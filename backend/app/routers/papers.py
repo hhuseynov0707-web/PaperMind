@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from .. import cache, crud
@@ -29,13 +29,17 @@ def list_fields(response: Response, db: Session = Depends(get_db)):
 @router.get("/papers", response_model=PapersPage)
 def list_papers(
     category: str | None = None,
+    field: str | None = Query(None),
     days: int | None = Query(None, ge=1, le=365),
     q: str | None = Query(None, max_length=200),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
+    if field and field not in FIELDS:
+        raise HTTPException(status_code=422, detail=f"Naməlum sahə: {field}")
     items, total = crud.get_papers(
-        db, category=category, days=days, q=q, page=page, page_size=page_size
+        db, category=category, days=days, q=q,
+        page=page, page_size=page_size, field=field,
     )
     return {"items": items, "total": total, "page": page, "page_size": page_size}

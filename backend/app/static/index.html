@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
-  <link rel="stylesheet" href="/style.css?v=2.3.0">
+  <link rel="stylesheet" href="/style.css?v=2.7.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=2.6.1" defer></script>
+  <script src="/app.js?v=2.7.0" defer></script>
 </head>
 <body>
 
@@ -30,6 +30,7 @@
     <nav class="nav" id="nav" aria-label="Sections">
       <a href="#discover" data-nav="discover" data-i18n="nav_discover">Discover</a>
       <a href="#results" data-nav="results" data-i18n="nav_search">Search</a>
+      <a href="#browse" data-nav="browse" data-i18n="nav_browse">Browse</a>
       <a href="#trends" data-nav="trends" data-i18n="nav_trends">Trends</a>
       <a href="#digest" data-nav="digest" data-i18n="nav_digest">Digest</a>
     </nav>
@@ -85,6 +86,26 @@
     </section>
 
     <section id="results" class="results" aria-live="polite" aria-busy="false"></section>
+
+    <section class="panel" id="browse">
+      <div class="panel-head">
+        <div>
+          <h2 data-i18n="browse_title">This week in research</h2>
+          <p class="panel-sub" data-i18n="browse_sub">Flip through recent papers and open the ones worth your time.</p>
+        </div>
+        <div class="panel-tools">
+          <span class="deck-count" id="deck-count"></span>
+          <button type="button" class="icon-btn" id="deck-prev" data-i18n-aria="prev_paper">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="icon-btn" id="deck-next" data-i18n-aria="next_paper">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="deck" id="deck" tabindex="0" aria-live="polite" aria-label="Paper browser"></div>
+      <div class="deck-dots" id="deck-dots"></div>
+    </section>
 
     <section class="panel" id="trends">
       <div class="panel-head">

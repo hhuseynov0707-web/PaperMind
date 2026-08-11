@@ -194,6 +194,7 @@ def get_papers(
     q: str | None = None,
     page: int = 1,
     page_size: int = 20,
+    field: str | None = None,
 ) -> tuple[list[dict], int]:
     stmt = select(models.Paper).options(*_PAPER_LOADS)
     count_stmt = select(func.count(models.Paper.id))
@@ -201,6 +202,10 @@ def get_papers(
     if category:
         stmt = stmt.where(models.Paper.primary_category == category)
         count_stmt = count_stmt.where(models.Paper.primary_category == category)
+    if field:
+        # Sahə açarı bütün mənbələr üçün təyin olunur (primary_category isə yalnız arXiv-də)
+        stmt = stmt.where(models.Paper.field_keys.overlap([field]))
+        count_stmt = count_stmt.where(models.Paper.field_keys.overlap([field]))
     if days:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         stmt = stmt.where(models.Paper.published_at >= cutoff)

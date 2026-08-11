@@ -24,7 +24,7 @@ const I18N = {
   az: {
     product_kicker: 'Elmi İntellekt Platforması',
     skip_to_content: 'Əsas məzmuna keç',
-    nav_discover: 'Kəşf', nav_search: 'Axtarış', nav_trends: 'Trendlər', nav_digest: 'İcmal',
+    nav_discover: 'Kəşf', nav_search: 'Axtarış', nav_browse: 'Vərəqlə', nav_trends: 'Trendlər', nav_digest: 'İcmal',
     m_papers: 'Məqalə', m_chunks: 'Fraqment', m_updated: 'Yeniləndi',
     hero_eyebrow: 'Araşdırmanı kəşf et',
     hero_title: 'Az axtar. Çox anla.',
@@ -64,6 +64,10 @@ const I18N = {
     err_generic_title: 'Nəsə düzgün getmədi',
     err_generic_sub: 'Bir azdan yenidən cəhd et.',
     details: 'Texniki detallar',
+    browse_title: 'Bu həftənin araşdırmaları',
+    browse_sub: 'Məqalələri vərəqlə, xoşuna gələni aç və oxu.',
+    prev_paper: 'Əvvəlki məqalə', next_paper: 'Növbəti məqalə',
+    deck_empty: 'Bu sahədə son bir həftədə məqalə yoxdur.',
     trends_title: 'Araşdırma dinamikası',
     insight_leads: '{f} son həftədə {n} məqalə ilə öndədir ({p}% pay).',
     insight_none: 'Trend üçün hələ kifayət qədər data yoxdur.',
@@ -108,7 +112,7 @@ const I18N = {
   ru: {
     product_kicker: 'Платформа научного интеллекта',
     skip_to_content: 'Перейти к содержимому',
-    nav_discover: 'Обзор', nav_search: 'Поиск', nav_trends: 'Тренды', nav_digest: 'Дайджест',
+    nav_discover: 'Обзор', nav_search: 'Поиск', nav_browse: 'Листать', nav_trends: 'Тренды', nav_digest: 'Дайджест',
     m_papers: 'Статей', m_chunks: 'Фрагментов', m_updated: 'Обновлено',
     hero_eyebrow: 'Исследуйте науку',
     hero_title: 'Меньше искать. Больше понимать.',
@@ -148,6 +152,10 @@ const I18N = {
     err_generic_title: 'Что-то пошло не так',
     err_generic_sub: 'Повторите попытку через момент.',
     details: 'Технические детали',
+    browse_title: 'Исследования этой недели',
+    browse_sub: 'Листайте статьи и открывайте те, что заинтересовали.',
+    prev_paper: 'Предыдущая статья', next_paper: 'Следующая статья',
+    deck_empty: 'В этой области за последнюю неделю статей нет.',
     trends_title: 'Динамика исследований',
     insight_leads: '{f} лидирует за последнюю неделю: {n} статей ({p}%).',
     insight_none: 'Пока недостаточно данных для тренда.',
@@ -192,7 +200,7 @@ const I18N = {
   en: {
     product_kicker: 'Scientific Intelligence Platform',
     skip_to_content: 'Skip to content',
-    nav_discover: 'Discover', nav_search: 'Search', nav_trends: 'Trends', nav_digest: 'Digest',
+    nav_discover: 'Discover', nav_search: 'Search', nav_browse: 'Browse', nav_trends: 'Trends', nav_digest: 'Digest',
     m_papers: 'Papers', m_chunks: 'Chunks', m_updated: 'Updated',
     hero_eyebrow: 'Discover research',
     hero_title: 'Search less. Understand more.',
@@ -232,6 +240,10 @@ const I18N = {
     err_generic_title: 'Something went wrong',
     err_generic_sub: 'Please try again in a moment.',
     details: 'Technical details',
+    browse_title: 'This week in research',
+    browse_sub: 'Flip through recent papers and open the ones worth your time.',
+    prev_paper: 'Previous paper', next_paper: 'Next paper',
+    deck_empty: 'No papers in this area over the past week.',
     trends_title: 'Research momentum',
     insight_leads: '{f} leads the last week with {n} papers ({p}% share).',
     insight_none: 'Not enough data yet to describe a trend.',
@@ -476,6 +488,7 @@ function setField(k) {
   localStorage.setItem('pm_field', k);
   renderAreas();
   renderScope();
+  loadDeck();          // vərəqlənən dəst seçilmiş sahəyə uyğunlaşır
 }
 
 /* ------------------------------------------------------------------ metrics */
@@ -848,6 +861,66 @@ function drawChart(weeks, series, stacks) {
   });
 }
 
+/* ------------------------------------------------------------------ deck */
+
+let deck = [], deckIdx = 0;
+
+async function loadDeck() {
+  const box = $('#deck');
+  try {
+    const fp = FIELD ? `&field=${encodeURIComponent(FIELD)}` : '';
+    const { data } = await api(`/api/papers?days=7&page_size=15${fp}`);
+    deck = data.items || [];
+    deckIdx = 0;
+    if (!deck.length) {
+      box.innerHTML = `<p class="muted">${t('deck_empty')}</p>`;
+      $('#deck-dots').innerHTML = '';
+      $('#deck-count').textContent = '';
+      return;
+    }
+    renderDeck(1);
+  } catch (e) {
+    box.innerHTML = `<p class="muted">${esc(errTitle(e))}</p>`;
+  }
+}
+
+function renderDeck(dir = 1) {
+  const p = deck[deckIdx];
+  if (!p) return;
+  const authors = p.authors.slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '');
+  const field = (p.field_keys || [])[0];
+
+  $('#deck').innerHTML = `
+    <article class="deck-card" style="--from:${dir > 0 ? '14px' : '-14px'}">
+      <div class="deck-meta">
+        ${field ? `<span class="deck-field">${esc(fieldName(field))}</span>` : ''}
+        <span>${p.published_at ? dmy(p.published_at) : ''}</span>
+        <span class="sep">·</span><span class="aid">${esc(paperRef(p))}</span>
+        ${langChip(p)}${sourceChips(p)}
+      </div>
+      <a class="deck-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+      ${authors ? `<div class="deck-meta">${esc(authors)}</div>` : ''}
+      <p class="deck-abs">${esc(p.abstract)}</p>
+      <div class="paper-actions">
+        <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ${t('act_read')}</a>
+        <button type="button" class="act ai" data-ask="${esc(p.title)}">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>
+          ${t('act_ask')}</button>
+      </div>
+    </article>`;
+
+  $('#deck-count').textContent = `${deckIdx + 1} / ${deck.length}`;
+  $('#deck-dots').innerHTML = deck.map((_, i) => `<i class="${i === deckIdx ? 'on' : ''}"></i>`).join('');
+}
+
+function flip(step) {
+  if (deck.length < 2) return;
+  deckIdx = (deckIdx + step + deck.length) % deck.length;   // dövri: sonuncudan birinciyə
+  renderDeck(step);
+}
+
 /* ------------------------------------------------------------------ discover */
 
 let spot = [], spotIdx = 0, spotTimer = null, spotStart = 0, spotPaused = false, spotRaf = null;
@@ -990,6 +1063,7 @@ function loadAll() {
   loadDigest();
   loadStatus();
   loadSpotlight();
+  loadDeck();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1024,6 +1098,29 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#query-form').requestSubmit();
   });
   $('#trend-refresh').addEventListener('click', loadTrends);
+
+  $('#deck-prev').addEventListener('click', () => flip(-1));
+  $('#deck-next').addEventListener('click', () => flip(1));
+  $('#deck').addEventListener('keydown', (ev) => {
+    if (ev.key === 'ArrowLeft') { ev.preventDefault(); flip(-1); }
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); flip(1); }
+  });
+  /* toxunma ilə vərəqləmə — mobil üçün */
+  let touchX = null;
+  $('#deck').addEventListener('touchstart', (ev) => { touchX = ev.touches[0].clientX; }, { passive: true });
+  $('#deck').addEventListener('touchend', (ev) => {
+    if (touchX === null) return;
+    const dx = ev.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 45) flip(dx < 0 ? 1 : -1);
+    touchX = null;
+  }, { passive: true });
+  $('#deck').addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-ask]');
+    if (!b) return;
+    setMode('ask');
+    $('#q').value = t('ask_about').replace('{t}', b.dataset.ask);
+    $('#query-form').requestSubmit();
+  });
 
   const card = $('#discover-card');
   card.addEventListener('mouseenter', () => { spotPaused = true; });
