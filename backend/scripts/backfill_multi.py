@@ -17,10 +17,11 @@ API = "http://localhost:8000/api/ingest/pull"
 ALL_SOURCES = ["arxiv", "crossref", "doaj"]
 
 
-def pull(source: str, fields: list[str], days: int, limit: int, timeout: int = 900) -> dict:
+def pull(source: str, fields: list[str], days: int, limit: int,
+         lang: str = "en", timeout: int = 900) -> dict:
     payload = json.dumps({
         "source": source, "fields": fields,
-        "days": days, "limit_per_field": limit,
+        "days": days, "limit_per_field": limit, "lang": lang,
     }).encode()
     req = urllib.request.Request(API, data=payload, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -33,6 +34,8 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=80, help="hər sahə üçün maksimum məqalə")
     ap.add_argument("--sources", default=",".join(ALL_SOURCES))
     ap.add_argument("--fields", default="", help="boş = bütün sahələr")
+    ap.add_argument("--lang", default="en", choices=["en", "ru"],
+                    help="məqalələrin dili; openalex yalnız 'ru' üçün nəticə verir")
     args = ap.parse_args()
 
     sources = [s.strip() for s in args.sources.split(",") if s.strip()]
@@ -42,7 +45,7 @@ def main() -> int:
     for source in sources:
         print(f"\n=== {source} (son {args.days} gün, sahə başına {args.limit}) …", flush=True)
         try:
-            res = pull(source, fields, args.days, args.limit)
+            res = pull(source, fields, args.days, args.limit, args.lang)
         except Exception as exc:
             print(f"  XƏTA: {exc}", file=sys.stderr)
             continue
