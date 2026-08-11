@@ -56,6 +56,8 @@ const I18N = {
     err_net_sub: 'Backend işləmir və ya şəbəkə problemi var.',
     err_req_title: 'Sorğu qəbul olunmadı',
     err_req_sub: 'Sorğunu dəyişib yenidən cəhd et.',
+    err_limit_title: 'Sorğu limiti doldu',
+    err_limit_sub: 'Bir azdan yenidən cəhd et. Limit hər saat yenilənir.',
     err_generic_title: 'Nəsə düzgün getmədi',
     err_generic_sub: 'Bir azdan yenidən cəhd et.',
     details: 'Texniki detallar',
@@ -132,6 +134,8 @@ const I18N = {
     err_net_sub: 'Backend не отвечает или проблема с сетью.',
     err_req_title: 'Запрос не принят',
     err_req_sub: 'Измените запрос и попробуйте снова.',
+    err_limit_title: 'Лимит запросов исчерпан',
+    err_limit_sub: 'Повторите попытку позже — лимит обновляется каждый час.',
     err_generic_title: 'Что-то пошло не так',
     err_generic_sub: 'Повторите попытку через момент.',
     details: 'Технические детали',
@@ -208,6 +212,8 @@ const I18N = {
     err_net_sub: 'The backend is down or the network failed.',
     err_req_title: 'That request was not accepted',
     err_req_sub: 'Adjust the query and try again.',
+    err_limit_title: 'Request limit reached',
+    err_limit_sub: 'Try again shortly — the limit resets every hour.',
     err_generic_title: 'Something went wrong',
     err_generic_sub: 'Please try again in a moment.',
     details: 'Technical details',
@@ -460,12 +466,14 @@ function renderSources(summary) {
 
 function errTitle(e) {
   if (e.status === 0) return t('err_net_title');
+  if (e.status === 429) return t('err_limit_title');     // sürət limiti — öz qorumamız
   if (e.status === 503 || e.status === 502) return t('err_ai_title');
   if (e.status === 422 || e.status === 400) return t('err_req_title');
   return t('err_generic_title');
 }
 function errSub(e) {
   if (e.status === 0) return t('err_net_sub');
+  if (e.status === 429) return e.detail || t('err_limit_sub');
   if (e.status === 503 || e.status === 502) return t('err_ai_sub');
   if (e.status === 422 || e.status === 400) return t('err_req_sub');
   return t('err_generic_sub');
