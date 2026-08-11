@@ -740,18 +740,17 @@ async function loadTrends() {
       .map(([k, byWeek]) => [k, Object.values(byWeek).reduce((a, b) => a + b, 0)])
       .sort((a, b) => b[1] - a[1]);
 
-    /* palette holds 5 validated hues -> top 4 fields + Other, never cycled */
-    // Set: 'other' artıq top-da varsa ikinci dəfə əlavə olunmasın (leqendada
-    // iki eyni sətir görünürdü).
-    const top = totals.slice(0, 4).map(([k]) => k);
-    const series = [...new Set([...top, 'other'])].filter((k) => totals.some(([n]) => n === k));
-    const bucket = (f) => (top.includes(f) ? f : 'other');
+    /* Backend fənn qrupu qaytarır və onlar 5-dir — palitradakı təsdiqlənmiş
+       rəng sayı ilə eyni. Ona görə «top-N + digər» yığımına ehtiyac yoxdur:
+       hər qrup öz seriyasını alır. (Əvvəlki versiyada 5-ci qrup mövcud olmayan
+       'other' seriyasına yönləndirilirdi və qrafik çökürdü.) */
+    const series = totals.slice(0, SERIES.length).map(([k]) => k);
 
     const stacks = {};
     series.forEach((s) => (stacks[s] = weeks.map(() => 0)));
     Object.entries(map).forEach(([f, byWeek]) => {
-      const s = bucket(f);
-      weeks.forEach((w, i) => { stacks[s][i] += byWeek[w] || 0; });
+      if (!stacks[f]) return;          // palitradan kənarda qalan qrup (indi olmur)
+      weeks.forEach((w, i) => { stacks[f][i] += byWeek[w] || 0; });
     });
 
     const last = weeks[weeks.length - 1];
