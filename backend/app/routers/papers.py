@@ -20,7 +20,7 @@ def featured(limit: int = Query(6, ge=1, le=12), db: Session = Depends(get_db)):
 def list_fields(response: Response, db: Session = Depends(get_db)):
     """Sahə seçicisi üçün: hər texnologiya sahəsində neçə məqalə var."""
     value, hit = cache.get_or_set(
-        "analytics:fields:v2", settings.analytics_cache_ttl, lambda: crud.field_counts(db, FIELDS)
+        "analytics:fields:v3", settings.analytics_cache_ttl, lambda: crud.field_counts(db, FIELDS)
     )
     response.headers["X-Cache"] = "HIT" if hit else "MISS"
     return value

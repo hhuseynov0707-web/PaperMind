@@ -88,10 +88,16 @@ const I18N = {
     dedup_found: 'Birdən çox mənbədə tapılıb birləşdirilmiş: {n} məqalə. Təkrar nəticə göstərilmir.',
     dedup_none: 'Mənbələr arasında hələ üst-üstə düşən məqalə tapılmayıb.',
     months: ['yan','fev','mar','apr','may','iyn','iyl','avq','sen','okt','noy','dek'],
+    groups: { tech: 'Texnologiya', natural: 'Təbiət elmləri', formal: 'Formal elmlər',
+      health: 'Tibb və sağlamlıq', social: 'Sosial elmlər' },
     fields: {
       ai: 'Süni intellekt', cv: 'Kompüter görməsi', security: 'Kibertəhlükəsizlik',
       robotics: 'Robototexnika', software: 'Proqram mühəndisliyi', data: 'Data sistemləri',
       networks: 'Şəbəkə və sistemlər', hci: 'İnsan-kompüter', other: 'Digər',
+      physics: 'Fizika', astronomy: 'Astronomiya', chemistry: 'Kimya',
+      biology: 'Biologiya', earth: 'Yer elmləri', math: 'Riyaziyyat',
+      statistics: 'Statistika', medicine: 'Tibb', neuroscience: 'Nevrologiya',
+      economics: 'İqtisadiyyat', psychology: 'Psixologiya',
     },
     examples: ['hallüsinasiyaların aşkarlanması', 'federated learning', 'robot təhlükəsizliyi'],
   },
@@ -166,10 +172,16 @@ const I18N = {
     dedup_found: 'Объединено из нескольких источников: {n} статей. Дубликаты не показываются.',
     dedup_none: 'Пересечений между источниками пока не найдено.',
     months: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
+    groups: { tech: 'Технологии', natural: 'Естественные науки', formal: 'Формальные науки',
+      health: 'Медицина и здоровье', social: 'Социальные науки' },
     fields: {
       ai: 'Искусственный интеллект', cv: 'Компьютерное зрение', security: 'Кибербезопасность',
       robotics: 'Робототехника', software: 'Программная инженерия', data: 'Системы данных',
       networks: 'Сети и системы', hci: 'Человек-компьютер', other: 'Другое',
+      physics: 'Физика', astronomy: 'Астрономия', chemistry: 'Химия',
+      biology: 'Биология', earth: 'Науки о Земле', math: 'Математика',
+      statistics: 'Статистика', medicine: 'Медицина', neuroscience: 'Нейронауки',
+      economics: 'Экономика', psychology: 'Психология',
     },
     examples: ['обнаружение галлюцинаций', 'federated learning', 'безопасность роботов'],
   },
@@ -244,10 +256,16 @@ const I18N = {
     dedup_found: 'Merged across sources: {n} papers. Duplicates are not shown.',
     dedup_none: 'No overlap between sources found yet.',
     months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    groups: { tech: 'Technology', natural: 'Natural sciences', formal: 'Formal sciences',
+      health: 'Medicine & health', social: 'Social sciences' },
     fields: {
       ai: 'Artificial intelligence', cv: 'Computer vision', security: 'Cybersecurity',
       robotics: 'Robotics', software: 'Software engineering', data: 'Data systems',
       networks: 'Networks & systems', hci: 'Human-computer', other: 'Other',
+      physics: 'Physics', astronomy: 'Astronomy', chemistry: 'Chemistry',
+      biology: 'Biology', earth: 'Earth sciences', math: 'Mathematics',
+      statistics: 'Statistics', medicine: 'Medicine', neuroscience: 'Neuroscience',
+      economics: 'Economics', psychology: 'Psychology',
     },
     examples: ['hallucination detection', 'federated learning', 'robot safety'],
   },
@@ -255,7 +273,10 @@ const I18N = {
 
 const GLYPH = {
   '': '◉', ai: '✦', cv: '◈', security: '⌁', robotics: '⬡',
-  software: '⌘', data: '▤', networks: '⋔', hci: '◇', other: '·',
+  software: '⌘', data: '▤', networks: '⋔', hci: '◇',
+  physics: '⚛', astronomy: '✧', chemistry: '⬢', biology: '❋', earth: '◍',
+  math: '∑', statistics: '⌗', medicine: '✚', neuroscience: '❂',
+  economics: '⌸', psychology: '☉', other: '·',
 };
 
 /* mənbə identifikasiyası — ad və rəng (data seriyalarından ayrı) */
@@ -407,20 +428,39 @@ async function loadFields() {
   } catch (e) { toast(errTitle(e)); }
 }
 
-function renderAreas() {
-  /* Field counts overlap (a paper can be cross-listed), so "all" uses the
-     distinct total from /api/analytics/summary rather than their sum. */
-  const rows = [{ key: '', name: t('area_all'), count: totalPapers }]
-    .concat([...fields].sort((a, b) => b.count - a.count)
-      .map((f) => ({ key: f.key, name: fieldName(f.key), count: f.count })));
+function areaButton(key, name, count) {
+  const on = FIELD === key;
+  return `
+    <button type="button" class="area ${on ? 'on' : ''}" data-field="${esc(key)}"
+            role="option" aria-selected="${on}">
+      <span class="glyph" aria-hidden="true">${GLYPH[key] || '·'}</span>
+      <span class="nm">${esc(name)}</span>
+      <span class="ct">${count == null ? '' : num(count)}</span>
+    </button>`;
+}
 
-  $('#areas').innerHTML = rows.map((r) => `
-    <button type="button" class="area ${FIELD === r.key ? 'on' : ''}" data-field="${esc(r.key)}"
-            role="option" aria-selected="${FIELD === r.key}">
-      <span class="glyph" aria-hidden="true">${GLYPH[r.key] || '·'}</span>
-      <span class="nm">${esc(r.name)}</span>
-      <span class="ct">${r.count == null ? '' : num(r.count)}</span>
-    </button>`).join('');
+function renderAreas() {
+  /* Sahə sayları üst-üstə düşür (məqalə bir neçə sahəyə aid ola bilər), ona görə
+     «bütün araşdırmalar» sayı /api/analytics/summary-dən gələn distinct totaldır. */
+  let html = areaButton('', t('area_all'), totalPapers);
+
+  /* Fənn qrupları üzrə düzülüş. Boş sahələr göstərilmir — 20 sahədən yalnız
+     korpusda mövcud olanlar görünsün deyə. */
+  const byGroup = {};
+  fields.forEach((f) => {
+    if (!f.count) return;
+    (byGroup[f.group || 'tech'] ||= []).push(f);
+  });
+
+  const order = ['tech', 'natural', 'formal', 'health', 'social'];
+  const groups = t('groups') || {};
+  order.filter((g) => byGroup[g]).forEach((g) => {
+    html += `<div class="area-group">${esc(groups[g] || g)}</div>`;
+    byGroup[g].sort((a, b) => b.count - a.count)
+      .forEach((f) => { html += areaButton(f.key, fieldName(f.key), f.count); });
+  });
+
+  $('#areas').innerHTML = html;
 }
 
 function setField(k) {

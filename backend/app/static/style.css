@@ -426,6 +426,12 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 .card-sub { margin: 3px 0 var(--sp-4); font-size: 13px; color: var(--text-2); }
 
 .areas { display: flex; flex-direction: column; gap: 1px; margin-top: var(--sp-3); }
+.area-group {
+  font-size: 10px; letter-spacing: .11em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600;
+  padding: 12px 0 5px 11px; border-top: 1px solid var(--border); margin-top: 6px;
+}
+.area-group:first-of-type { border-top: 0; margin-top: 2px; }
 .area {
   display: flex; align-items: center; gap: 10px;
   background: transparent; border: 0; border-left: 2px solid transparent;

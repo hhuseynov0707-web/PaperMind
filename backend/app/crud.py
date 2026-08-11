@@ -240,9 +240,16 @@ def field_counts(db: Session, fields: dict[str, list[str]]) -> list[dict]:
     rows = db.execute(
         select(key_col, func.count().label("count")).group_by("fk")
     ).all()
+    from .fields import FIELD_GROUP
+
     counts = {r.fk: r.count for r in rows}
     return [
-        {"key": key, "count": counts.get(key, 0), "categories": list(cats)}
+        {
+            "key": key,
+            "count": counts.get(key, 0),
+            "group": FIELD_GROUP.get(key, ""),
+            "categories": list(cats),
+        }
         for key, cats in fields.items()
     ]
 

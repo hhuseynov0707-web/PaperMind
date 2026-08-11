@@ -115,6 +115,7 @@ class AskRequest(BaseModel):
 class FieldOut(BaseModel):
     key: str
     count: int
+    group: str = ""             # təbiət elmləri, formal elmlər, ... (iyerarxik seçici üçün)
     categories: list[str] = []  # frontend kateqoriya -> sahə xəritəsini buradan qurur
 
 
