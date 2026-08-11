@@ -287,12 +287,15 @@ def trends(db: Session, weeks: int = 8) -> list[dict]:
     Bir məqalə bir neçə sahəyə aid ola bilər və hər sahədə sayılır — trend
     baxışı üçün bu düzgündür (sahənin aktivliyi ölçülür, məqalələr deyil).
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(weeks=weeks)
     week = func.date_trunc("week", models.Paper.published_at)
     field = func.unnest(models.Paper.field_keys)
     rows = db.execute(
         select(week.label("week"), field.label("category"), func.count().label("count"))
-        .where(models.Paper.published_at >= cutoff)
+        # Yuxarı sərhəd vacibdir: bəzi naşirlər gələcək nömrə tarixi verir
+        # (məs. 2027) və o qeydlər trend oxunu aylarla uzadıb qrafiki oxunmaz edir.
+        .where(models.Paper.published_at >= cutoff, models.Paper.published_at <= now)
         .group_by(week, field)
         .order_by(week)
     ).all()

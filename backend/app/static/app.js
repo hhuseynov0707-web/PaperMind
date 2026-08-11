@@ -14,6 +14,9 @@ const CHART_SURFACE = '#151518';
    weeks. Below this, the first week is truncated by the backfill window, so a
    week-over-week percentage would be an artefact — we show share instead. */
 const MIN_WEEKS_FOR_DELTA = 4;
+/* Az sayda məqalə üzərində faiz mənasızdır: 1→8 məqalə «+700%» kimi görünür.
+   Keçən həftədə bu qədər məqalə olmasa, pay rejimi göstərilir. */
+const MIN_VOLUME_FOR_DELTA = 40;
 
 /* ------------------------------------------------------------------ i18n */
 
@@ -304,11 +307,13 @@ let MODE = 'search';
 
 let fields = [];          // [{key, count, categories[]}]
 let catToField = {};      // 'cs.LG' -> 'ai'
+let fieldToGroup = {};    // 'physics' -> 'natural'
 let totalPapers = null;   // distinct total; field counts overlap via cross-listing
 let trendChart = null;
 
 const t = (k) => I18N[LANG][k] ?? I18N.en[k] ?? k;
 const fieldName = (k) => I18N[LANG].fields[k] ?? I18N.en.fields[k] ?? k;
+const groupName = (k) => (I18N[LANG].groups || {})[k] ?? (I18N.en.groups || {})[k] ?? fieldName(k);
 const catName = (c) => (c ? CAT_NAMES[LANG][c] ?? c : '—');
 
 /* ------------------------------------------------------------------ utils */
@@ -423,7 +428,10 @@ async function loadFields() {
     const { data } = await api('/api/fields');
     fields = data;
     catToField = {};
-    data.forEach((f) => (f.categories || []).forEach((c) => { catToField[c] = f.key; }));
+    data.forEach((f) => {
+      (f.categories || []).forEach((c) => { catToField[c] = f.key; });
+      if (f.group) fieldToGroup[f.key] = f.group;
+    });
     renderAreas();
   } catch (e) { toast(errTitle(e)); }
 }
@@ -700,11 +708,13 @@ async function onSubmit(ev) {
 
 function weeklyByField(rows) {
   const weeks = [...new Set(rows.map((r) => r.week))].sort();
-  const map = {};                       // field -> {week: count}
+  const map = {};                       // qrup -> {week: count}
   rows.forEach((r) => {
-    // Backend artıq sahə açarı qaytarır (əvvəl arXiv kateqoriyası idi)
-    const f = r.category in I18N.en.fields ? r.category : 'other';
-    (map[f] ||= {})[r.week] = (map[f][r.week] || 0) + r.count;
+    /* 19 sahə var, palitrada isə 5 təsdiqlənmiş rəng — ona görə qrafik FƏNN
+       QRUPU səviyyəsində göstərilir. Sahə səviyyəsi «top-4 + digər» verirdi,
+       orada «digər» korpusun çoxunu udurdu. */
+    const g = fieldToGroup[r.category] || 'other';
+    (map[g] ||= {})[r.week] = (map[g][r.week] || 0) + r.count;
   });
   return { weeks, map };
 }
@@ -753,7 +763,7 @@ async function loadTrends() {
     if (lastByField.length && lastTotal) {
       const [f, n] = lastByField[0];
       note.textContent = t('insight_leads')
-        .replace('{f}', fieldName(f)).replace('{n}', num(n))
+        .replace('{f}', groupName(f)).replace('{n}', num(n))
         .replace('{p}', ((n / lastTotal) * 100).toFixed(1));
     } else {
       note.textContent = t('insight_none');
@@ -768,9 +778,11 @@ async function loadTrends() {
 }
 
 function renderDeltas(weeks, map, lastByField, lastTotal) {
-  const useDelta = weeks.length >= MIN_WEEKS_FOR_DELTA;
   const prev = weeks[weeks.length - 2];
   const last = weeks[weeks.length - 1];
+  const prevTotal = prev
+    ? Object.values(map).reduce((sum, bw) => sum + (bw[prev] || 0), 0) : 0;
+  const useDelta = weeks.length >= MIN_WEEKS_FOR_DELTA && prevTotal >= MIN_VOLUME_FOR_DELTA;
 
   const rows = lastByField.slice(0, 6).map(([f, n], i) => {
     const colour = SERIES[i % SERIES.length];
@@ -786,7 +798,7 @@ function renderDeltas(weeks, map, lastByField, lastTotal) {
       val = `${((n / lastTotal) * 100).toFixed(1)}%`;
     }
     return `<div class="delta">
-        <span class="dn"><i style="background:${colour}"></i><span>${esc(fieldName(f))}</span></span>
+        <span class="dn"><i style="background:${colour}"></i><span>${esc(groupName(f))}</span></span>
         <span class="dv ${cls}">${val}</span>
       </div>`;
   });
