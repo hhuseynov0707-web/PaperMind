@@ -130,7 +130,11 @@ class ServiceHealth(BaseModel):
 
 
 class SourceOut(BaseModel):
-    arxiv_id: str
+    # arXiv ID yalnız arXiv məqalələrində olur — Crossref/DOAJ/OpenAlex
+    # qeydlərində DOI istinad rolunu oynayır. Məcburi saxlansaydı (əvvəl belə idi)
+    # qeyri-arXiv mənbəyə istinad edən hər cavab 500 ilə çökərdi.
+    arxiv_id: str | None = None
+    doi: str | None = None
     title: str
     score: float
     pdf_url: str | None = None

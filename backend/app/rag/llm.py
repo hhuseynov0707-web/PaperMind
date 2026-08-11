@@ -49,8 +49,16 @@ def ask_llm(question: str, blocks: list[dict], lang: str = "az") -> str:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY təyin olunmayıb")
 
+    def ref(paper) -> str:
+        """İstinad etiketi: arXiv ID yoxdursa DOI işlədilir.
+
+        Bunsuz qeyri-arXiv mənbələr kontekstə `[None]` kimi düşür və LLM
+        həmin sətri cavaba köçürür.
+        """
+        return paper.arxiv_id or paper.doi or f"id:{paper.id}"
+
     context = "\n\n".join(
-        f"[{b['paper'].arxiv_id}] {b['paper'].title}\n{b['chunk'].content}" for b in blocks
+        f"[{ref(b['paper'])}] {b['paper'].title}\n{b['chunk'].content}" for b in blocks
     )
     client = Groq(api_key=settings.groq_api_key)
     resp = client.chat.completions.create(

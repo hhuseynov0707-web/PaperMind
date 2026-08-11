@@ -610,8 +610,10 @@ async function runAsk(q) {
     ? `<span class="badge cached" title="${esc(t('cached_hint'))}">⚡ ${t('cached')} · ${ms(data.latency_ms)}</span>`
     : `<span class="badge live" title="${esc(t('live_hint'))}"><span class="dot"></span>${t('processing')} · ${ms(data.latency_ms)}</span>`;
 
-  const answer = esc(data.answer).replace(/\[(\d{4}\.\d{4,5}(?:v\d+)?)\]/g,
-    '<span class="cite">[$1]</span>');
+  // arXiv ID (2608.01234) və DOI (10.1145/xxx) istinadlarının hər ikisi vurğulanır
+  const answer = esc(data.answer)
+    .replace(/\[(\d{4}\.\d{4,5}(?:v\d+)?)\]/g, '<span class="cite">[$1]</span>')
+    .replace(/\[(10\.\d{4,9}\/[^\]\s]+)\]/g, '<span class="cite">[$1]</span>');
 
   r.innerHTML = `
     <div class="answer-panel">
@@ -630,7 +632,7 @@ async function runAsk(q) {
           ${data.sources.map((s, i) => `
             <a class="source" href="${esc(s.pdf_url || '#')}" target="_blank" rel="noopener">
               <span class="idx">${i + 1}</span>
-              <span class="st"><b>${esc(s.title)}</b><span>arXiv:${esc(s.arxiv_id)}</span></span>
+              <span class="st"><b>${esc(s.title)}</b><span>${esc(paperRef(s))}</span></span>
               <span class="sc">${Math.round(s.score * 100)}% ${esc(t('rel_short'))}</span>
             </a>`).join('')}
         </div>` : ''}

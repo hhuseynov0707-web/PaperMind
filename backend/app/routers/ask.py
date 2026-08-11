@@ -93,6 +93,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         sources.append(
             {
                 "arxiv_id": paper.arxiv_id,
+                "doi": paper.doi,
                 "title": paper.title,
                 "score": b["score"],
                 "pdf_url": paper.pdf_url,
