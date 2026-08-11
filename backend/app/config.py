@@ -6,8 +6,35 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg2://elmradari:elmradari@localhost:5433/elmradari"
+    # Bağlantı komponentləri ayrıca saxlanılır və URL SQLAlchemy tərəfindən qurulur.
+    # Parolu URL sətrinə əl ilə yapışdırmaq təhlükəlidir: içindəki `@`, `/`, `:` kimi
+    # simvollar sətri sındırır (məs. `@` olanda host `@postgres` kimi oxunur və
+    # Linux bunu abstrakt Unix socket sayır — bağlantı heç cəhd edilmir).
+    postgres_user: str = "elmradari"
+    postgres_password: str = "elmradari"
+    postgres_db: str = "elmradari"
+    postgres_host: str = "postgres"
+    postgres_port: int = 5432
+
+    # Açıq verilsə, komponentləri üstələyir (məs. xarici idarə olunan baza).
+    database_url_override: str = ""
+
     redis_url: str = "redis://localhost:6379/0"
+
+    @property
+    def database_url(self) -> str:
+        if self.database_url_override:
+            return self.database_url_override
+        from sqlalchemy import URL
+
+        return URL.create(
+            "postgresql+psycopg2",
+            username=self.postgres_user,
+            password=self.postgres_password,   # xüsusi simvollar burada düzgün kodlanır
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
+        ).render_as_string(hide_password=False)
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"

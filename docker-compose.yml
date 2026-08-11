@@ -34,7 +34,10 @@ services:
     container_name: papermind-backend
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-elmradari}:${POSTGRES_PASSWORD:-elmradari}@postgres:5432/${POSTGRES_DB:-elmradari}
+      POSTGRES_USER: ${POSTGRES_USER:-elmradari}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-elmradari}
+      POSTGRES_DB: ${POSTGRES_DB:-elmradari}
+      POSTGRES_HOST: postgres
       REDIS_URL: redis://redis:6379/0
       HF_CACHE_DIR: /models
     ports:
