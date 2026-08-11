@@ -10,11 +10,26 @@ deduplikasiya backend-də (crud.upsert_papers) baş verir.
 
 import argparse
 import json
+import os
 import sys
 import urllib.request
 
 API = "http://localhost:8000/api/ingest/pull"
 ALL_SOURCES = ["arxiv", "crossref", "doaj"]
+
+
+def _headers() -> dict:
+    """İctimai rejimdə yazma endpoint-ləri X-API-Key tələb edir.
+
+    Skript backend konteynerinin içində işləyir, ona görə açar onsuz da
+    mühit dəyişənindədir (compose `.env`-i yükləyir). Açar yoxdursa başlıq
+    göndərilmir — lokal rejimdə (PUBLIC_MODE=false) onsuz da lazım deyil.
+    """
+    headers = {"Content-Type": "application/json"}
+    key = os.environ.get("ADMIN_API_KEY", "").strip()
+    if key:
+        headers["X-API-Key"] = key
+    return headers
 
 
 def pull(source: str, fields: list[str], days: int, limit: int,
@@ -23,7 +38,7 @@ def pull(source: str, fields: list[str], days: int, limit: int,
         "source": source, "fields": fields,
         "days": days, "limit_per_field": limit, "lang": lang,
     }).encode()
-    req = urllib.request.Request(API, data=payload, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(API, data=payload, headers=_headers())
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode())
 
