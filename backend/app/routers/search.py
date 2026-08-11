@@ -5,7 +5,7 @@ from .. import crud
 from ..database import get_db
 from ..fields import FIELDS
 from ..rag.retriever import retrieve
-from ..rag.translator import query_to_english
+from ..rag.translator import retrieval_inputs
 from ..schemas import SearchResponse
 from ..security import enforce_search_limits
 
@@ -25,12 +25,11 @@ def semantic_search(
     enforce_search_limits(request)
     if field and field not in FIELDS:
         raise HTTPException(status_code=422, detail=f"Naməlum sahə: {field}")
-    query_en, lang = query_to_english(q)
-    # Orijinal sorğu əsasdır (model çoxdillidir), tərcümə əlavə siqnal kimi verilir
+    # Dilə görə strategiya translator-də, benchmark ilə ölçülüb
+    query, also, lang, query_en = retrieval_inputs(q)
     blocks = retrieve(
-        db, q, top_k=max(top_k * 2, 10),
-        categories=[field] if field else None,
-        also=query_en if lang != "en" else None,
+        db, query, top_k=max(top_k * 2, 10),
+        categories=[field] if field else None, also=also,
     )
 
     hits, seen = [], set()

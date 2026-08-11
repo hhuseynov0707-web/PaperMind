@@ -30,6 +30,31 @@ def detect_lang(text: str) -> str:
     return "en"
 
 
+def retrieval_inputs(text: str) -> tuple[str, str | None, str, str | None]:
+    """Retrieval üçün (əsas sorğu, əlavə vektor, dil, tərcümə) qaytarır.
+
+    Strategiya dilə görə fərqlidir — benchmark ilə ölçülüb (n=60, korpus 1047):
+
+        dil   əsas        əlavə      səbəb
+        ---   ---------   --------   ---------------------------------------
+        en    orijinal    —          tərcümə olunmur
+        ru    orijinal    tərcümə    orijinal sahə dəqiqliyini 63%→72% qaldırır,
+                                     tərcümə known-item MRR-i 0.70→0.80
+        az    tərcümə     —          azərbaycanca vektor səs-küy əlavə edir:
+                                     yalnız tərcümə 60%, orijinal qoşulanda 52%
+
+    Bu funksiya həm axtarış/RAG, həm də benchmark tərəfindən çağırılır ki,
+    ölçdüyümüz davranışla istifadəçinin gördüyü davranış eyni olsun.
+    """
+    query_en, lang = query_to_english(text)
+
+    if lang == "en":
+        return text, None, lang, None
+    if lang == "az":
+        return query_en, None, lang, query_en
+    return text, query_en, lang, query_en
+
+
 def query_to_english(text: str) -> tuple[str, str]:
     """(ingiliscə sorğu, aşkarlanmış dil) qaytarır.
 

@@ -10,7 +10,7 @@ from ..database import get_db
 from ..fields import FIELDS
 from ..rag.llm import ask_llm
 from ..rag.retriever import retrieve
-from ..rag.translator import query_to_english
+from ..rag.translator import retrieval_inputs
 from ..schemas import AskRequest, AskResponse
 from ..security import enforce_ask_limits
 
@@ -59,11 +59,10 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             query_en=cached.get("query_en"),
         )
 
-    query_en, lang = query_to_english(req.question)
+    query, also, lang, query_en = retrieval_inputs(req.question)
     blocks = retrieve(
-        db, req.question, top_k=req.top_k,
-        categories=[req.field] if req.field else None,
-        also=query_en if lang != "en" else None,
+        db, query, top_k=req.top_k,
+        categories=[req.field] if req.field else None, also=also,
     )
     if not blocks:
         latency = int((time.perf_counter() - t0) * 1000)

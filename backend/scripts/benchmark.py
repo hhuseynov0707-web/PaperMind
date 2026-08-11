@@ -42,7 +42,7 @@ from app.config import settings                        # noqa: E402
 from app.database import SessionLocal                  # noqa: E402
 from app.models import Paper                           # noqa: E402
 from app.rag.retriever import retrieve                 # noqa: E402
-from app.rag.translator import query_to_english        # noqa: E402
+from app.rag.translator import query_to_english, retrieval_inputs   # noqa: E402
 
 QUERIES = Path(__file__).resolve().parent.parent / "eval" / "queries.json"
 K = 10
@@ -71,10 +71,17 @@ def top_papers(db, query: str, k: int = K, also: str | None = None,
 def _prepare(text: str, mode: str) -> tuple[str, str | None]:
     """Rejimə görə (əsas sorğu, əlavə vektor) qaytarır.
 
-    both       — orijinal + tərcümə (cari davranış)
-    original   — yalnız orijinal
-    translated — YALNIZ tərcümə (düzəlişdən əvvəlki davranış)
+    policy     — PRODUKSİYA davranışı (translator.retrieval_inputs)
+    original   — yalnız orijinal sorğu
+    translated — yalnız tərcümə
+    both       — orijinal + tərcümə, dildən asılı olmayaraq
+
+    `policy` qəsdən produksiya funksiyasını çağırır ki, ölçdüyümüz davranışla
+    istifadəçinin gördüyü davranış bir-birindən uzaqlaşa bilməsin.
     """
+    if mode == "policy":
+        query, also, _lang, _en = retrieval_inputs(text)
+        return query, also
     if mode == "original":
         return text, None
     translated, lang = query_to_english(text)
@@ -189,14 +196,15 @@ def main() -> int:
     print(f"  model  : {settings.embedding_model}")
     print(f"  korpus : {total} məqalə")
 
-    current = run(db, args.sample, "both")
-    show("ORİJİNAL + TƏRCÜMƏ (cari davranış)", current)
+    current = run(db, args.sample, "policy")
+    show("DİLƏ GÖRƏ STRATEGİYA (produksiya)", current)
 
     if args.compare:
         show("YALNIZ ORİJİNAL SORĞU", run(db, args.sample, "original"))
+        show("ORİJİNAL + TƏRCÜMƏ (dildən asılı olmayaraq)", run(db, args.sample, "both"))
 
         legacy = run(db, args.sample, "translated")
-        show("YALNIZ TƏRCÜMƏ (düzəlişdən əvvəlki davranış)", legacy)
+        show("YALNIZ TƏRCÜMƏ", legacy)
 
         print("\n  " + "=" * 52)
         print("  DÜZƏLİŞİN TƏSİRİ — köhnə davranışla müqayisə")
