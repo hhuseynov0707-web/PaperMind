@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY scripts ./scripts
+COPY eval ./eval
 
 ENV PYTHONUNBUFFERED=1 \
     HF_CACHE_DIR=/models
