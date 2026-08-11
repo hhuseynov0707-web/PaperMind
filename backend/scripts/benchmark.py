@@ -68,7 +68,24 @@ def top_papers(db, query: str, k: int = K, also: str | None = None,
 
 # ----------------------------------------------------------------- 1. known-item
 
-def known_item(db, sample: int, use_translation: bool, seed: int = 7) -> dict:
+def _prepare(text: str, mode: str) -> tuple[str, str | None]:
+    """Rejimə görə (əsas sorğu, əlavə vektor) qaytarır.
+
+    both       — orijinal + tərcümə (cari davranış)
+    original   — yalnız orijinal
+    translated — YALNIZ tərcümə (düzəlişdən əvvəlki davranış)
+    """
+    if mode == "original":
+        return text, None
+    translated, lang = query_to_english(text)
+    if lang == "en":
+        return text, None
+    if mode == "translated":
+        return translated, None
+    return text, translated
+
+
+def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
     rng = random.Random(seed)
     results: dict[str, list[float]] = {"en": [], "ru": []}
     latencies: list[float] = []
@@ -82,13 +99,10 @@ def known_item(db, sample: int, use_translation: bool, seed: int = 7) -> dict:
             paper = db.get(Paper, pid)
             if not paper or not paper.title:
                 continue
-            also = None
-            if use_translation:
-                translated, qlang = query_to_english(paper.title)
-                also = translated if qlang != "en" else None
+            query, also = _prepare(paper.title, mode)
 
             t0 = time.perf_counter()
-            found = top_papers(db, paper.title, also=also)
+            found = top_papers(db, query, also=also)
             latencies.append((time.perf_counter() - t0) * 1000)
 
             rank = next((i + 1 for i, p in enumerate(found) if p.id == pid), 0)
@@ -109,7 +123,7 @@ def known_item(db, sample: int, use_translation: bool, seed: int = 7) -> dict:
 
 # ------------------------------------------------------- 2/3. sahə + çarpaz dilli
 
-def field_precision(db, use_translation: bool) -> dict:
+def field_precision(db, mode: str) -> dict:
     spec = json.loads(QUERIES.read_text(encoding="utf-8"))
     by_lang: dict[str, list[float]] = {}
     ru_share: list[float] = []
@@ -117,12 +131,8 @@ def field_precision(db, use_translation: bool) -> dict:
 
     for item in spec["field_queries"]:
         q, lang, want = item["q"], item["lang"], item["field"]
-        also = None
-        if use_translation:
-            translated, detected = query_to_english(q)
-            also = translated if detected != "en" else None
-
-        papers = top_papers(db, q, also=also)
+        query, also = _prepare(q, mode)
+        papers = top_papers(db, query, also=also)
         if not papers:
             continue
         hit = sum(1 for p in papers if want in (p.field_keys or [])) / len(papers)
@@ -140,10 +150,10 @@ def field_precision(db, use_translation: bool) -> dict:
 
 # ----------------------------------------------------------------- hesabat
 
-def run(db, sample: int, use_translation: bool) -> dict:
+def run(db, sample: int, mode: str) -> dict:
     return {
-        "known": known_item(db, sample, use_translation),
-        "field": field_precision(db, use_translation),
+        "known": known_item(db, sample, mode),
+        "field": field_precision(db, mode),
     }
 
 
@@ -173,14 +183,27 @@ def main() -> int:
     print(f"  model  : {settings.embedding_model}")
     print(f"  korpus : {total} məqalə")
 
-    main_run = run(db, args.sample, use_translation=True)
-    show("ORİJİNAL + TƏRCÜMƏ VEKTORU (cari)", main_run)
+    current = run(db, args.sample, "both")
+    show("ORİJİNAL + TƏRCÜMƏ (cari davranış)", current)
 
     if args.compare:
-        base = run(db, args.sample, use_translation=False)
-        show("YALNIZ ORİJİNAL SORĞU", base)
-        delta = main_run["field"]["ru_share"] - base["field"]["ru_share"]
-        print(f"\n  Tərcümə vektorunun rusdilli əhatəyə təsiri: {delta:+.0%}")
+        show("YALNIZ ORİJİNAL SORĞU", run(db, args.sample, "original"))
+
+        legacy = run(db, args.sample, "translated")
+        show("YALNIZ TƏRCÜMƏ (düzəlişdən əvvəlki davranış)", legacy)
+
+        print("\n  " + "=" * 52)
+        print("  DÜZƏLİŞİN TƏSİRİ — köhnə davranışla müqayisə")
+        ru_old, ru_now = legacy["field"]["ru_share"], current["field"]["ru_share"]
+        print(f"    rusdilli nəticə payı     {ru_old:>6.0%} → {ru_now:>6.0%}   ({ru_now - ru_old:+.0%})")
+        for lang in sorted(current["known"]["per_lang"]):
+            a = legacy["known"]["per_lang"].get(lang, {}).get("mrr", 0.0)
+            b = current["known"]["per_lang"][lang]["mrr"]
+            print(f"    known-item MRR ({lang})     {a:>6.3f} → {b:>6.3f}   ({b - a:+.3f})")
+        for lang in sorted(current["field"]["by_lang"]):
+            a = legacy["field"]["by_lang"].get(lang, 0.0)
+            b = current["field"]["by_lang"][lang]
+            print(f"    sahə dəqiqliyi ({lang})     {a:>6.0%} → {b:>6.0%}   ({b - a:+.0%})")
 
     print("\n  Qeyd: sahə dəqiqliyi məqalənin BİR NEÇƏ sahəyə aid ola bilməsi")
     print("  səbəbindən 100% olmur — bu, səhv deyil, korpusun təbiətidir.\n")
