@@ -1,0 +1,43 @@
+{
+  "_comment": "Retrieval benchmark sorğu dəsti. Hər sorğu üçün gözlənilən sahə qeyd olunur — nəticələrin neçə faizinin həmin sahəyə aid olduğu Precision@10 kimi ölçülür. Yeni sorğu əlavə etmək üçün sadəcə sətir əlavə et; kod dəyişmir.",
+
+  "field_queries": [
+    { "q": "transformer architecture for language modeling", "lang": "en", "field": "ai" },
+    { "q": "reinforcement learning policy optimization", "lang": "en", "field": "ai" },
+    { "q": "graph neural network representation learning", "lang": "en", "field": "ai" },
+
+    { "q": "image segmentation with deep networks", "lang": "en", "field": "cv" },
+    { "q": "object detection in video streams", "lang": "en", "field": "cv" },
+
+    { "q": "intrusion detection in computer networks", "lang": "en", "field": "security" },
+    { "q": "post-quantum cryptography schemes", "lang": "en", "field": "security" },
+    { "q": "malware classification using machine learning", "lang": "en", "field": "security" },
+
+    { "q": "robot motion planning in unknown environments", "lang": "en", "field": "robotics" },
+    { "q": "autonomous navigation and control", "lang": "en", "field": "robotics" },
+
+    { "q": "automated software testing and verification", "lang": "en", "field": "software" },
+    { "q": "large language models for code generation", "lang": "en", "field": "software" },
+
+    { "q": "query optimization in database systems", "lang": "en", "field": "data" },
+    { "q": "information retrieval and ranking", "lang": "en", "field": "data" },
+
+    { "q": "wireless network protocol performance", "lang": "en", "field": "networks" },
+    { "q": "distributed systems and edge computing", "lang": "en", "field": "networks" },
+
+    { "q": "user interface usability evaluation", "lang": "en", "field": "hci" },
+    { "q": "human factors in interactive systems", "lang": "en", "field": "hci" },
+
+    { "q": "машинное обучение и глубокие нейронные сети", "lang": "ru", "field": "ai" },
+    { "q": "защита информации и криптография", "lang": "ru", "field": "security" },
+    { "q": "компьютерное зрение и распознавание образов", "lang": "ru", "field": "cv" },
+    { "q": "базы данных и обработка информации", "lang": "ru", "field": "data" },
+    { "q": "робототехника и системы управления", "lang": "ru", "field": "robotics" },
+    { "q": "пользовательский интерфейс и юзабилити", "lang": "ru", "field": "hci" },
+
+    { "q": "dil modellərində hallüsinasiyaların aşkarlanması", "lang": "az", "field": "ai" },
+    { "q": "kompüter şəbəkələrində təhlükəsizlik", "lang": "az", "field": "security" },
+    { "q": "şəkillərin emalı və obyektlərin tanınması", "lang": "az", "field": "cv" },
+    { "q": "verilənlər bazasında sorğuların optimallaşdırılması", "lang": "az", "field": "data" }
+  ]
+}

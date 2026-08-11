@@ -271,13 +271,22 @@ def multi_source_count(db: Session) -> int:
 # ---------- Analytics (ağır SQL sorğuları — Redis-də keşlənir) ----------
 
 def trends(db: Session, weeks: int = 8) -> list[dict]:
+    """Həftələr üzrə SAHƏ paylanması.
+
+    `primary_category` üzrə qruplaşdırmaq olmaz — o, yalnız arXiv-də doludur,
+    Crossref/DOAJ/OpenAlex məqalələrinin hamısı "digər" səbətinə düşürdü.
+    `field_keys` isə bütün mənbələr üçün təyin olunur.
+
+    Bir məqalə bir neçə sahəyə aid ola bilər və hər sahədə sayılır — trend
+    baxışı üçün bu düzgündür (sahənin aktivliyi ölçülür, məqalələr deyil).
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
     week = func.date_trunc("week", models.Paper.published_at)
-    category = func.coalesce(models.Paper.primary_category, "digər")
+    field = func.unnest(models.Paper.field_keys)
     rows = db.execute(
-        select(week.label("week"), category.label("category"), func.count().label("count"))
+        select(week.label("week"), field.label("category"), func.count().label("count"))
         .where(models.Paper.published_at >= cutoff)
-        .group_by(week, category)
+        .group_by(week, field)
         .order_by(week)
     ).all()
     return [

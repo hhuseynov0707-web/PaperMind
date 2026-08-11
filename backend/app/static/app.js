@@ -25,7 +25,7 @@ const I18N = {
     m_papers: 'Məqalə', m_chunks: 'Fraqment', m_updated: 'Yeniləndi',
     hero_eyebrow: 'Araşdırmanı kəşf et',
     hero_title: 'Az axtar. Çox anla.',
-    hero_sub: 'Elmi ədəbiyyatı məna üzrə axtar və ya süni intellektdən araşdırmaların nə dediyini ümumiləşdirməsini istə — hər cavab real arXiv məqalələrinə əsaslanır.',
+    hero_sub: 'Elmi ədəbiyyatı məna üzrə axtar və ya süni intellektdən araşdırmaların nə dediyini ümumiləşdirməsini istə — hər cavab dörd akademik mənbədən gələn real məqalələrə əsaslanır.',
     mode_search: 'Axtar', mode_ask: 'AI-dan soruş',
     mode_hint_search: 'Açar söz yox — məna üzrə vektor axtarışı',
     mode_hint_ask: 'Mənbəli cavab: retrieval + Groq LLM',
@@ -101,7 +101,7 @@ const I18N = {
     m_papers: 'Статей', m_chunks: 'Фрагментов', m_updated: 'Обновлено',
     hero_eyebrow: 'Исследуйте науку',
     hero_title: 'Меньше искать. Больше понимать.',
-    hero_sub: 'Ищите научную литературу по смыслу или попросите ИИ обобщить, что говорят исследования — каждый ответ опирается на реальные статьи arXiv.',
+    hero_sub: 'Ищите научную литературу по смыслу или попросите ИИ обобщить, что говорят исследования — каждый ответ опирается на реальные статьи из четырёх академических источников.',
     mode_search: 'Поиск', mode_ask: 'Спросить ИИ',
     mode_hint_search: 'Не по ключевым словам — векторный поиск по смыслу',
     mode_hint_ask: 'Ответ с источниками: retrieval + Groq LLM',
@@ -177,7 +177,7 @@ const I18N = {
     m_papers: 'Papers', m_chunks: 'Chunks', m_updated: 'Updated',
     hero_eyebrow: 'Discover research',
     hero_title: 'Search less. Understand more.',
-    hero_sub: 'Search scientific literature by meaning, or ask AI to synthesise what the research says — every answer grounded in real arXiv papers.',
+    hero_sub: 'Search scientific literature by meaning, or ask AI to synthesise what the research says — every answer grounded in real papers from four academic sources.',
     mode_search: 'Search', mode_ask: 'Ask AI',
     mode_hint_search: 'Not keywords — vector search over meaning',
     mode_hint_ask: 'Source-grounded answer: retrieval + Groq LLM',
@@ -652,7 +652,8 @@ function weeklyByField(rows) {
   const weeks = [...new Set(rows.map((r) => r.week))].sort();
   const map = {};                       // field -> {week: count}
   rows.forEach((r) => {
-    const f = catToField[r.category] || 'other';
+    // Backend artıq sahə açarı qaytarır (əvvəl arXiv kateqoriyası idi)
+    const f = r.category in I18N.en.fields ? r.category : 'other';
     (map[f] ||= {})[r.week] = (map[f][r.week] || 0) + r.count;
   });
   return { weeks, map };
