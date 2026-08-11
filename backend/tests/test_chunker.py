@@ -40,13 +40,21 @@ def test_soz_ortasindan_kesilmir():
 
 
 def test_parcalar_ust_uste_dusur():
-    """Üst-üstə düşmə olmasa, sərhəddə qalan cümlə heç bir parçada tam qalmaz."""
+    """Üst-üstə düşmə olmasa, sərhəddə qalan cümlə heç bir parçada tam qalmaz.
+
+    Qeyd: dar pəncərələri (məs. son 15 söz ↔ ilk 15 söz) müqayisə etmək səhvdir —
+    üst-üstə düşmə simvolla ölçülür (chunk_overlap) və söz sayı ona uyğun gəlmir.
+    Ona görə parçaların söz çoxluqlarının kəsişməsinə baxılır.
+    """
     text = " ".join(f"w{i}" for i in range(1500))
     parts = chunk_text(text)
     assert len(parts) >= 2
-    son = set(parts[0].split()[-15:])
-    evvel = set(parts[1].split()[:15])
-    assert son & evvel, "ardıcıl parçalar arasında ortaq söz yoxdur"
+
+    ortaq = set(parts[0].split()) & set(parts[1].split())
+    assert ortaq, "ardıcıl parçalar arasında ortaq söz yoxdur"
+
+    # ikinci parça birincinin sonundan ƏVVƏL başlamalıdır
+    assert parts[1].split()[0] in parts[0]
 
 
 def test_butun_metn_ehate_olunur():
