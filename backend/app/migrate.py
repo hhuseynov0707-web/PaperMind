@@ -35,6 +35,19 @@ DDL = [
     "CREATE INDEX IF NOT EXISTS ix_papers_field_keys ON papers USING gin (field_keys)",
 ]
 
+# Vektor axtarışı üçün ANN indeksi. Bunsuz hər sorğu bütün chunks cədvəlini
+# ardıcıl skan edir — bir neçə min sətirdə hiss olunmur, yüz minlərlə sətirdə
+# sistem dayanır. Boş cədvəldə yaradılması anidir, ona görə korpus böyüməzdən
+# ƏVVƏL qurulur; Postgres sonra onu avtomatik saxlayır.
+#
+# vector_cosine_ops seçilib, çünki retriever cosine_distance işlədir —
+# operator sinfi məsafə funksiyası ilə üst-üstə düşməlidir, yoxsa indeks
+# istifadə olunmur.
+HNSW_INDEX = (
+    "CREATE INDEX IF NOT EXISTS ix_chunks_embedding_hnsw "
+    "ON chunks USING hnsw (embedding vector_cosine_ops)"
+)
+
 
 def _backfill_field_keys(conn) -> int:
     """arXiv kateqoriyalarından sahə açarlarını çıxarır."""
@@ -58,6 +71,15 @@ def run() -> None:
     with engine.begin() as conn:
         for stmt in DDL:
             conn.execute(text(stmt))
+
+    # Ayrıca tranzaksiyada: böyük cədvəldə uzun çəkə bilər və uğursuzluğu
+    # qalan miqrasiyanı dayandırmamalıdır (sistem indekssiz də işləyir, sadəcə yavaş).
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(HNSW_INDEX))
+        log.info("HNSW vektor indeksi hazırdır")
+    except Exception as exc:
+        log.warning("HNSW indeksi yaradıla bilmədi (sistem indekssiz işləyəcək): %s", exc)
 
         # Köhnə sətirlər arXiv mənşəlidir
         conn.execute(text("""
