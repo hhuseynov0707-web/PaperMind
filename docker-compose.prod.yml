@@ -1,0 +1,124 @@
+name: papermind
+
+# İCTİMAİ DEPLOY konfiqurasiyası.
+# Lokal compose-dan fərqi:
+#   - yalnız Caddy (80/443) internetə açıqdır; Postgres, Redis, n8n YOX
+#   - Caddy avtomatik Let's Encrypt sertifikatı alır
+#   - backend PUBLIC_MODE=true ilə işləyir (yazma açar tələb edir, limitlər aktiv)
+#   - servislərə yaddaş limiti qoyulub ki, kiçik VPS-də biri digərini boğmasın
+#
+# İstifadə:
+#   cp .env.example .env   (və doldur: DOMAIN, ADMIN_API_KEY, GROQ_API_KEY, POSTGRES_PASSWORD)
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: papermind-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN .env-də təyin edilməlidir}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: papermind-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-elmradari}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?güclü parol tələb olunur}
+      POSTGRES_DB: ${POSTGRES_DB:-elmradari}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elmradari} -d ${POSTGRES_DB:-elmradari}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  redis:
+    image: redis:7-alpine
+    container_name: papermind-redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "192mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  backend:
+    build: ./backend
+    container_name: papermind-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-elmradari}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-elmradari}
+      REDIS_URL: redis://redis:6379/0
+      HF_CACHE_DIR: /models
+      PUBLIC_MODE: "true"      # yazma endpoint-ləri X-API-Key tələb edir
+      TRUST_PROXY: "true"      # Caddy arxasındayıq -> X-Forwarded-For real IP-dir
+    volumes:
+      - model_cache:/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: papermind-n8n
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Asia/Baku
+      - TZ=Asia/Baku
+      - N8N_DIAGNOSTICS_ENABLED=false
+    # Port QƏSDƏN açılmır. Admin panelinə SSH tuneli ilə gir:
+    #   ssh -L 5679:localhost:5678 user@server   ->  http://localhost:5679
+    expose:
+      - "5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+volumes:
+  pgdata:
+  n8n_data:
+  model_cache:
+  caddy_data:
+  caddy_config:

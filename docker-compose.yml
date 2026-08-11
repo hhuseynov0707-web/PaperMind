@@ -1,0 +1,75 @@
+name: papermind
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: papermind-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-elmradari}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-elmradari}
+      POSTGRES_DB: ${POSTGRES_DB:-elmradari}
+    ports:
+      - "5433:5432"          # lokal Postgres ilə konflikt olmasin deye 5433
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elmradari} -d ${POSTGRES_DB:-elmradari}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: papermind-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    build: ./backend
+    container_name: papermind-backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-elmradari}:${POSTGRES_PASSWORD:-elmradari}@postgres:5432/${POSTGRES_DB:-elmradari}
+      REDIS_URL: redis://redis:6379/0
+      HF_CACHE_DIR: /models
+    ports:
+      - "8000:8000"
+    volumes:
+      - model_cache:/models   # embedding modeli restartlar arasinda qalsin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 10
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: papermind-n8n
+    env_file: .env             # GROQ_API_KEY workflow-larda $env ile istifade olunur
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Asia/Baku
+      - TZ=Asia/Baku
+    ports:
+      - "5679:5678"        # 5678-i kursdan qalan kohne n8n tutub, ona gore 5679
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro   # CLI ile import ucun
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  n8n_data:
+  model_cache:

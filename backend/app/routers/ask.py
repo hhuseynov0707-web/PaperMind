@@ -1,0 +1,113 @@
+import hashlib
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from .. import cache, crud
+from ..config import settings
+from ..database import get_db
+from ..fields import FIELDS
+from ..rag.llm import ask_llm
+from ..rag.retriever import retrieve
+from ..rag.translator import query_to_english
+from ..schemas import AskRequest, AskResponse
+from ..security import enforce_ask_limits
+
+router = APIRouter(prefix="/api", tags=["ask"])
+
+
+def _normalize(q: str) -> str:
+    return " ".join(q.lower().split())
+
+
+EMPTY_DB_MSG = {
+    "az": "Bazada hələ məqalə yoxdur — əvvəlcə backfill skriptini və ya n8n ingest workflow-unu işlət.",
+    "ru": "В базе пока нет статей — сначала запусти скрипт backfill или n8n ingest workflow.",
+    "en": "No papers in the database yet — run the backfill script or the n8n ingest workflow first.",
+}
+
+
+@router.post("/ask", response_model=AskResponse)
+def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
+    """RAG sual-cavab: cache -> (tərcümə) -> retrieval -> Groq -> cavab + mənbələr.
+
+    Retrieval ingiliscə tərcümə ilə gedir, LLM-ə isə orijinal sual verilir —
+    cavab istifadəçinin dilində qayıdır (system prompt qaydası).
+    """
+    if req.field and req.field not in FIELDS:
+        raise HTTPException(status_code=422, detail=f"Naməlum sahə: {req.field}")
+
+    # Keşdən gələn cavab da sayılır — əks halda limit asanca keçilər
+    enforce_ask_limits(request)
+
+    t0 = time.perf_counter()
+    key = (
+        f"ask:{hashlib.sha256(_normalize(req.question).encode()).hexdigest()}"
+        f":{req.top_k}:{req.field or 'all'}"
+    )
+
+    cached = cache.get_json(key)
+    if cached:
+        latency = int((time.perf_counter() - t0) * 1000)
+        crud.save_qa(db, req.question, cached["answer"], cached["sources"], True, latency)
+        return AskResponse(
+            answer=cached["answer"],
+            sources=cached["sources"],
+            from_cache=True,
+            latency_ms=latency,
+            query_en=cached.get("query_en"),
+        )
+
+    query_en, lang = query_to_english(req.question)
+    blocks = retrieve(db, query_en, top_k=req.top_k, categories=[req.field] if req.field else None)
+    if not blocks:
+        latency = int((time.perf_counter() - t0) * 1000)
+        return AskResponse(
+            answer=EMPTY_DB_MSG.get(lang, EMPTY_DB_MSG["en"]),
+            sources=[],
+            from_cache=False,
+            latency_ms=latency,
+        )
+
+    if not settings.groq_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="GROQ_API_KEY təyin olunmayıb. .env faylını doldur və 'docker compose restart backend' işlət.",
+        )
+
+    try:
+        answer = ask_llm(req.question, blocks, lang=lang)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
+
+    sources, seen = [], set()
+    for b in blocks:
+        paper = b["paper"]
+        if paper.id in seen:
+            continue
+        seen.add(paper.id)
+        sources.append(
+            {
+                "arxiv_id": paper.arxiv_id,
+                "title": paper.title,
+                "score": b["score"],
+                "pdf_url": paper.pdf_url,
+            }
+        )
+
+    query_en_out = query_en if lang != "en" else None
+    latency = int((time.perf_counter() - t0) * 1000)
+    cache.set_json(
+        key,
+        {"answer": answer, "sources": sources, "query_en": query_en_out},
+        settings.ask_cache_ttl,
+    )
+    crud.save_qa(db, req.question, answer, sources, False, latency)
+    return AskResponse(
+        answer=answer,
+        sources=sources,
+        from_cache=False,
+        latency_ms=latency,
+        query_en=query_en_out,
+    )

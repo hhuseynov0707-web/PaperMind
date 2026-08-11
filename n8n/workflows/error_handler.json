@@ -1,0 +1,89 @@
+{
+  "id": "W3errorHandler01",
+  "name": "W3 - error_handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c3000000-0000-0000-0000-000000000001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n error obyektindən lazımlı sahələri çıxarır\nconst j = $json;\nconst workflow = (j.workflow && j.workflow.name) || 'unknown';\nconst node = (j.execution && j.execution.lastNodeExecuted) || null;\nconst rawMessage =\n  (j.execution && j.execution.error && (j.execution.error.message || j.execution.error.description)) ||\n  'Naməlum xəta';\nreturn [{ json: { workflow, node, message: String(rawMessage).slice(0, 1000) } }];"
+      },
+      "id": "c3000000-0000-0000-0000-000000000002",
+      "name": "Xətanı formala",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/logs/error",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ADMIN_API_KEY || '' }}"
+            }
+          ]
+        }
+      },
+      "id": "c3000000-0000-0000-0000-000000000003",
+      "name": "Backend-ə log yaz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Xətanı formala",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Xətanı formala": {
+      "main": [
+        [
+          {
+            "node": "Backend-ə log yaz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

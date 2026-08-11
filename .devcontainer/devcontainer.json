@@ -1,0 +1,39 @@
+{
+  "name": "PaperMind",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
+
+  // Docker Compose stack-i Codespace-in İÇİNDƏ işləsin deyə lazımdır
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    }
+  },
+
+  // Kompüterin zəifdirsə burada 8 GB tam sənindir
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+
+  "forwardPorts": [8000, 5679],
+  "portsAttributes": {
+    "8000": { "label": "PaperMind (API + interfeys)", "onAutoForward": "openBrowser" },
+    "5679": { "label": "n8n admin", "onAutoForward": "silent" }
+  },
+
+  // .env avtomatik yaradılır; açarları özün doldurursan
+  "postCreateCommand": "test -f .env || cp .env.example .env",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}

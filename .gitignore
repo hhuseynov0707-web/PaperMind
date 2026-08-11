@@ -1,0 +1,28 @@
+# --- Sirrlər (heç vaxt commit olunmamalıdır) ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# --- Redaktor / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- İş faylları ---
+*.log
+backup/
+*.sql.gz
+qr*.b64
+papermind-qr.png

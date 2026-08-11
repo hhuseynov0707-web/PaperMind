@@ -1,0 +1,158 @@
+{
+  "id": "W1dailyIngest001",
+  "name": "W1 - daily_ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000001",
+      "name": "Hər gün 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL+OR+cat:cs.NE+OR+cat:stat.ML+OR+cat:cs.CV+OR+cat:eess.IV+OR+cat:cs.CR+OR+cat:cs.RO+OR+cat:cs.SY+OR+cat:eess.SY+OR+cat:cs.SE+OR+cat:cs.PL+OR+cat:cs.DB+OR+cat:cs.IR+OR+cat:cs.DC+OR+cat:cs.NI+OR+cat:cs.OS+OR+cat:cs.AR+OR+cat:cs.HC+OR+cat:cs.CY&start=0&max_results=300&sortBy=submittedDate&sortOrder=descending",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000002",
+      "name": "arXiv sorğusu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1000000-0000-0000-0000-000000000003",
+      "name": "XML - JSON",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// arXiv Atom feed-ini backend-in PaperIn formatına çevirir\nconst root = $json.data && $json.data.feed ? $json.data : $json;\nconst feed = root.feed || {};\nlet entries = feed.entry || [];\nif (!Array.isArray(entries)) entries = [entries];\n\nconst papers = entries.map((e) => {\n  const absUrl = typeof e.id === 'string' ? e.id : (e.id && e.id._) || '';\n  const rawId = absUrl.split('/abs/')[1] || '';\n  const arxivId = rawId.replace(/v\\d+$/, '');\n\n  let cats = e.category || [];\n  if (!Array.isArray(cats)) cats = [cats];\n  const catTerms = cats\n    .map((c) => (c && (c.term || (c.$ && c.$.term))) || null)\n    .filter(Boolean);\n\n  let auths = e.author || [];\n  if (!Array.isArray(auths)) auths = [auths];\n\n  const primaryNode = e['arxiv:primary_category'];\n  const primary =\n    (primaryNode && (primaryNode.term || (primaryNode.$ && primaryNode.$.term))) ||\n    catTerms[0] ||\n    null;\n\n  return {\n    arxiv_id: arxivId,\n    title: String(e.title || '').replace(/\\s+/g, ' ').trim(),\n    abstract: String(e.summary || '').replace(/\\s+/g, ' ').trim(),\n    primary_category: primary,\n    categories: catTerms,\n    authors: auths.map((a) => a && a.name).filter(Boolean),\n    published_at: e.published || null,\n    pdf_url: arxivId ? 'https://arxiv.org/pdf/' + arxivId : null,\n  };\n}).filter((p) => p.arxiv_id && p.abstract);\n\nreturn [{ json: { papers } }];"
+      },
+      "id": "a1000000-0000-0000-0000-000000000004",
+      "name": "PaperIn formatına map",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ADMIN_API_KEY || '' }}"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-0000-0000-000000000005",
+      "name": "Backend-ə göndər",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Hər gün 09:00": {
+      "main": [
+        [
+          {
+            "node": "arXiv sorğusu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "arXiv sorğusu": {
+      "main": [
+        [
+          {
+            "node": "XML - JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML - JSON": {
+      "main": [
+        [
+          {
+            "node": "PaperIn formatına map",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PaperIn formatına map": {
+      "main": [
+        [
+          {
+            "node": "Backend-ə göndər",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "W3errorHandler01"
+  },
+  "pinData": {}
+}

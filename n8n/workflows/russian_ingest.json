@@ -1,0 +1,91 @@
+{
+  "id": "W5russianIngest",
+  "name": "W5 - russian_ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 11,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "a5000000-0000-0000-0000-000000000001",
+      "name": "Hər gün 11:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rus dilli məqalələr. Rus interfeysini seçən istifadəçilər üçün korpusu\n// öz dillərində zənginləşdirir.\n//\n// openalex — həcm üçün (CS sahəsində on minlərlə rusdilli iş)\n// doaj     — açıq girişli rus jurnalları üçün\n//\n// Hər ikisində backend mətnin ƏLİFBASINI yoxlayır: mənbələrin dil etiketi\n// etibarsızdır (rus jurnalı ingiliscə abstrakt verə bilər).\nreturn [\n  { json: { source: 'openalex', lang: 'ru', days: 30, limit_per_field: 40 } },\n  { json: { source: 'doaj',     lang: 'ru', days: 60, limit_per_field: 25 } },\n];"
+      },
+      "id": "a5000000-0000-0000-0000-000000000002",
+      "name": "Rusdilli mənbələr",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/ingest/pull",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ADMIN_API_KEY || '' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "a5000000-0000-0000-0000-000000000003",
+      "name": "Rusdilli məqalələri yığ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Yekun — icra tarixçəsində oxunaqlı görünsün\nconst rows = items.map((i) => i.json);\nconst sum = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);\nreturn [{ json: {\n  dil: 'ru',\n  menbeler: rows.map((r) => r.source).filter(Boolean).join(', '),\n  yeni: sum('inserted'),\n  tekrar: sum('skipped'),\n  birlesdirilen: sum('merged'),\n  qeyd: 'kiril elifbasi yoxlanilir — ingiliscə abstraktlı rus jurnalları ötürülür',\n} }];"
+      },
+      "id": "a5000000-0000-0000-0000-000000000004",
+      "name": "Yekun",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Hər gün 11:30": {
+      "main": [[{ "node": "Rusdilli mənbələr", "type": "main", "index": 0 }]]
+    },
+    "Rusdilli mənbələr": {
+      "main": [[{ "node": "Rusdilli məqalələri yığ", "type": "main", "index": 0 }]]
+    },
+    "Rusdilli məqalələri yığ": {
+      "main": [[{ "node": "Yekun", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "W3errorHandler01"
+  },
+  "pinData": {}
+}
