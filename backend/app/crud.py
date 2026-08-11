@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, func, or_, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from . import models
@@ -287,17 +287,31 @@ def trends(db: Session, weeks: int = 8) -> list[dict]:
     Bir məqalə bir neçə sahəyə aid ola bilər və hər sahədə sayılır — trend
     baxışı üçün bu düzgündür (sahənin aktivliyi ölçülür, məqalələr deyil).
     """
+    from .fields import FIELD_GROUP
+
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(weeks=weeks)
-    week = func.date_trunc("week", models.Paper.published_at)
-    field = func.unnest(models.Paper.field_keys)
+
+    # Sahə -> qrup xəritəsi SQL-ə VALUES kimi verilir ki, sayma bazada aparılsın.
+    # count(DISTINCT p.id) vacibdir: bir neçə sahəyə aid məqalə qrup daxilində
+    # BİR dəfə sayılmalıdır, əks halda cəm korpusdan böyük çıxır.
+    pairs = ", ".join(f"('{f}','{g}')" for f, g in FIELD_GROUP.items())
     rows = db.execute(
-        select(week.label("week"), field.label("category"), func.count().label("count"))
-        # Yuxarı sərhəd vacibdir: bəzi naşirlər gələcək nömrə tarixi verir
-        # (məs. 2027) və o qeydlər trend oxunu aylarla uzadıb qrafiki oxunmaz edir.
-        .where(models.Paper.published_at >= cutoff, models.Paper.published_at <= now)
-        .group_by(week, field)
-        .order_by(week)
+        text(f"""
+            SELECT date_trunc('week', p.published_at) AS week,
+                   m.grp                              AS category,
+                   count(DISTINCT p.id)               AS count
+              FROM papers p
+              CROSS JOIN LATERAL unnest(p.field_keys) AS fk
+              JOIN (VALUES {pairs}) AS m(field, grp) ON m.field = fk
+             WHERE p.published_at >= :cutoff
+               -- Yuxarı sərhəd: bəzi naşirlər gələcək nömrə tarixi verir (məs. 2027)
+               -- və o qeydlər trend oxunu aylarla uzadıb qrafiki oxunmaz edir.
+               AND p.published_at <= :now
+             GROUP BY week, m.grp
+             ORDER BY week
+        """),
+        {"cutoff": cutoff, "now": now},
     ).all()
     return [
         {"week": r.week.date().isoformat(), "category": r.category, "count": r.count}

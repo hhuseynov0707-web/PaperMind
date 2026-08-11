@@ -710,11 +710,10 @@ function weeklyByField(rows) {
   const weeks = [...new Set(rows.map((r) => r.week))].sort();
   const map = {};                       // qrup -> {week: count}
   rows.forEach((r) => {
-    /* 19 sahə var, palitrada isə 5 təsdiqlənmiş rəng — ona görə qrafik FƏNN
-       QRUPU səviyyəsində göstərilir. Sahə səviyyəsi «top-4 + digər» verirdi,
-       orada «digər» korpusun çoxunu udurdu. */
-    const g = fieldToGroup[r.category] || 'other';
-    (map[g] ||= {})[r.week] = (map[g][r.week] || 0) + r.count;
+    /* Backend artıq FƏNN QRUPU qaytarır (distinct məqalə sayı ilə). 19 sahəni
+       ayrıca çəkmək olmaz — palitrada 5 təsdiqlənmiş rəng var, qalanı «digər»ə
+       yığılsaydı o, qrafikə hakim kəsilərdi. */
+    (map[r.category] ||= {})[r.week] = (map[r.category][r.week] || 0) + r.count;
   });
   return { weeks, map };
 }
@@ -742,8 +741,10 @@ async function loadTrends() {
       .sort((a, b) => b[1] - a[1]);
 
     /* palette holds 5 validated hues -> top 4 fields + Other, never cycled */
+    // Set: 'other' artıq top-da varsa ikinci dəfə əlavə olunmasın (leqendada
+    // iki eyni sətir görünürdü).
     const top = totals.slice(0, 4).map(([k]) => k);
-    const series = [...top, 'other'];
+    const series = [...new Set([...top, 'other'])].filter((k) => totals.some(([n]) => n === k));
     const bucket = (f) => (top.includes(f) ? f : 'other');
 
     const stacks = {};
@@ -1031,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
   card.addEventListener('focusin', () => { spotPaused = true; });
   card.addEventListener('focusout', () => { spotPaused = false; spotStart = performance.now(); });
 
-  loadFields();
-  loadAll();
+  /* loadAll trend qrafikini çəkir, o isə sahə→qrup xəritəsinə möhtacdır.
+     Paralel buraxılsa trend keşdən daha tez qayıdır və hər şey «Digər» olur. */
+  loadFields().then(loadAll);
 });
