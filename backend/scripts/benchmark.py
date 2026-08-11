@@ -91,7 +91,11 @@ def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
     latencies: list[float] = []
 
     for lang in ("en", "ru"):
-        ids = db.scalars(select(Paper.id).where(Paper.language == lang)).all()
+        # ORDER BY vacibdir: onsuz Postgres sıra qaydasına zəmanət vermir,
+        # eyni seed fərqli nümunə verir və nəticələr müqayisə oluna bilmir.
+        ids = db.scalars(
+            select(Paper.id).where(Paper.language == lang).order_by(Paper.id)
+        ).all()
         if not ids:
             continue
         picked = rng.sample(ids, min(sample, len(ids)))
@@ -171,7 +175,9 @@ def show(label: str, r: dict) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sample", type=int, default=25, help="dil başına known-item sayı")
+    # n=25-də bir məqalənin 1-ci sıradan 3-cüyə düşməsi MRR-i 0.027 dəyişir —
+    # konfiqurasiyalar arasındakı real fərqdən böyük səs-küy. 60 daha sabitdir.
+    ap.add_argument("--sample", type=int, default=60, help="dil başına known-item sayı")
     ap.add_argument("--compare", action="store_true",
                     help="tərcümə vektoru ilə və onsuz müqayisə et")
     args = ap.parse_args()
