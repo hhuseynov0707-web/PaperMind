@@ -89,17 +89,24 @@ Sonra:
 ### n8n workflow-larının qurulması (bir dəfəlik)
 
 ```bash
-# 1. Workflow-ları import et
+# 1. Beş workflow-u import et
 docker compose exec n8n n8n import:workflow --separate --input=/workflows
 
-# 2. n8n-i yenidən başlat ki, UI siyahını görsün
+# 2. Dördünü aktivləşdir (W3 error handler-dir, aktiv olmamalıdır)
+for w in W1dailyIngest001 W2weeklyDigest01 W4multiSourceIng W5russianIngest; do
+  docker compose exec -T n8n n8n update:workflow --id=$w --active=true
+done
 docker compose restart n8n
+
+# 3. Yoxla
+docker compose exec -T n8n n8n list:workflow --active=true
 ```
 
-Sonra http://localhost:5679 aç (ilk dəfə owner hesabı yaradacaqsan) və:
-1. Hər üç workflow-u aç, sağ yuxarıdan **Active** et
-2. `W1 - daily_ingest` və `W2 - weekly_digest` üçün: **Settings → Error Workflow → "W3 - error_handler"** seç
-3. İstəsən `W1`-i dərhal yoxla: **Execute Workflow** düyməsi → dashboard-da "Son ingest-lər"də yeni sətir görünəcək
+Workflow fayllarında **sabit ID** və `errorWorkflow` bağlantısı var, ona görə interfeysdə əl ilə heç nə seçmək lazım deyil. `X-API-Key` başlığı da `.env`-dəki `ADMIN_API_KEY`-dən avtomatik oxunur.
+
+İnterfeysi görmək istəsən: http://localhost:5679 (ilk dəfə owner hesabı yaradılır). `W1`-də **Execute Workflow** basıb yoxlaya bilərsən — dashboard-da "Son ingest-lər"də yeni sətir görünəcək.
+
+> **Reverse proxy arxasında** (Codespaces, Caddy) n8n interfeysi «connection lost» verə bilər — compose-da `N8N_PUSH_BACKEND=sse` məhz bunun üçündür. Aktivləşdirmə onsuz da CLI ilə işləyir.
 
 ## Redis cache-in fərqini görmək
 
