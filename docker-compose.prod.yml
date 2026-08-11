@@ -102,6 +102,10 @@ services:
     env_file: .env
     environment:
       - N8N_SECURE_COOKIE=false
+      # Codespaces/reverse proxy arxasinda WebSocket qirilir və interfeys
+      # «connection lost» verir; SSE proxy-lərdən sabit keçir.
+      - N8N_PUSH_BACKEND=sse
+      - N8N_PROXY_HOPS=1
       - GENERIC_TIMEZONE=Asia/Baku
       - TZ=Asia/Baku
       - N8N_DIAGNOSTICS_ENABLED=false

@@ -62,6 +62,10 @@ services:
     env_file: .env             # GROQ_API_KEY workflow-larda $env ile istifade olunur
     environment:
       - N8N_SECURE_COOKIE=false
+      # Codespaces/reverse proxy arxasinda WebSocket qirilir və interfeys
+      # «connection lost» verir; SSE proxy-lərdən sabit keçir.
+      - N8N_PUSH_BACKEND=sse
+      - N8N_PROXY_HOPS=1
       - GENERIC_TIMEZONE=Asia/Baku
       - TZ=Asia/Baku
     ports:
