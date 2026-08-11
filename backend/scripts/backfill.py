@@ -102,7 +102,12 @@ def main() -> int:
     total_inserted = total_skipped = 0
     for i in range(0, len(papers), 100):
         batch = papers[i : i + 100]
-        resp = requests.post(API_URL, json={"papers": batch}, timeout=300)
+        # İctimai rejimdə yazma endpoint-i X-API-Key tələb edir; açar yoxdursa
+        # (lokal rejim) başlıq göndərilmir.
+        headers = {}
+        if os.environ.get("ADMIN_API_KEY", "").strip():
+            headers["X-API-Key"] = os.environ["ADMIN_API_KEY"].strip()
+        resp = requests.post(API_URL, json={"papers": batch}, headers=headers, timeout=300)
         resp.raise_for_status()
         result = resp.json()
         total_inserted += result["inserted"]
