@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone
 import requests
 
 from ..config import settings
-from .common import detect_language, normalize_doi, usable
+from .common import detect_language, get_with_retry, normalize_doi, usable
 
 API = "https://api.openalex.org/works"
 CS_FIELD = "fields/17"          # Computer Science
@@ -98,7 +98,7 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
 
 
 def fetch(field_key: str, since: date, limit: int = 100,
-          timeout: int = 45, lang: str = "ru") -> list[dict]:
+          timeout: int = 90, lang: str = "ru") -> list[dict]:
     terms = FIELD_TERMS_RU.get(field_key, []) if lang == "ru" else []
     if not terms:
         return []
@@ -117,8 +117,7 @@ def fetch(field_key: str, since: date, limit: int = 100,
             "cursor": cursor,
             "sort": "publication_date:desc",
         }
-        resp = requests.get(API, params=params, headers=_headers(), timeout=timeout)
-        resp.raise_for_status()
+        resp = get_with_retry(API, params=params, headers=_headers(), timeout=timeout)
         data = resp.json()
         results = data.get("results") or []
         if not results:

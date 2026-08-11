@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 import requests
 
-from .common import clean_abstract, detect_language, normalize_doi, usable
+from .common import clean_abstract, detect_language, get_with_retry, normalize_doi, usable
 
 API = "https://doaj.org/api/search/articles"
 PAGE = 100
@@ -65,7 +65,7 @@ def _parse(article: dict, field_key: str, want_lang: str = "en") -> dict | None:
 
 
 def fetch(field_key: str, since: date, limit: int = 200,
-          timeout: int = 45, lang: str = "en") -> list[dict]:
+          timeout: int = 90, lang: str = "en") -> list[dict]:
     from . import FIELD_TERMS
     from .openalex import FIELD_TERMS_RU
 
@@ -82,9 +82,8 @@ def fetch(field_key: str, since: date, limit: int = 200,
     while len(out) < limit:
         url = f"{API}/{quote(query, safe='')}"
         params = {"pageSize": min(PAGE, limit - len(out)), "page": page, "sort": "created_date:desc"}
-        resp = requests.get(url, params=params, timeout=timeout,
-                            headers={"User-Agent": "PaperMind/1.0"})
-        resp.raise_for_status()
+        resp = get_with_retry(url, params=params, timeout=timeout,
+                              headers={"User-Agent": "PaperMind/1.0"})
         results = resp.json().get("results") or []
         if not results:
             break

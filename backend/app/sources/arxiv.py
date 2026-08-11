@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 import requests
 
 from ..fields import FIELDS
-from .common import clean_abstract, normalize_arxiv_id, usable
+from .common import clean_abstract, get_with_retry, normalize_arxiv_id, usable
 
 API = "http://export.arxiv.org/api/query"
 NS = {"a": "http://www.w3.org/2005/Atom"}
@@ -69,7 +69,7 @@ def _parse_entry(entry: ET.Element, field_key: str) -> dict | None:
 
 
 def fetch(field_key: str, since: date, limit: int = 200,
-          timeout: int = 45, lang: str = "en") -> list[dict]:
+          timeout: int = 120, lang: str = "en") -> list[dict]:
     """Sahəyə uyğun arXiv kateqoriyalarından `since` tarixindən sonrakı məqalələr.
 
     arXiv praktiki olaraq yalnız ingiliscədir — başqa dil istənsə boş qaytarır.
@@ -88,8 +88,7 @@ def fetch(field_key: str, since: date, limit: int = 200,
             f"{API}?search_query={query}&start={start}&max_results={PAGE}"
             "&sortBy=submittedDate&sortOrder=descending"
         )
-        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "PaperMind/1.0"})
-        resp.raise_for_status()
+        resp = get_with_retry(url, timeout=timeout, headers={"User-Agent": "PaperMind/1.0"})
         entries = ET.fromstring(resp.text).findall("a:entry", NS)
         if not entries:
             break

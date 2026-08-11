@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 import requests
 
 from ..config import settings
-from .common import clean_abstract, normalize_doi, usable
+from .common import clean_abstract, get_with_retry, normalize_doi, usable
 
 API = "https://api.crossref.org/works"
 PAGE = 100
@@ -62,7 +62,7 @@ def _parse(item: dict, field_key: str) -> dict | None:
 
 
 def fetch(field_key: str, since: date, limit: int = 200,
-          timeout: int = 45, lang: str = "en") -> list[dict]:
+          timeout: int = 90, lang: str = "en") -> list[dict]:
     from . import FIELD_TERMS
 
     if lang != "en":          # rusdilli məqalələr üçün openalex/doaj işlədilir
@@ -83,8 +83,7 @@ def fetch(field_key: str, since: date, limit: int = 200,
             "sort": "published",
             "order": "desc",
         }
-        resp = requests.get(API, params=params, headers=_headers(), timeout=timeout)
-        resp.raise_for_status()
+        resp = get_with_retry(API, params=params, headers=_headers(), timeout=timeout)
         msg = resp.json().get("message", {})
         items = msg.get("items") or []
         if not items:

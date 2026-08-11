@@ -9,8 +9,53 @@ versiyası kimi görünə bilər. Üç açar üzrə eyniləşdirilir:
 
 import hashlib
 import html
+import logging
 import re
+import time
 import unicodedata
+
+import requests
+
+log = logging.getLogger("papermind.sources")
+
+# Xarici akademik API-lər qeyri-sabitdir: arXiv geniş sorğularda yavaşlayır,
+# Crossref/OpenAlex isə yüklənmə anlarında 5xx qaytarır. Bir timeout bütöv
+# sahəni itirməsin deyə sorğular geri çəkilmə ilə təkrarlanır.
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+def get_with_retry(
+    url: str,
+    *,
+    params: dict | None = None,
+    headers: dict | None = None,
+    timeout: int = 90,
+    attempts: int = 3,
+    backoff: float = 4.0,
+) -> requests.Response:
+    """GET sorğusu; timeout və müvəqqəti server xətalarında təkrar cəhd edir.
+
+    Son cəhd də uğursuz olarsa istisna qaldırılır — çağıran tərəf onu
+    error_logs-a yazır və digər sahələrə davam edir.
+    """
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=timeout)
+            if resp.status_code in RETRY_STATUSES and i < attempts - 1:
+                wait = backoff * (i + 1)
+                log.warning("%s → HTTP %s, %.0f san sonra təkrar", url, resp.status_code, wait)
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            last = exc
+            if i < attempts - 1:
+                wait = backoff * (i + 1)
+                log.warning("%s → %s, %.0f san sonra təkrar", url, type(exc).__name__, wait)
+                time.sleep(wait)
+    raise last if last else RuntimeError(f"{url}: bütün cəhdlər uğursuz")
 
 _DOI_PREFIXES = ("https://doi.org/", "http://doi.org/", "http://dx.doi.org/", "doi:")
 _JATS_TAG = re.compile(r"<[^>]+>")
