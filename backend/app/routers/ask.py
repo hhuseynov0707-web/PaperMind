@@ -60,7 +60,11 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         )
 
     query_en, lang = query_to_english(req.question)
-    blocks = retrieve(db, query_en, top_k=req.top_k, categories=[req.field] if req.field else None)
+    blocks = retrieve(
+        db, req.question, top_k=req.top_k,
+        categories=[req.field] if req.field else None,
+        also=query_en if lang != "en" else None,
+    )
     if not blocks:
         latency = int((time.perf_counter() - t0) * 1000)
         return AskResponse(

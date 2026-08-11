@@ -26,7 +26,12 @@ def semantic_search(
     if field and field not in FIELDS:
         raise HTTPException(status_code=422, detail=f"Naməlum sahə: {field}")
     query_en, lang = query_to_english(q)
-    blocks = retrieve(db, query_en, top_k=max(top_k * 2, 10), categories=[field] if field else None)
+    # Orijinal sorğu əsasdır (model çoxdillidir), tərcümə əlavə siqnal kimi verilir
+    blocks = retrieve(
+        db, q, top_k=max(top_k * 2, 10),
+        categories=[field] if field else None,
+        also=query_en if lang != "en" else None,
+    )
 
     hits, seen = [], set()
     for b in blocks:
