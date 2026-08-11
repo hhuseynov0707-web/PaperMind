@@ -208,6 +208,45 @@ Qeyd: diakritiksiz Azərbaycan mətni üçün birmənalı söz siyahısı işlə
 
 > **Model dəyişdirsən:** vektorların ölçüsü eyni qalsa belə (384), fərqli modellərin vektorları müqayisə oluna bilməz. `scripts/reembed.py` mütləq işlədilməlidir — hər chunk-da hansı modellə hesablandığı (`embedding_model`) saxlanıldığı üçün proses kəsilsə qaldığı yerdən davam edir.
 
+## Keyfiyyət: testlər və benchmark
+
+Sistemin ən kritik funksiyaları (dedup açarları, dil təyini, chunking) **heç vaxt xəta atmır** — səhv işləsələr sadəcə yanlış nəticə qaytarırlar. Ona görə onlar testlə qorunur:
+
+```bash
+docker compose exec backend python -m pytest tests/ -q
+```
+
+**44 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
+
+### Retrieval benchmark
+
+«Axtarış yaxşı işləyir» gözlə təsdiqlənə bilməz. Ölçmə üç şeyi hesablayır: **known-item MRR** (məqalənin başlığı sorğu kimi verilir — başlıq chunk-lara daxil deyil), **sahə dəqiqliyi** (28 sorğu, gözlənilən sahə ilə) və **çarpaz dilli əhatə**.
+
+```bash
+docker compose exec backend python scripts/benchmark.py --compare
+```
+
+Cari nəticələr (korpus 1 047 məqalə, n=60):
+
+| | İngiliscə | Rusca | Azərbaycanca |
+|---|---|---|---|
+| known-item MRR@10 | 0.900 | 0.800 | — |
+| Recall@10 | 98% | 95% | — |
+| Sahə dəqiqliyi P@10 | 61% | 72% | 60% |
+| Median gecikmə | | 66 ms | |
+
+**Retrieval strategiyası ölçmə ilə seçilib**, fərziyyə ilə deyil ([translator.py](backend/app/rag/translator.py)):
+
+| Dil | Əsas vektor | Əlavə | Səbəb (ölçülmüş) |
+|---|---|---|---|
+| `en` | orijinal | — | tərcümə tətbiq olunmur |
+| `ru` | orijinal | tərcümə | orijinal sahə dəqiqliyini 63%→72%, tərcümə MRR-i 0.70→0.80 qaldırır |
+| `az` | tərcümə | — | azərbaycanca vektor səs-küy əlavə edir: tək tərcümə 60%, orijinal qoşulanda 52% |
+
+Benchmark produksiya funksiyasının **özünü** çağırır — ölçülən davranışla istifadəçinin gördüyü davranış uzaqlaşa bilməz.
+
+> Ölçmə iki gizli problemi üzə çıxardı: rusca sorğuların rusdilli korpusu tamamilə görməməsi, və benchmark-ın özünün təkrarlanmaması (`ORDER BY` olmadan eyni konfiqurasiya 0.885 və 0.773 verirdi). Hər ikisi gözlə görünməzdi.
+
 ## Prompt dizaynı
 
 System prompt [backend/app/rag/llm.py](backend/app/rag/llm.py)-dədir. Əsas qaydalar: yalnız verilmiş kontekstə əsaslan, hər iddiaya `[arxiv_id]` istinadı, kontekstdə cavab yoxdursa **açıq etiraf et** (hallüsinasiya qadağası), cavab dili = sual dili.
@@ -272,5 +311,7 @@ papermind/
 │       ├── routers/            # ingest, papers, search, ask, analytics, logs, digests
 │       ├── rag/                # chunker, embedder, retriever, llm, translator
 │       └── static/             # frontend (dashboard)
+│   ├── eval/queries.json       # benchmark sorğu dəsti (28 sorğu, 3 dil)
+│   └── tests/                  # 44 test: dedup, dil, chunking, uçdan-uca
 └── n8n/workflows/              # W1 arXiv · W2 digest · W3 error · W4 çoxmənbəli · W5 rusdilli
 ```
