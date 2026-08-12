@@ -42,6 +42,8 @@ class PaperIn(BaseModel):
     external_id: str | None = Field(default=None, max_length=MAX_ID)
     arxiv_id: str | None = Field(default=None, max_length=MAX_ID)
     doi: str | None = Field(default=None, max_length=MAX_ID)
+    pmid: str | None = Field(default=None, max_length=MAX_ID)
+    openalex_id: str | None = Field(default=None, max_length=MAX_ID)
     primary_category: str | None = Field(default=None, max_length=64)
     categories: list[str] = []
     field_keys: list[str] = []
@@ -69,11 +71,13 @@ class PaperIn(BaseModel):
     @model_validator(mode="after")
     def _fill_identity(self):
         if not self.external_id:
-            self.external_id = self.arxiv_id or self.doi
+            self.external_id = self.arxiv_id or self.doi or self.pmid or self.openalex_id
         if self.source == "arxiv" and not self.arxiv_id and self.external_id:
             self.arxiv_id = self.external_id
         if not self.external_id:
-            raise ValueError("external_id, arxiv_id və ya doi-dən biri tələb olunur")
+            raise ValueError(
+                "identifikator tələb olunur: external_id, arxiv_id, doi, pmid və ya openalex_id"
+            )
         return self
 
 

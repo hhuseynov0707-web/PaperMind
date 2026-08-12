@@ -48,6 +48,8 @@ class Paper(Base):
     external_id: Mapped[str | None] = mapped_column(Text, index=True)
     arxiv_id: Mapped[str | None] = mapped_column(Text, unique=True, index=True)
     doi: Mapped[str | None] = mapped_column(Text, index=True)
+    pmid: Mapped[str | None] = mapped_column(Text, index=True)               # PubMed/Europe PMC
+    openalex_id: Mapped[str | None] = mapped_column(Text, index=True)        # W-prefiksli OpenAlex work id
     title_key: Mapped[str | None] = mapped_column(Text, index=True)          # dedup üçün normallaşdırılmış başlıq
     language: Mapped[str] = mapped_column(Text, index=True, default="en")    # mətnin əlifbasından təyin olunur
     title: Mapped[str] = mapped_column(Text)

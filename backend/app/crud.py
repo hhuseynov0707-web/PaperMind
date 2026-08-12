@@ -34,10 +34,19 @@ _PAPER_LOADS = (
 
 # ---------- Ingest ----------
 
+def _paper_ids(paper: models.Paper) -> dict:
+    """Mövcud sətrin identifikator sözlüyü — birləşmə qərarı üçün."""
+    return {
+        "doi": paper.doi,
+        "arxiv_id": paper.arxiv_id,
+        "pmid": paper.pmid,
+        "openalex_id": paper.openalex_id,
+    }
+
+
 def _find_existing(
     db: Session,
-    doi: str | None,
-    arxiv_id: str | None,
+    ids: dict,
     tkey: str | None,
     authors: list[str] | None = None,
 ):
@@ -55,7 +64,7 @@ def _find_existing(
     sətir uyğun gələndə həmişə ən köhnəsi seçilir, Postgres-in ixtiyarına
     buraxılmır.
     """
-    from .sources.common import title_merge_allowed
+    from .sources.common import ID_KEYS, title_merge_allowed
 
     def _first(condition):
         return db.scalars(
@@ -66,25 +75,31 @@ def _find_existing(
             .limit(1)
         ).first()
 
-    if doi:
-        hit = _first(models.Paper.doi == doi)
-        if hit is not None:
-            return hit
-    if arxiv_id:
-        hit = _first(models.Paper.arxiv_id == arxiv_id)
-        if hit is not None:
-            return hit
+    # Güclü açarlar: uyğunluq tapılan kimi qəbul olunur
+    columns = {
+        "doi": models.Paper.doi,
+        "arxiv_id": models.Paper.arxiv_id,
+        "pmid": models.Paper.pmid,
+        "openalex_id": models.Paper.openalex_id,
+    }
+    for key in ID_KEYS:
+        value = ids.get(key)
+        if value:
+            hit = _first(columns[key] == value)
+            if hit is not None:
+                return hit
+
+    # Zəif açar: yalnız icazə verilirsə
     if tkey:
         hit = _first(models.Paper.title_key == tkey)
         if hit is not None and title_merge_allowed(
-            doi, arxiv_id, authors or [],
-            hit.doi, hit.arxiv_id, [a.name for a in hit.authors],
+            ids, authors or [], _paper_ids(hit), [a.name for a in hit.authors]
         ):
             return hit
     return None
 
 
-def _merge_source(db: Session, paper: models.Paper, p: PaperIn, doi: str | None) -> bool:
+def _merge_source(db: Session, paper: models.Paper, p: PaperIn, ids: dict) -> bool:
     """Mövcud məqaləyə yeni mənbəni bağlayır və çatışmayan sahələri doldurur.
 
     True qaytarır = bu, yeni mənbə idi (birləşdirildi); False = artıq tanınırdı.
@@ -100,15 +115,33 @@ def _merge_source(db: Session, paper: models.Paper, p: PaperIn, doi: str | None)
         )
 
     # Zənginləşdirmə: bir mənbədə olmayan məlumat digərində ola bilər
-    if not paper.doi and doi:
-        paper.doi = doi
-    if not paper.arxiv_id and p.arxiv_id:
-        paper.arxiv_id = p.arxiv_id
+    for key, value in ids.items():
+        if value and not getattr(paper, key):
+            setattr(paper, key, value)
     if not paper.pdf_url and p.pdf_url:
         paper.pdf_url = p.pdf_url
     if p.field_keys:
         paper.field_keys = sorted(set(paper.field_keys or []) | set(p.field_keys))
     return is_new_source
+
+
+# Abstraktı əvəz etmək üçün lazım olan minimum üstünlük. Kiçik fərq (formatlama,
+# boşluq) üçün chunk-ları yenidən hesablamaq baha başa gəlir və dəyəri yoxdur.
+_ABSTRACT_GAIN = 1.25
+
+
+def _better_abstract(current: str | None, incoming: str | None) -> str | None:
+    """Gələn abstrakt nəzərəçarpacaq dərəcədə doludursa onu qaytarır (audit D6).
+
+    Real hal: arXiv abstraktı kəsik gəlir, Crossref-də tam versiyası olur.
+    Birləşmə zamanı köhnə (kasıb) mətn saxlanılırdı — yəni daha yaxşı data
+    əldə olunduğu halda atılırdı.
+    """
+    if not incoming:
+        return None
+    if not current:
+        return incoming
+    return incoming if len(incoming) >= len(current) * _ABSTRACT_GAIN else None
 
 
 def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
@@ -124,6 +157,8 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
         detect_language,
         normalize_arxiv_id,
         normalize_doi,
+        normalize_openalex_id,
+        normalize_pmid,
         title_key,
         title_merge_allowed,
     )
@@ -147,37 +182,52 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
     merged = 0
     # Partiya daxilində də dedup — eyni iş iki mənbədən eyni anda gələ bilər
     batch_keys: dict[str, models.Paper] = {}
+    rechunked: set[int] = set()   # bir məqalə partiyada yalnız bir dəfə yenidən chunk-lanır
 
     for p in papers:
-        doi = normalize_doi(p.doi)
-        arxiv_id = normalize_arxiv_id(p.arxiv_id)
+        ids = {
+            "doi": normalize_doi(p.doi),
+            "arxiv_id": normalize_arxiv_id(p.arxiv_id),
+            "pmid": normalize_pmid(p.pmid),
+            "openalex_id": normalize_openalex_id(p.openalex_id),
+        }
         tkey = title_key(p.title)
+        strong = [v for v in ids.values() if v]
 
         # Partiya daxilində də eyni prioritet: güclü açarlar sərbəst, başlıq şərtli
-        hit = next((batch_keys[k] for k in (doi, arxiv_id) if k and k in batch_keys), None)
+        hit = next((batch_keys[k] for k in strong if k in batch_keys), None)
         if hit is None and tkey and tkey in batch_keys:
             cand = batch_keys[tkey]
-            if title_merge_allowed(
-                doi, arxiv_id, p.authors,
-                cand.doi, cand.arxiv_id, [a.name for a in cand.authors],
-            ):
+            if title_merge_allowed(ids, p.authors, _paper_ids(cand), [a.name for a in cand.authors]):
                 hit = cand
         if hit is None:
-            hit = _find_existing(db, doi, arxiv_id, tkey, p.authors)
+            hit = _find_existing(db, ids, tkey, p.authors)
 
         if hit is not None:
-            if _merge_source(db, hit, p, doi):
+            if _merge_source(db, hit, p, ids):
                 merged += 1
-            for k in (doi, arxiv_id, tkey):
-                if k:
-                    batch_keys[k] = hit
+
+            # D6: daha dolu abstrakt gəlibsə onu götürürük. Mətn dəyişdiyi üçün
+            # köhnə chunk-lar etibarsızdır — silinir və eyni partiyada yenidən
+            # embed olunur (ayrıca embedding çağırışı olmasın deyə chunk_map-ə düşür).
+            better = _better_abstract(hit.abstract, p.abstract)
+            if better and id(hit) not in rechunked:
+                hit.abstract = better
+                hit.chunks.clear()
+                chunk_map.append((hit, chunk_text(better)))
+                rechunked.add(id(hit))
+
+            for k in strong + ([tkey] if tkey else []):
+                batch_keys[k] = hit
             continue
 
         row = models.Paper(
             source=p.source,
             external_id=p.external_id,
-            arxiv_id=arxiv_id,
-            doi=doi,
+            arxiv_id=ids["arxiv_id"],
+            doi=ids["doi"],
+            pmid=ids["pmid"],
+            openalex_id=ids["openalex_id"],
             title_key=tkey,
             language=p.language or detect_language(p.title, p.abstract),
             title=p.title,
@@ -190,9 +240,8 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
         row.sources.append(
             models.PaperSource(source=p.source, external_id=p.external_id, url=p.pdf_url)
         )
-        for k in (doi, arxiv_id, tkey):
-            if k:
-                batch_keys[k] = row
+        for k in strong + ([tkey] if tkey else []):
+            batch_keys[k] = row
         for name in dict.fromkeys(p.authors):
             author = author_cache.get(name)
             if author is None:

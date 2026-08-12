@@ -33,7 +33,18 @@ DDL = [
     "CREATE INDEX IF NOT EXISTS ix_papers_title_key ON papers (title_key)",
     "CREATE INDEX IF NOT EXISTS ix_papers_source ON papers (source)",
     "CREATE INDEX IF NOT EXISTS ix_papers_field_keys ON papers USING gin (field_keys)",
+    # §4: DOI və arXiv ID-dən əlavə kanonik identifikatorlar. PMID tibb/biologiya
+    # üçün əsas açardır (Europe PMC/PubMed), OpenAlex ID isə çoxdilli korpusda
+    # DOI-su olmayan işləri bağlayır.
+    "ALTER TABLE papers ADD COLUMN IF NOT EXISTS pmid text",
+    "ALTER TABLE papers ADD COLUMN IF NOT EXISTS openalex_id text",
+    "CREATE INDEX IF NOT EXISTS ix_papers_pmid ON papers (pmid)",
+    "CREATE INDEX IF NOT EXISTS ix_papers_openalex_id ON papers (openalex_id)",
 ]
+
+DOI_UNIQUE_INDEX = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_papers_doi ON papers (doi) WHERE doi IS NOT NULL"
+)
 
 # Vektor axtarışı üçün ANN indeksi. Bunsuz hər sorğu bütün chunks cədvəlini
 # ardıcıl skan edir — bir neçə min sətirdə hiss olunmur, yüz minlərlə sətirdə
@@ -81,6 +92,24 @@ def run() -> None:
     except Exception as exc:
         log.warning("HNSW indeksi yaradıla bilmədi (sistem indekssiz işləyəcək): %s", exc)
 
+    # DOI unikallığı (audit D3). Dedup yalnız tətbiq qatında idi — paralel ingest
+    # eyni DOI-nu iki sətir kimi yaza bilərdi. Partial index, çünki DOI-suz
+    # məqalələr (arXiv preprintləri) çoxdur və NULL-lar unikallıq pozmur.
+    # Ayrıca tranzaksiyada: bazada artıq dublikat varsa bu addım uğursuz olur,
+    # amma qalan miqrasiyanı dayandırmamalıdır.
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(DOI_UNIQUE_INDEX))
+        log.info("DOI unikallıq indeksi hazırdır")
+    except Exception as exc:
+        log.warning(
+            "DOI unikallıq indeksi yaradıla bilmədi — bazada təkrar DOI ola bilər: %s", exc
+        )
+
+    # Köhnə sətirlərin bərpası. DİQQƏT: bu blok əvvəllər səhvən `except`-in
+    # içində idi — yəni HNSW uğurlu olanda HEÇ İŞLƏMİRDİ, uğursuz olanda isə
+    # bağlanmış `conn` ilə çökürdü. İndi öz tranzaksiyasındadır.
+    with engine.begin() as conn:
         # Köhnə sətirlər arXiv mənşəlidir
         conn.execute(text("""
             UPDATE papers

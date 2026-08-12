@@ -11,7 +11,14 @@ from datetime import date, datetime, timezone
 import requests
 
 from ..config import settings
-from .common import detect_language, get_with_retry, normalize_doi, usable
+from .common import (
+    detect_language,
+    get_with_retry,
+    normalize_doi,
+    normalize_openalex_id,
+    normalize_pmid,
+    usable,
+)
 
 API = "https://api.openalex.org/works"
 CS_FIELD = "fields/17"          # Computer Science
@@ -83,7 +90,13 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
         return None
 
     doi = normalize_doi(work.get("doi"))
-    external_id = doi or (work.get("id") or "").rsplit("/", 1)[-1]
+    # OpenAlex work id-si onsuz da gəlirdi, amma yalnız external_id üçün işlədilib
+    # atılırdı. İndi kanonik açar kimi saxlanılır (§4): DOI-suz işləri — çoxdilli
+    # korpusda bunlar azlıq təşkil etmir — mənbələr arası bağlamağa imkan verir.
+    openalex_id = normalize_openalex_id(work.get("id"))
+    # PMID OpenAlex-də ids blokunda gəlir; tibb korpusu üçün ən güclü açardır
+    pmid = normalize_pmid((work.get("ids") or {}).get("pmid"))
+    external_id = doi or openalex_id
     if not external_id:
         return None
 
@@ -105,6 +118,8 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
         "external_id": external_id,
         "arxiv_id": None,
         "doi": doi,
+        "pmid": pmid,
+        "openalex_id": openalex_id,
         "title": title,
         "abstract": abstract,
         "authors": authors[:20],

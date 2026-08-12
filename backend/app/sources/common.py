@@ -87,6 +87,26 @@ def normalize_arxiv_id(value: str | None) -> str | None:
     return v or None
 
 
+def normalize_pmid(value: str | None) -> str | None:
+    """`PMID: 12345678`, `pubmed/12345678`, `12345678` → `12345678`.
+
+    PMID sırf rəqəmdir; rəqəmdən başqa nə varsa atılır. Uyğun gəlməyən dəyər
+    saxlanmır — səhv PMID yanlış birləşməyə səbəb olar.
+    """
+    if not value:
+        return None
+    digits = re.sub(r"\D", "", str(value))
+    return digits or None
+
+
+def normalize_openalex_id(value: str | None) -> str | None:
+    """`https://openalex.org/W2741809807` → `W2741809807`."""
+    if not value:
+        return None
+    v = str(value).strip().rstrip("/").rsplit("/", 1)[-1].upper()
+    return v if re.fullmatch(r"W\d+", v) else None
+
+
 def title_key(title: str | None) -> str | None:
     """Başlığı deduplikasiya açarına çevirir: diakritika, durğu işarəsi və boşluqdan asılı olmayan hash."""
     if not title:
@@ -140,21 +160,19 @@ def detect_language(*parts: str | None) -> str:
 # --------------------------------------------------------------------------
 # Bu funksiyalar DB-dən asılı deyil ki, test oluna bilsinlər.
 
-def has_conflicting_ids(
-    doi_a: str | None, arxiv_a: str | None,
-    doi_b: str | None, arxiv_b: str | None,
-) -> bool:
+# §4-ün kanonik identifikatorları — güclüdən zəifə. Yeni mənbə (məs. Europe PMC)
+# əlavə olunanda yalnız bu siyahıya bir sətir düşür.
+ID_KEYS = ("doi", "arxiv_id", "pmid", "openalex_id")
+
+
+def has_conflicting_ids(a: dict, b: dict) -> bool:
     """İki qeydin identifikatorları bir-birini İNKAR edirmi?
 
     Yalnız hər iki tərəfdə eyni növ identifikator olub FƏRQLİ olduqda True.
     Bir tərəfdə yoxdursa ziddiyyət deyil — sadəcə məlumat çatışmazlığıdır
     (arXiv preprint-in DOI-su olmaya bilər, elə həmin iş Crossref-də DOI ilə gəlir).
     """
-    if doi_a and doi_b and doi_a != doi_b:
-        return True
-    if arxiv_a and arxiv_b and arxiv_a != arxiv_b:
-        return True
-    return False
+    return any(a.get(k) and b.get(k) and a[k] != b[k] for k in ID_KEYS)
 
 
 def _surnames(names: list[str]) -> set[str]:
@@ -172,8 +190,8 @@ def _surnames(names: list[str]) -> set[str]:
 
 
 def title_merge_allowed(
-    doi_a: str | None, arxiv_a: str | None, authors_a: list[str],
-    doi_b: str | None, arxiv_b: str | None, authors_b: list[str],
+    ids_a: dict, authors_a: list[str],
+    ids_b: dict, authors_b: list[str],
 ) -> bool:
     """Yalnız BAŞLIQ üst-üstə düşəndə birləşməyə icazə verilirmi?
 
@@ -188,7 +206,7 @@ def title_merge_allowed(
     Müəllif məlumatı olmayan tərəf varsa 2-ci şərt tətbiq edilmir — məlumatın
     yoxluğu sübut deyil.
     """
-    if has_conflicting_ids(doi_a, arxiv_a, doi_b, arxiv_b):
+    if has_conflicting_ids(ids_a, ids_b):
         return False
     if authors_a and authors_b:
         return bool(_surnames(authors_a) & _surnames(authors_b))
