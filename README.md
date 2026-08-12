@@ -10,12 +10,13 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 
 - 🤖 **Sual-cavab (RAG):** sual verirsən → sistem öz bazasından ən uyğun abstraktları tapır (pgvector cosine axtarışı) → Groq LLM mənbəli cavab qaytarır
 - 🔎 **Semantik axtarış:** açar söz yox, *məna* üzrə axtarış
-- 📈 **Trend analitikası:** həftələr üzrə kateqoriya paylanması, ən aktiv müəlliflər (Redis-də keşlənir)
+- 📈 **Trend analitikası:** həftələr üzrə **5 fənn qrupunun** paylanması, ən aktiv müəlliflər (Redis-də keşlənir)
 - 🔄 **Avtomatik yenilənmə:** n8n hər gün üç dəfə yığım aparır — arXiv (09:00), Crossref+DOAJ (10:30), rusdilli mənbələr (11:30). Hamısında retry + error handling
 - 📰 **Həftəlik AI icmalı:** n8n bazar günləri həftənin statistikasını Groq-a verib icmal yazdırır
 - 🌐 **3 dilli interfeys (AZ / RU / EN)** və **həqiqi çoxdilli axtarış:** çoxdilli embedding modeli sayəsində rusca sorğu ingiliscə məqalələri də tapır (RU↔EN oxşarlıq testdə 0.79). Cavab həmişə sənin dilində qayıdır
 - 🇷🇺 **Rusdilli korpus:** rus interfeysini seçən istifadəçi öz dilində məqalələr də tapır. Mənbənin dil etiketinə güvənilmir — mətnin **öz əlifbası** yoxlanılır, çünki rus jurnalları çox vaxt ingiliscə abstrakt dərc edir
-- 🗂 **8 texnologiya sahəsi:** süni intellekt, kompüter görməsi, kibertəhlükəsizlik, robototexnika, proqram mühəndisliyi, data sistemləri, şəbəkələr, HCI — yan paneldən sahə seçəndə axtarış və sual-cavab yalnız orada gedir
+- 🗂 **19 elm sahəsi, 5 fənn qrupu:** texnologiya, təbiət elmləri (fizika, biologiya, kimya, astronomiya, Yer elmləri), formal elmlər (riyaziyyat, statistika), tibb və sağlamlıq, sosial elmlər — yan paneldən sahə seçəndə axtarış, sual-cavab və vərəqlənən dəst yalnız orada işləyir
+- 📖 **Vərəqlənən məqalə dəsti:** son həftənin məqalələri bir-bir göstərilir; ox düymələri, klaviatura və ya sürüşdürmə ilə vərəqləyirsən, xoşuna gələni açırsan
 - ✨ **"Discover" paneli:** bazadan təsadüfi seçmə məqalələr yanda sakit şəkildə fırlanır (15 saniyəlik interval, kursor üstünə gələndə dayanır)
 - 🩺 **Sistem statusu:** Postgres, pgvector, Redis, Groq açarı və son ingest — hamısı `/health/services`-dən real yoxlanır, heç bir status fərz edilmir
 - 🔗 **Çoxmənbəli yığım + deduplikasiya:** arXiv (preprint), Crossref (nəşr olunmuş), DOAJ (açıq giriş), OpenAlex (çoxdilli). Eyni iş bir neçə mənbədə varsa **bir dəfə** göstərilir, mənbələrin hamısı isə qeyd olunur
@@ -59,6 +60,8 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 
 **Tələblər:** Docker Desktop + [Groq API açarı](https://console.groq.com/keys) (pulsuz).
 
+> **Kompüterin zəifdirsə** (8 GB RAM və ya az): layihədə [.devcontainer](.devcontainer/devcontainer.json) var — GitHub-da **Code → Codespaces → Create codespace** ilə brauzerdə 8 GB-lıq mühit açılır və bütün stack orada işləyir. Aylıq 60 saat pulsuzdur.
+
 ```bash
 # 1. .env faylını doldur (GROQ_API_KEY sətrini)
 cp .env.example .env
@@ -69,8 +72,16 @@ docker compose up -d --build
 # 3. İlk datanı yüklə — bütün mənbələrdən (~15-20 dəq, mənbələrin rate limit-i üzündən)
 docker compose exec backend python scripts/backfill_multi.py --days 14 --limit 80
 
-# Yalnız rusdilli məqalələr üçün:
-docker compose exec backend python scripts/backfill_multi.py --sources openalex,doaj --days 30
+# Təbiət və formal elmlər (arXiv-də güclü təmsil olunur):
+docker compose exec backend python scripts/backfill_multi.py --sources arxiv \
+  --fields physics,astronomy,biology,math,chemistry,earth,statistics,economics --days 14 --limit 50
+
+# Tibb və psixologiya (arXiv-də yoxdur, mətn sorğusu ilə):
+docker compose exec backend python scripts/backfill_multi.py --sources crossref,doaj \
+  --fields medicine,psychology --days 30 --limit 40
+
+# Rusdilli korpus:
+docker compose exec backend python scripts/backfill_multi.py --sources openalex,doaj --lang ru --days 30
 ```
 
 > **Embedding modelini dəyişsən** bütün vektorları yenidən hesablamaq lazımdır — fərqli
@@ -84,7 +95,7 @@ Sonra:
 - **Dashboard:** http://localhost:8000
 - **API sənədləri (Swagger):** http://localhost:8000/docs
 - **n8n:** http://localhost:5679
-- **DataGrip:** `localhost:5433`, db/user/parol: `elmradari`
+- **DataGrip:** `localhost:5433`, db/user/parol: `elmradari` *(layihənin ilk adından qalıb — baza həcmi ilə birlikdə saxlanılıb ki, mövcud volume itməsin)*
 
 ### n8n workflow-larının qurulması (bir dəfəlik)
 
@@ -128,7 +139,8 @@ curl -i "http://localhost:8000/api/analytics/trends?weeks=8"
 | GET | `/api/papers` | Filter + səhifələmə ilə siyahı |
 | GET | `/api/papers/featured` | "Kəşf et" paneli üçün təsadüfi seçmələr |
 | POST | `/api/ingest/pull` | Server özü mənbədən çəkir (`source`, `lang`, `fields`, `days`) |
-| GET | `/api/fields` | 8 sahə + say + kateqoriya siyahısı (keşli) |
+| GET | `/api/fields` | 19 sahə + qrup + say + kateqoriya siyahısı (keşli) |
+| GET | `/api/papers?field=&days=` | Sahə üzrə süzülmüş siyahı (vərəqlənən dəst bunu işlədir) |
 | GET | `/health` · `/health/services` | Sadə health · Postgres/pgvector/Redis/Groq real yoxlaması |
 | GET | `/api/search?q=&field=` | Semantik axtarış (pgvector), sahə üzrə daralda bilər |
 | POST | `/api/ask` | RAG sual-cavab (Redis keşli), `field` ilə daralda bilər |
@@ -142,7 +154,7 @@ curl -i "http://localhost:8000/api/analytics/trends?weeks=8"
 
 | Mənbə | Nə verir | Qeyd |
 |---|---|---|
-| **arXiv** | Preprintlər, cs.* və eess.* kateqoriyaları | Sahə **real təsnifatdan** çıxarılır |
+| **arXiv** | Preprintlər — 76 kateqoriya (`cs.*`, `physics.*`, `math.*`, `q-bio.*`, `econ.*`, `stat.*`…) | Sahə **real təsnifatdan** çıxarılır |
 | **Crossref** | Nəşr olunmuş jurnal məqalələri, DOI reyestri | Abstrakt JATS XML-dən təmizlənir |
 | **DOAJ** | Açıq girişli, resenziyadan keçmiş məqalələr | Həm ingiliscə, həm rusca sorğu dəstəkləyir |
 | **OpenAlex** | Çoxdilli akademik reyestr (240M+ iş) | **Rusdilli korpusun əsas mənbəyi** |
@@ -189,11 +201,25 @@ Hər mənbə ayrıca item olduğu üçün biri xəta versə digəri dayanmır (`
 
 ## Sahələr necə işləyir?
 
-[fields.py](backend/app/fields.py) arXiv kateqoriyalarını 8 texnologiya sahəsinə qruplaşdırır (məs. `ai` → cs.AI, cs.LG, cs.CL, cs.NE, stat.ML). Sahə seçiləndə retrieval `paper_categories` cədvəli üzərindən süzülür — yəni **cross-listing** də nəzərə alınır: əsas kateqoriyası cs.LG olan, amma cs.CR-ə də əlavə edilmiş məqalə kibertəhlükəsizlik axtarışında görünür.
+[fields.py](backend/app/fields.py) iki səviyyəli taksonomiya saxlayır — **5 fənn qrupu, 19 sahə**:
+
+| Qrup | Sahələr |
+|---|---|
+| Texnologiya | süni intellekt · kompüter görməsi · kibertəhlükəsizlik · robototexnika · proqram mühəndisliyi · data sistemləri · şəbəkələr · HCI |
+| Təbiət elmləri | fizika · astronomiya · kimya · biologiya · Yer elmləri |
+| Formal elmlər | riyaziyyat · statistika |
+| Tibb və sağlamlıq | tibb · nevrologiya |
+| Sosial elmlər | iqtisadiyyat · psixologiya |
+
+76 arXiv kateqoriyası sahələrə xəritələnib (`quant-ph` → fizika, `q-bio.*` → biologiya, `econ.*` → iqtisadiyyat). arXiv-də qarşılığı olmayan sahələr (tibb, psixologiya) boş siyahı ilə qalır və yalnız mətn sorğusu ilə yığılır.
+
+Süzgəc `field_keys` massivi üzərindən işləyir — o, **bütün mənbələr** üçün təyin olunur (`primary_category` isə yalnız arXiv-də doludur). arXiv məqalələrində sahə **real təsnifatdan** çıxarılır, ona görə cross-listing nəzərə alınır: əsas kateqoriyası `cs.LG` olan, amma `cs.CR`-ə də əlavə edilmiş məqalə kibertəhlükəsizlik axtarışında görünür.
 
 Nümunə: eyni `attack detection` sorğusu kibertəhlükəsizlik sahəsində intrusion detection məqalələri, robototexnikada isə robot hijacking məqalələri qaytarır.
 
-arXiv-in xam kodları (`cs.LG`, `cs.CV`, `cs.RO`...) interfeysdə oxunaqlı adlara çevrilir — "Maşın öyrənməsi", "Kompüter görməsi", "Robototexnika". Kodun özü tooltip-də (`title`) qalır ki, mütəxəssis üçün də dəqiqlik itməsin. Tərcümə cədvəli [app.js](backend/app/static/app.js)-dəki `CAT_NAMES`-dədir, üç dil üçün.
+arXiv-in xam kodları (`cs.LG`, `cs.CV`, `quant-ph`...) interfeysdə oxunaqlı adlara çevrilir; kodun özü tooltip-də qalır ki, mütəxəssis üçün dəqiqlik itməsin.
+
+> **Yeni sahə əlavə etmək:** `fields.py`-a bir sətir, `sources/__init__.py`-a ingiliscə terminlər, `openalex.py`-a rusca qarşılıqları, `app.js`-ə üç dildə ad. Retrieval, süzgəc və analitika kodu dəyişmir.
 
 ## Çoxdilli axtarış necə işləyir?
 
@@ -233,7 +259,7 @@ docker compose exec backend python -m pytest tests/ -q
 docker compose exec backend python scripts/benchmark.py --compare
 ```
 
-Cari nəticələr (korpus 1 047 məqalə, n=60):
+Cari nəticələr (n=60, ölçmə anında korpus 1 047 məqalə idi):
 
 | | İngiliscə | Rusca | Azərbaycanca |
 |---|---|---|---|
@@ -256,9 +282,34 @@ Benchmark produksiya funksiyasının **özünü** çağırır — ölçülən da
 
 ## Prompt dizaynı
 
-System prompt [backend/app/rag/llm.py](backend/app/rag/llm.py)-dədir. Əsas qaydalar: yalnız verilmiş kontekstə əsaslan, hər iddiaya `[arxiv_id]` istinadı, kontekstdə cavab yoxdursa **açıq etiraf et** (hallüsinasiya qadağası), cavab dili = sual dili.
+System prompt [backend/app/rag/llm.py](backend/app/rag/llm.py)-dədir. Əsas qaydalar: yalnız verilmiş kontekstə əsaslan, hər iddiaya mənbə istinadı, kontekstdə cavab yoxdursa **açıq etiraf et** (hallüsinasiya qadağası), cavab dili = sual dili.
+
+İstinad etiketi `arxiv_id → doi → id:N` ardıcıllığı ilə seçilir. Bu vacibdir: korpusun yarıdan çoxu arXiv-dən kənardır, yalnız `arxiv_id`-yə güvənsək o məqalələr kontekstə `[None]` kimi düşür və LLM eyni etiketi bir neçə fərqli işə yapışdırır.
 
 Yoxlanması: bazada olmayan mövzu soruş (məs. "aşpazlıq resepti") — sistem "tapılmadı" deməlidir, uydurmamalıdır.
+
+## İctimai rejim və deploy
+
+Lokal mühitdə bütün endpoint-lər açıqdır. Portu internetə açmazdan **əvvəl** `.env`-də ictimai rejimi qoşmaq lazımdır — əks halda hər kəs bazaya yaza və Groq balansını yandıra bilər:
+
+```bash
+PUBLIC_MODE=true
+ADMIN_API_KEY=<uzun təsadüfi sətir>   # openssl rand -hex 32
+TRUST_PROXY=true                      # yalnız Caddy/nginx arxasındasa
+```
+
+Bu rejimdə [security.py](backend/app/security.py):
+
+| Qoruma | Dəyər | Harada |
+|---|---|---|
+| Yazma endpoint-ləri (`/api/ingest*`, `/api/digests`, `/api/logs/error`) | `X-API-Key` tələb olunur | `require_admin_key()` |
+| LLM sualı | 20 / saat / IP | `ASK_RATE_LIMIT` |
+| Günlük LLM tavanı (hamı üçün) | 500 | `ASK_DAILY_BUDGET` |
+| Semantik axtarış | 120 / saat / IP | `SEARCH_RATE_LIMIT` |
+
+Limit aşılanda `429` qayıdır və interfeys onu üç dildə ayrıca mesajla göstərir (ümumi «xəta baş verdi» yox).
+
+Serverə çıxarma [DEPLOY.md](DEPLOY.md)-də addım-addım yazılıb: `scripts/server-setup.sh` (Docker + firewall + swap), `scripts/preflight.sh` (13 yoxlama — açar boşdursa, port açıqdırsa xəbərdarlıq verir), sonra `docker-compose.prod.yml` + `Caddyfile` ilə avtomatik HTTPS. **n8n prod-da `expose` ilə qalır, `ports` ilə yox** — admin panelinə yalnız SSH tuneli ilə girilir. `scripts/backup.sh` gündəlik `pg_dump` alır.
 
 ## Tez-tez çıxan problemlər
 
@@ -272,15 +323,19 @@ Yoxlanması: bazada olmayan mövzu soruş (məs. "aşpazlıq resepti") — siste
 | `/api/ask` → 503 | `.env`-də `GROQ_API_KEY` boşdur; doldur və `docker compose restart backend n8n` |
 | n8n-dən backend-ə çatmır | URL `http://backend:8000` olmalıdır (`localhost` yox — docker network qaydası) |
 | Backfill boş qayıdır | arXiv 3 san/sorğu limitini yoxla; internet bağlantısını yoxla |
+| Backfill `401 Unauthorized` verir | `PUBLIC_MODE=true`-dur, amma `ADMIN_API_KEY` təyin olunmayıb — skript açarı mühitdən oxuyur |
+| Trend paneli köhnə data göstərir | Analitika 6 saat keşlənir: `docker compose exec -T backend python -c "from app import cache; cache.invalidate('analytics:*')"` |
+| n8n interfeysi «connection lost» | Reverse proxy arxasında WebSocket qırılır — compose-da `N8N_PUSH_BACKEND=sse` var; workflow-ları CLI ilə də aktivləşdirmək olar |
 
 ## 3 dəqiqəlik demo ssenarisi
 
 1. **(0:00)** `docker compose ps` — 4 servis healthy. Brauzerdə dashboard: məqalə sayı, son yeniləmə görünür.
-2. **(0:30)** Semantik axtarış: *"hallucination detection in LLMs"* — nəticələr oxşarlıq faizi ilə gəlir. Qeyd et: bu, keyword axtarışı deyil, məna axtarışıdır.
+2. **(0:30)** Semantik axtarış: *"hallucination detection in LLMs"* — nəticələr oxşarlıq faizi ilə gəlir. Qeyd et: bu, keyword axtarışı deyil, məna axtarışıdır. Sonra yan paneldən **Fizika** seç və eyni sorğunu təkrarla — nəticələr tamam dəyişir.
 3. **(1:00)** Sual ver: *"RAG sistemlərində retrieval-ı necə yaxşılaşdırırlar?"* — mənbəli cavab, `[arxiv_id]` istinadları. **Eyni sualı təkrar ver** → ⚡ cache badge, latency 2-5 saniyədən <100 ms-ə düşür. Bu, Redis-in canlı sübutudur.
-4. **(1:45)** Trend qrafiki + `curl -i` ilə `X-Cache: MISS→HIT` nümayişi.
-5. **(2:15)** n8n: `W1 - daily_ingest`-i əl ilə Execute et → dashboard-da "Son ingest-lər" yenilənir. Sonra **backend-i söndür** (`docker compose stop backend`), W1-i yenidən işlət → retry-lar işləyir, sonda W3 xətanı DB-yə yazır → backend-i qaldır, dashboard-da qırmızı xəta sətrini göstər. *(Bu hissə error handling-in canlı sübutudur.)*
-6. **(3:00)** `/docs` səhifəsi: bütün Pydantic modelləri.
+4. **(1:30)** **RU** düyməsi → rusca sorğu ver (*"защита информации и криптография"*) — nəticələrdə həm rusca, həm ingiliscə məqalələr gəlir. Çoxdilli modelin canlı sübutudur.
+5. **(2:00)** Trend qrafiki (5 fənn qrupu) + `curl -i` ilə `X-Cache: MISS→HIT` nümayişi. Yanında benchmark rəqəmlərini göstər: `docker compose exec backend python scripts/benchmark.py`
+6. **(2:30)** n8n: `W1 - daily_ingest`-i əl ilə Execute et → dashboard-da "Son ingest-lər" yenilənir. Sonra **backend-i söndür** (`docker compose stop backend`), W1-i yenidən işlət → retry-lar işləyir, sonda W3 xətanı DB-yə yazır → backend-i qaldır, dashboard-da qırmızı xəta sətrini göstər. *(Bu hissə error handling-in canlı sübutudur.)*
+7. **(3:00)** `/docs` səhifəsi: bütün Pydantic modelləri.
 
 ## Qovluq strukturu
 
@@ -299,26 +354,40 @@ papermind/
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── eval/queries.json       # benchmark sorğu dəsti (28 sorğu, 3 dil)
+│   ├── tests/                  # 44 test: dedup, dil, chunking, uçdan-uca
 │   ├── scripts/
 │   │   ├── backfill.py         # yalnız arXiv (köhnə, sadə)
-│   │   ├── backfill_multi.py   # bütün mənbələr + dil seçimi
+│   │   ├── backfill_multi.py   # bütün mənbələr + dil seçimi (--lang ru)
+│   │   ├── benchmark.py        # axtarış keyfiyyəti: MRR@10, P@10, dil əhatəsi
 │   │   └── reembed.py          # model dəyişəndə vektorların bərpası
 │   └── app/
 │       ├── main.py             # FastAPI + lifespan + /health/services
-│       ├── config.py           # pydantic-settings
+│       ├── config.py           # pydantic-settings (DB URL SQLAlchemy ilə qurulur)
 │       ├── migrate.py          # idempotent sxem miqrasiyası (Alembic-siz)
 │       ├── security.py         # API açarı + IP limitləri (ictimai rejim)
 │       ├── database.py         # SQLAlchemy engine/session
 │       ├── models.py           # 11 cədvəl (papers, chunks+vector, paper_sources, M2M, loglar)
 │       ├── schemas.py          # Pydantic modelləri
-│       ├── crud.py             # dedup upsert, analitika SQL
+│       ├── crud.py             # dedup upsert, analitika SQL (trendlər fənn qrupları üzrə)
 │       ├── cache.py            # Redis helper (get_or_set, invalidate, ping)
-│       ├── fields.py           # sahə → arXiv kateqoriya xəritəsi
-│       ├── sources/            # arxiv, crossref, doaj, openalex + common (dedup açarları, dil)
+│       ├── fields.py           # 19 sahə / 5 qrup → 76 arXiv kateqoriyası
+│       ├── sources/            # arxiv, crossref, doaj, openalex + common (dedup açarları, dil, retry)
 │       ├── routers/            # ingest, papers, search, ask, analytics, logs, digests
 │       ├── rag/                # chunker, embedder, retriever, llm, translator
-│       └── static/             # frontend (dashboard)
-│   ├── eval/queries.json       # benchmark sorğu dəsti (28 sorğu, 3 dil)
-│   └── tests/                  # 44 test: dedup, dil, chunking, uçdan-uca
+│       └── static/             # frontend: 3 dilli konsol, vərəqlənən dəst, trend qrafiki
 └── n8n/workflows/              # W1 arXiv · W2 digest · W3 error · W4 çoxmənbəli · W5 rusdilli
 ```
+
+## Bilinən məhdudiyyətlər
+
+Sistemin nə **etmədiyini** bilmək, nə etdiyini bilmək qədər vacibdir:
+
+- **Axtarış yalnız vektor əsaslıdır.** BM25 açar-söz axtarışı ilə hibrid birləşmə yoxdur, ona görə dəqiq termin (məsələn nadir bir metod adı və ya model nömrəsi) axtaranda semantik yaxınlıq bəzən daha ümumi məqaləni önə çıxarır.
+- **Reranking yoxdur.** İlk 10 nəticə birbaşa cosine sıralamasıdır; cross-encoder ilə yenidən sıralama sahə dəqiqliyini qaldırardı.
+- **Testlər saf funksiyaları örtür, endpoint-ləri yox.** Real nümunə: `SourceOut.arxiv_id` məcburi olduğu üçün arXiv-dən kənar məqaləyə istinad edən hər cavab `500` verirdi — 44 testin heç biri bunu tutmadı, çünki heç biri HTTP cavabını yoxlamır.
+- **Yalnız abstraktlar indekslənir**, tam mətn yox. Metod detalları çox vaxt abstraktda olmur.
+- **Azərbaycan dili tərcümə ilə işləyir.** Model azərbaycancanı rus/ingilis səviyyəsində dəstəkləmədiyi üçün az sorğularda orijinal vektor ölçmədə zərər verirdi (60% → 52%) və istifadə olunmur.
+- **Tibb və psixologiya arXiv-dən gəlmir** — yalnız Crossref/DOAJ mətn sorğusu ilə, ona görə bu sahələrdə korpus daha nazikdir.
+
+Növbəti addımlar bu sıra ilə planlanıb: hibrid axtarış (BM25 + vektor) → reranking → endpoint testləri → müqayisə/ziddiyyət analitikası.
