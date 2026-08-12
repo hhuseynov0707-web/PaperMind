@@ -44,6 +44,15 @@ services:
       - "8000:8000"
     volumes:
       - model_cache:/models   # embedding modeli restartlar arasinda qalsin
+      # Kod bind mount ilə verilir: hər dəyişiklikdən sonra image-i yenidən
+      # qurmaq lazım deyil, `docker compose restart backend` kifayətdir.
+      # Təhlükəsizdir, çünki dependency-lər /usr/local/lib-dədir, /app-da yox.
+      # YALNIZ development üçün — docker-compose.prod.yml-də bu sətir yoxdur,
+      # orada kod image-in içində qalır (dəyişməz artefakt).
+      - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
+      - ./backend/tests:/app/tests
+      - ./backend/eval:/app/eval
     depends_on:
       postgres:
         condition: service_healthy
