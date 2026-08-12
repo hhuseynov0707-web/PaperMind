@@ -232,3 +232,33 @@ def test_missing_current_abstract_filled():
 
     assert _better_abstract(None, "yeni abstrakt") == "yeni abstrakt"
     assert _better_abstract("mövcud", None) is None
+
+
+# --------------------------------------------------------------------------
+# Mənbə körpüsü — OpenAlex-dən arXiv ID (§3, §4)
+# --------------------------------------------------------------------------
+
+def test_openalex_extracts_arxiv_id_from_landing_page():
+    """Preprint ↔ nəşr birləşməsi yalnız bu ID ilə mümkündür: arXiv qeydlərinin
+    əksəriyyətində DOI yoxdur, ona görə OpenAlex körpü rolunu oynayır."""
+    from app.sources.openalex import _arxiv_from_locations
+
+    work = {"locations": [
+        {"landing_page_url": "https://arxiv.org/abs/2601.01234"},
+        {"landing_page_url": "https://doi.org/10.1/x"},
+    ]}
+    assert _arxiv_from_locations(work) == "2601.01234"
+
+
+def test_openalex_extracts_arxiv_id_from_pdf_url():
+    from app.sources.openalex import _arxiv_from_locations
+
+    work = {"locations": [{"pdf_url": "http://arxiv.org/pdf/2512.09876v2"}]}
+    assert _arxiv_from_locations(work) == "2512.09876"
+
+
+def test_openalex_no_arxiv_link_returns_none():
+    from app.sources.openalex import _arxiv_from_locations
+
+    assert _arxiv_from_locations({"locations": [{"landing_page_url": "https://nature.com/x"}]}) is None
+    assert _arxiv_from_locations({}) is None

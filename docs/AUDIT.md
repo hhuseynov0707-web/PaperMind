@@ -325,20 +325,45 @@ Ardıcıllıq brief-in §22-sinə uyğundur, amma **§23-ün qaydası** tətbiq 
 | 1.2 | **D2: `PaperIn`-ə uzunluq limitləri** | ✅ siyahılar rədd yox, kəsilir |
 | 1.3 | **S1: prompt injection müdafiəsi** | ✅ kontekst `<evidence>` blokunda, 7 test |
 | 1.4 | **S3: `/api/search` üçün qlobal LLM büdcəsi** | ✅ degrade, 429 yox |
-| 1.5 | **Endpoint testləri** (`TestClient`) | ⏳ **qalır** — §21; keçmiş `500` bu boşluqdan keçib |
+| 1.5 | **Endpoint testləri** (`TestClient`) | ✅ 16 test — validasiya, 401, `SourceOut` regression-u |
 | 1.6 | **D3/D5/D6/D7** | ✅ hamısı |
 | 1.7 | **Benchmark baza xətti** | ✅ yuxarıda |
 | 1.8 | `migrate.py`-da `except` bloku səhvi *(auditdə qaçırılmışdı)* | ✅ |
 
-### Phase 2 — Hybrid retrieval (§5)
-| # | İş |
-|---|---|
-| 2.1 | `search_vector tsvector` sütunu + GIN indeks (`english` və `russian` konfiqurasiyaları) |
-| 2.2 | Leksik retriever (`ts_rank_cd`) |
-| 2.3 | **Məqalə səviyyəli** retrieval: chunk-lar `DISTINCT ON (paper_id)` ilə yığılır (W2 həlli) |
-| 2.4 | RRF ilə birləşmə + filtrlər (dil, tarix, müəllif) |
-| 2.5 | Benchmark genişlənməsi: **NDCG@10** + `vector / lexical / hybrid` müqayisəsi |
-| 2.6 | Rerank **yalnız** 2.5 fayda göstərərsə |
+### Phase 2 — Hybrid retrieval (§5) — kod hazır, qərar ölçmədən asılıdır
+| # | İş | Vəziyyət |
+|---|---|---|
+| 2.1 | `sv_en` / `sv_ru` tsvector sütunları + GIN indeks | ✅ GENERATED STORED |
+| 2.2 | Leksik retriever (`ts_rank_cd`, `websearch_to_tsquery`) | ✅ |
+| 2.3 | **Məqalə səviyyəli** retrieval — `DISTINCT ON` (W2 həlli) | ✅ |
+| 2.4 | RRF ilə birləşmə | ✅ 9 test |
+| 2.5 | Benchmark: NDCG@10 + `vector/lexical/hybrid` | ✅ |
+| 2.6 | Başlığın vektor indeksinə daxil edilməsi | ✅ *(leakage düzəlişi, aşağıda)* |
+| 2.7 | **Qərar: `RETRIEVAL_MODE` nə olsun** | ⏳ ölçmə gözlənilir |
+| 2.8 | Rerank — yalnız 2.7 fayda göstərsə | ⏳ |
+
+#### İlk ölçmə etibarsız çıxdı — səbəb sənədləşdirilir
+
+Leksik üsul `MRR@10 = 1.000`, `Recall = 100%` verdi. Bu, üsulun üstünlüyü deyil,
+**leakage** idi: known-item testi məqalənin **başlığını** sorğu kimi verir,
+`tsvector` isə başlığı `setweight(A)` ilə saxlayır — cavab açarı indeksin
+içindədir. Vektor indeksində isə başlıq yox idi (yalnız abstrakt embed olunurdu).
+Yəni müqayisə **üsulu deyil, indeksin məzmununu** ölçürdü.
+
+Düzəliş məhsul üçün də doğrudur: istifadəçi başlıqla axtaranda semantik axtarış
+onu tapmalıdır. İndi `chunker.embedding_text()` embed olunan mətnə başlıq əlavə
+edir; saxlanılan `content` dəyişmir. `embedding_signature()` isə `model#title-v1`
+qaytarır ki, təmsil dəyişəndə `reembed.py` köhnəlməni görsün.
+
+#### `ru_share` metrikası yenidən çərçivələnir
+
+Əvvəl bu metrik «nə qədər çox, o qədər yaxşı» kimi qoyulmuşdu — **səhv idi**.
+Leksik onu 100% etdi, bu isə o deməkdir ki, rus dilində soruşan istifadəçi üçün
+bütün ingiliscə korpus görünməz olur — məhsulun vədinin əksi (§2: *«retrieve
+semantically relevant literature regardless of query language»*).
+
+Sağlam hədəf **30–60% aralığıdır**: rusdilli işlər görünür, ingiliscə ədəbiyyat
+bağlanmır. 22% aşağıdır, 100% nasazlıqdır.
 
 ### Phase 3 — Evidence-grounded RAG (§8)
 3.1 evidence selection (hədd + budget) · 3.2 claim/citation validation · 3.3 dəstəklənməyən iddianın etiketlənməsi · 3.4 korpus konteksti (§16) · 3.5 RAG eval: groundedness, citation correctness, unsupported claim rate (§20)

@@ -66,14 +66,14 @@ The resulting policy lives in one function that both the API and the benchmark c
 | `ru` | original | translation | original lifts field precision 63%→72%; translation lifts MRR 0.70→0.80 |
 | `az` | translation | — | the Azerbaijani vector adds noise: 60% alone vs 52% when combined |
 
-Current results (n=60):
+Current baseline (n=60, corpus 1,596):
 
 | | English | Russian | Azerbaijani |
 |---|---|---|---|
-| known-item MRR@10 | 0.900 | 0.800 | — |
-| Recall@10 | 98% | 95% | — |
-| Field precision P@10 | 61% | 72% | 60% |
-| Median latency | | 66 ms | |
+| known-item MRR@10 | 0.876 | 0.802 | — |
+| NDCG@10 | 0.898 | 0.830 | — |
+| Recall@10 | 97% | 92% | — |
+| Field precision P@10 | 59% | 75% | 60% |
 
 ```bash
 docker compose exec backend python scripts/benchmark.py --compare
@@ -87,7 +87,7 @@ Russian journals routinely publish English abstracts, and OpenAlex sometimes lab
 
 DOI → arXiv ID (version stripped) → a diacritic- and punctuation-insensitive SHA-1 of the title. On a match no new row is created: the existing paper gains another provenance record and any missing fields (DOI, PDF link, field keys) are enriched from the other source. Dedup runs both **within** an incoming batch and **against** the database.
 
-Six real merges were verified against live Crossref lookups of DOAJ DOIs — not against fixtures.
+Verified against live data, not fixtures: of 15 DOAJ DOIs re-fetched directly from Crossref, the 7 that Crossref actually holds exist as a single row with two provenance records; the 8 it does not hold show DOAJ only. No duplicates were created.
 
 ### 4. Public exposure was secured before the port was opened
 
@@ -111,21 +111,21 @@ Low-RAM machine? The repo ships a [devcontainer](.devcontainer/devcontainer.json
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-44 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
+103 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
 
 ## Known limitations
 
 Stated plainly, because they shape what this is useful for:
 
 - **The corpus is small — roughly 1,600 papers.** This is a self-hosted index built from daily ingestion, not a mirror of the literature. Scale here is a hosting question, not an engineering one.
-- **Vector-only search.** No BM25 hybrid, so an exact rare term can rank below a semantically similar but more general paper.
+- **Hybrid search is built but off by default.** A lexical `tsvector` index and RRF fusion exist; `RETRIEVAL_MODE=vector` stays until benchmarking proves a gain (§5: complexity only when measured).
 - **No reranking.** The top 10 is raw cosine ordering.
 - **Abstracts only**, not full text.
-- **Tests cover pure functions, not endpoints.** A concrete miss: a required `arxiv_id` field in a response model made every answer citing a non-arXiv paper return `500`, and none of the 44 tests caught it, because none of them assert on an HTTP response.
+- **Endpoint coverage is thin.** It now exists (validation, auth, response models) but retrieval quality itself is proven by benchmark, not tests.
 - **Azerbaijani goes through translation**, since the model supports it less strongly than Russian or English.
 - **Medicine and psychology** are not on arXiv and arrive only via Crossref/DOAJ text queries, so those fields are thin.
 
-Planned next, in order: hybrid search (BM25 + vector) → reranking → endpoint tests → comparison and contradiction analytics.
+Planned next, in order: decide hybrid on measurement → reranking → paper-level intelligence → comparison and contradiction analytics.
 
 ## License
 

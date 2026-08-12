@@ -5,6 +5,7 @@ işarələnə bilər), ona görə çəkiləndən sonra mətnin əlifbası yoxlan
 Həmçinin User-Agent olmadan API boş nəticə qaytarır («nəzakətli hovuz»).
 """
 
+import re
 import time
 from datetime import date, datetime, timezone
 
@@ -65,6 +66,25 @@ def _headers() -> dict:
     return {"User-Agent": ua}
 
 
+_ARXIV_URL = re.compile(r"arxiv\.org/(?:abs|pdf)/([0-9]{4}\.[0-9]{4,5})", re.IGNORECASE)
+
+
+def _arxiv_from_locations(work: dict) -> str | None:
+    """OpenAlex qeydindən arXiv ID-ni çıxarır.
+
+    OpenAlex `ids` blokunda arXiv ID vermir, amma preprint versiyası
+    `locations[].landing_page_url` və ya `pdf_url` sahəsində arxiv.org linki
+    kimi görünür. Bu ID olmadan arXiv preprinti ilə jurnal versiyası heç vaxt
+    birləşə bilmir (arXiv qeydlərinin əksəriyyətində DOI yoxdur).
+    """
+    for loc in (work.get("locations") or []):
+        for key in ("landing_page_url", "pdf_url"):
+            m = _ARXIV_URL.search(loc.get(key) or "")
+            if m:
+                return m.group(1)
+    return None
+
+
 def _abstract(inverted: dict | None) -> str | None:
     """OpenAlex abstraktı tərs indeks kimi saxlayır — mətnə çevirir."""
     if not inverted:
@@ -96,6 +116,10 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
     openalex_id = normalize_openalex_id(work.get("id"))
     # PMID OpenAlex-də ids blokunda gəlir; tibb korpusu üçün ən güclü açardır
     pmid = normalize_pmid((work.get("ids") or {}).get("pmid"))
+    # arXiv ID OpenAlex-in `ids` blokunda gəlmir, amma `locations` içindəki
+    # arxiv.org linkindən çıxarıla bilir. Bu, preprint ↔ nəşr birləşməsini
+    # mümkün edən yeganə siqnaldır: arXiv qeydlərinin əksəriyyətində DOI yoxdur.
+    arxiv_id = _arxiv_from_locations(work)
     external_id = doi or openalex_id
     if not external_id:
         return None
@@ -116,7 +140,7 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
     return {
         "source": "openalex",
         "external_id": external_id,
-        "arxiv_id": None,
+        "arxiv_id": arxiv_id,
         "doi": doi,
         "pmid": pmid,
         "openalex_id": openalex_id,
@@ -134,7 +158,16 @@ def _parse(work: dict, field_key: str, want_lang: str) -> dict | None:
 
 def fetch(field_key: str, since: date, limit: int = 100,
           timeout: int = 90, lang: str = "ru") -> list[dict]:
-    terms = FIELD_TERMS_RU.get(field_key, []) if lang == "ru" else []
+    # Əvvəllər `lang != "ru"` olanda boş qayıdırdı, yəni OpenAlex yalnız rusdilli
+    # mənbə idi. Halbuki o, həm arXiv preprintlərini, həm jurnal nəşrlərini
+    # indeksləyən yeganə mənbədir — yəni korpusu bir-birinə bağlayan körpüdür
+    # (§3, §4). İngiliscə terminlər digər mənbələrlə eyni siyahıdan gəlir ki,
+    # sahə tərifi bir yerdə qalsın.
+    if lang == "ru":
+        terms = FIELD_TERMS_RU.get(field_key, [])
+    else:
+        from . import FIELD_TERMS
+        terms = FIELD_TERMS.get(field_key, [])
     if not terms:
         return []
     search = "|".join(terms)

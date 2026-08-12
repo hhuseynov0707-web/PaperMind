@@ -251,7 +251,7 @@ Sistemin ən kritik funksiyaları (dedup açarları, dil təyini, chunking) **he
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-**44 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
+**103 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
 
 ### Retrieval benchmark
 
