@@ -34,6 +34,19 @@ from app.sources.common import get_with_retry             # noqa: E402
 from app.sources.crossref import API, _headers, _parse    # noqa: E402
 
 
+def _multi_source_ids(db: Session, paper_ids: list[int]) -> set[int]:
+    """Verilən məqalələrdən hansıları birdən çox MƏNBƏDƏ qeyd olunub."""
+    if not paper_ids:
+        return set()
+    rows = db.execute(
+        select(PaperSource.paper_id)
+        .where(PaperSource.paper_id.in_(paper_ids))
+        .group_by(PaperSource.paper_id)
+        .having(func.count(func.distinct(PaperSource.source)) > 1)
+    ).all()
+    return {r[0] for r in rows}
+
+
 def fetch_by_doi(doi: str, field_key: str) -> dict | None:
     """Crossref-dən konkret DOI-nu çəkir (axtarış yox, birbaşa müraciət)."""
     try:
@@ -69,6 +82,13 @@ def main() -> int:
         print(f"Sınaq: {len(rows)} DOAJ DOI-su Crossref-dən çəkilir\n")
 
         targets = {p.doi: (p.id, p.field_keys[0] if p.field_keys else "ai") for p in rows}
+        target_ids = [pid for pid, _ in targets.values()]
+
+        # ƏVVƏLKİ vəziyyət mütləq ölçülməlidir. Əks halda "çoxmənbəlidir" nəticəsi
+        # bu icranın nailiyyəti kimi oxunur, halbuki əvvəldən belə ola bilər —
+        # skriptin ilk versiyası məhz bu səhvi etdi.
+        multi_before = _multi_source_ids(db, target_ids)
+        print(f"Başlanğıcda çoxmənbəli: {len(multi_before)} / {len(targets)}\n")
 
         incoming: list[PaperIn] = []
         for doi, (_, field_key) in targets.items():
@@ -94,25 +114,36 @@ def main() -> int:
         print(f"  məqalə sayı:  {before_papers} → {after_papers}  (+{after_papers - before_papers})")
         print(f"  provenans:    {before_sources} → {after_sources}  (+{after_sources - before_sources})")
 
-        multi = db.execute(
-            select(PaperSource.paper_id)
-            .where(PaperSource.paper_id.in_([pid for pid, _ in targets.values()]))
-            .group_by(PaperSource.paper_id)
-            .having(func.count(func.distinct(PaperSource.source)) > 1)
-        ).all()
+        multi_after = _multi_source_ids(db, target_ids)
+        gained = multi_after - multi_before
 
-        print(f"  indi çoxmənbəli: {len(multi)} / {len(targets)}")
+        print(f"  çoxmənbəli:   {len(multi_before)} → {len(multi_after)}  (+{len(gained)})")
         print("=" * 56)
 
-        ok = inserted == 0 and len(multi) > 0
-        if ok:
-            print("\n✓ DEDUP İŞLƏYİR: yeni sətir yaranmadı, provenans genişləndi.")
-        elif inserted > 0:
-            print(f"\n✗ PROBLEM: {inserted} YENİ sətir yarandı — eyni DOI dublikat oldu.")
-        else:
-            print("\n! Qeydlər tanındı, amma provenans genişlənmədi.")
-            print("  Ehtimal: Crossref eyni external_id-ni qaytarır və mənbə fərqi yazılmır.")
-        return 0 if ok else 2
+        # Hansı məqalədə hansı mənbələr var — nəticəni yozmaq üçün
+        print("\n  Sınanan məqalələrin provenansı:")
+        for doi, (pid, _) in targets.items():
+            srcs = db.scalars(
+                select(PaperSource.source).where(PaperSource.paper_id == pid).distinct()
+            ).all()
+            mark = "+" if pid in gained else " "
+            print(f"   {mark} {doi[:46]:<46} {','.join(sorted(srcs))}")
+
+        print()
+        if inserted > 0:
+            print(f"✗ PROBLEM: {inserted} YENİ sətir yarandı — eyni DOI dublikat oldu.")
+            return 2
+        if gained:
+            print(f"✓ DEDUP İŞLƏYİR: {len(gained)} məqalə yeni mənbə qazandı, dublikat yaranmadı.")
+            return 0
+        if multi_after:
+            print("• Dublikat yaranmadı, amma bu icrada yeni provenans da əlavə olunmadı —")
+            print("  sınanan məqalələrdə Crossref qeydi ONSUZ DA var idi.")
+            print("  Yəni: kimlik uyğunlaşması işləyir, birləşmə isə əvvəlcədən baş verib.")
+            return 0
+        print("! Qeydlər tanındı, amma heç bir çoxmənbəli məqalə yoxdur.")
+        print("  _merge_source-da provenans yazılmır — araşdırılmalıdır.")
+        return 2
 
 
 if __name__ == "__main__":
