@@ -1,43 +1,480 @@
 {
-  "_comment": "Retrieval benchmark sorğu dəsti. Hər sorğu üçün gözlənilən sahə qeyd olunur — nəticələrin neçə faizinin həmin sahəyə aid olduğu Precision@10 kimi ölçülür. Yeni sorğu əlavə etmək üçün sadəcə sətir əlavə et; kod dəyişmir.",
-
+  "_comment": "Retrieval benchmark sorğu dəsti. Hər sorğu üçün gözlənilən sahə qeyd olunur — nəticələrin neçə faizinin həmin sahəyə aid olduğu ölçülür (Precision@10). DƏST 28-dən 95-ə genişləndirildi: əvvəlki versiya yalnız 8 texnologiya sahəsini örtürdü, halbuki taksonomiyada 19 sahə var — fizika, biologiya, tibb, iqtisadiyyat və digərləri heç vaxt ölçülməmişdi. Dil balansı da düzəldildi (az cəmi 4 sorğu idi, yəni 3% fərq sorğunun 0.12-si demək idi — statistik olaraq mənasız). Sahə dəqiqliyi 100% olmur: məqalə bir neçə sahəyə aid ola bilər.",
   "field_queries": [
-    { "q": "transformer architecture for language modeling", "lang": "en", "field": "ai" },
-    { "q": "reinforcement learning policy optimization", "lang": "en", "field": "ai" },
-    { "q": "graph neural network representation learning", "lang": "en", "field": "ai" },
-
-    { "q": "image segmentation with deep networks", "lang": "en", "field": "cv" },
-    { "q": "object detection in video streams", "lang": "en", "field": "cv" },
-
-    { "q": "intrusion detection in computer networks", "lang": "en", "field": "security" },
-    { "q": "post-quantum cryptography schemes", "lang": "en", "field": "security" },
-    { "q": "malware classification using machine learning", "lang": "en", "field": "security" },
-
-    { "q": "robot motion planning in unknown environments", "lang": "en", "field": "robotics" },
-    { "q": "autonomous navigation and control", "lang": "en", "field": "robotics" },
-
-    { "q": "automated software testing and verification", "lang": "en", "field": "software" },
-    { "q": "large language models for code generation", "lang": "en", "field": "software" },
-
-    { "q": "query optimization in database systems", "lang": "en", "field": "data" },
-    { "q": "information retrieval and ranking", "lang": "en", "field": "data" },
-
-    { "q": "wireless network protocol performance", "lang": "en", "field": "networks" },
-    { "q": "distributed systems and edge computing", "lang": "en", "field": "networks" },
-
-    { "q": "user interface usability evaluation", "lang": "en", "field": "hci" },
-    { "q": "human factors in interactive systems", "lang": "en", "field": "hci" },
-
-    { "q": "машинное обучение и глубокие нейронные сети", "lang": "ru", "field": "ai" },
-    { "q": "защита информации и криптография", "lang": "ru", "field": "security" },
-    { "q": "компьютерное зрение и распознавание образов", "lang": "ru", "field": "cv" },
-    { "q": "базы данных и обработка информации", "lang": "ru", "field": "data" },
-    { "q": "робототехника и системы управления", "lang": "ru", "field": "robotics" },
-    { "q": "пользовательский интерфейс и юзабилити", "lang": "ru", "field": "hci" },
-
-    { "q": "dil modellərində hallüsinasiyaların aşkarlanması", "lang": "az", "field": "ai" },
-    { "q": "kompüter şəbəkələrində təhlükəsizlik", "lang": "az", "field": "security" },
-    { "q": "şəkillərin emalı və obyektlərin tanınması", "lang": "az", "field": "cv" },
-    { "q": "verilənlər bazasında sorğuların optimallaşdırılması", "lang": "az", "field": "data" }
+    {
+      "q": "transformer architecture for language modeling",
+      "lang": "en",
+      "field": "ai"
+    },
+    {
+      "q": "reinforcement learning from human feedback",
+      "lang": "en",
+      "field": "ai"
+    },
+    {
+      "q": "knowledge distillation for smaller models",
+      "lang": "en",
+      "field": "ai"
+    },
+    {
+      "q": "обучение с подкреплением для языковых моделей",
+      "lang": "ru",
+      "field": "ai"
+    },
+    {
+      "q": "dil modellərində hallüsinasiya problemi",
+      "lang": "az",
+      "field": "ai"
+    },
+    {
+      "q": "self-supervised learning for image representation",
+      "lang": "en",
+      "field": "cv"
+    },
+    {
+      "q": "object detection in low light conditions",
+      "lang": "en",
+      "field": "cv"
+    },
+    {
+      "q": "diffusion models for image generation",
+      "lang": "en",
+      "field": "cv"
+    },
+    {
+      "q": "сегментация медицинских изображений",
+      "lang": "ru",
+      "field": "cv"
+    },
+    {
+      "q": "şəkillərdə obyekt tanıma üsulları",
+      "lang": "az",
+      "field": "cv"
+    },
+    {
+      "q": "adversarial attacks on neural networks",
+      "lang": "en",
+      "field": "security"
+    },
+    {
+      "q": "side channel attack on cryptographic hardware",
+      "lang": "en",
+      "field": "security"
+    },
+    {
+      "q": "intrusion detection using machine learning",
+      "lang": "en",
+      "field": "security"
+    },
+    {
+      "q": "постквантовая криптография и защита данных",
+      "lang": "ru",
+      "field": "security"
+    },
+    {
+      "q": "şəbəkə hücumlarının aşkarlanması",
+      "lang": "az",
+      "field": "security"
+    },
+    {
+      "q": "robot manipulation with tactile sensing",
+      "lang": "en",
+      "field": "robotics"
+    },
+    {
+      "q": "path planning for autonomous mobile robots",
+      "lang": "en",
+      "field": "robotics"
+    },
+    {
+      "q": "sim to real transfer in robot learning",
+      "lang": "en",
+      "field": "robotics"
+    },
+    {
+      "q": "управление манипулятором робота",
+      "lang": "ru",
+      "field": "robotics"
+    },
+    {
+      "q": "avtonom robotların hərəkət planlaması",
+      "lang": "az",
+      "field": "robotics"
+    },
+    {
+      "q": "automated program repair using large language models",
+      "lang": "en",
+      "field": "software"
+    },
+    {
+      "q": "flaky test detection in continuous integration",
+      "lang": "en",
+      "field": "software"
+    },
+    {
+      "q": "technical debt in large codebases",
+      "lang": "en",
+      "field": "software"
+    },
+    {
+      "q": "автоматическое тестирование программного обеспечения",
+      "lang": "ru",
+      "field": "software"
+    },
+    {
+      "q": "proqram təminatının test edilməsi",
+      "lang": "az",
+      "field": "software"
+    },
+    {
+      "q": "vector database indexing for similarity search",
+      "lang": "en",
+      "field": "data"
+    },
+    {
+      "q": "query optimization in distributed databases",
+      "lang": "en",
+      "field": "data"
+    },
+    {
+      "q": "data quality and schema evolution",
+      "lang": "en",
+      "field": "data"
+    },
+    {
+      "q": "оптимизация запросов в базах данных",
+      "lang": "ru",
+      "field": "data"
+    },
+    {
+      "q": "verilənlər bazasında indeksləmə",
+      "lang": "az",
+      "field": "data"
+    },
+    {
+      "q": "congestion control in wireless networks",
+      "lang": "en",
+      "field": "networks"
+    },
+    {
+      "q": "routing protocols for low power devices",
+      "lang": "en",
+      "field": "networks"
+    },
+    {
+      "q": "network traffic classification with deep learning",
+      "lang": "en",
+      "field": "networks"
+    },
+    {
+      "q": "протоколы маршрутизации в беспроводных сетях",
+      "lang": "ru",
+      "field": "networks"
+    },
+    {
+      "q": "simsiz şəbəkələrdə məlumat ötürülməsi",
+      "lang": "az",
+      "field": "networks"
+    },
+    {
+      "q": "user trust in AI assisted decision making",
+      "lang": "en",
+      "field": "hci"
+    },
+    {
+      "q": "accessibility of touch interfaces for older adults",
+      "lang": "en",
+      "field": "hci"
+    },
+    {
+      "q": "eye tracking for interface evaluation",
+      "lang": "en",
+      "field": "hci"
+    },
+    {
+      "q": "взаимодействие человека и компьютера в обучении",
+      "lang": "ru",
+      "field": "hci"
+    },
+    {
+      "q": "istifadəçi interfeysinin qiymətləndirilməsi",
+      "lang": "az",
+      "field": "hci"
+    },
+    {
+      "q": "quantum error correction in superconducting qubits",
+      "lang": "en",
+      "field": "physics"
+    },
+    {
+      "q": "phase transitions in condensed matter systems",
+      "lang": "en",
+      "field": "physics"
+    },
+    {
+      "q": "dark matter detection experiments",
+      "lang": "en",
+      "field": "physics"
+    },
+    {
+      "q": "квантовая запутанность и декогеренция",
+      "lang": "ru",
+      "field": "physics"
+    },
+    {
+      "q": "kvant mexanikasında ölçmə problemi",
+      "lang": "az",
+      "field": "physics"
+    },
+    {
+      "q": "exoplanet atmosphere characterization",
+      "lang": "en",
+      "field": "astronomy"
+    },
+    {
+      "q": "gravitational wave detection from binary mergers",
+      "lang": "en",
+      "field": "astronomy"
+    },
+    {
+      "q": "galaxy formation in the early universe",
+      "lang": "en",
+      "field": "astronomy"
+    },
+    {
+      "q": "наблюдения экзопланет и их атмосфер",
+      "lang": "ru",
+      "field": "astronomy"
+    },
+    {
+      "q": "qara dəliklərin müşahidəsi",
+      "lang": "az",
+      "field": "astronomy"
+    },
+    {
+      "q": "catalyst design for carbon dioxide reduction",
+      "lang": "en",
+      "field": "chemistry"
+    },
+    {
+      "q": "machine learning for molecular property prediction",
+      "lang": "en",
+      "field": "chemistry"
+    },
+    {
+      "q": "organic synthesis of heterocyclic compounds",
+      "lang": "en",
+      "field": "chemistry"
+    },
+    {
+      "q": "катализаторы для органического синтеза",
+      "lang": "ru",
+      "field": "chemistry"
+    },
+    {
+      "q": "kimyəvi reaksiyaların kataliz mexanizmi",
+      "lang": "az",
+      "field": "chemistry"
+    },
+    {
+      "q": "gene expression regulation in stem cells",
+      "lang": "en",
+      "field": "biology"
+    },
+    {
+      "q": "protein structure prediction from sequence",
+      "lang": "en",
+      "field": "biology"
+    },
+    {
+      "q": "microbiome composition and host health",
+      "lang": "en",
+      "field": "biology"
+    },
+    {
+      "q": "экспрессия генов и регуляция транскрипции",
+      "lang": "ru",
+      "field": "biology"
+    },
+    {
+      "q": "zülal strukturunun proqnozlaşdırılması",
+      "lang": "az",
+      "field": "biology"
+    },
+    {
+      "q": "climate model projections of regional rainfall",
+      "lang": "en",
+      "field": "earth"
+    },
+    {
+      "q": "seismic wave propagation in the crust",
+      "lang": "en",
+      "field": "earth"
+    },
+    {
+      "q": "remote sensing of land cover change",
+      "lang": "en",
+      "field": "earth"
+    },
+    {
+      "q": "моделирование изменения климата",
+      "lang": "ru",
+      "field": "earth"
+    },
+    {
+      "q": "iqlim dəyişikliyinin modelləşdirilməsi",
+      "lang": "az",
+      "field": "earth"
+    },
+    {
+      "q": "convergence rates of stochastic gradient methods",
+      "lang": "en",
+      "field": "math"
+    },
+    {
+      "q": "spectral graph theory and clustering",
+      "lang": "en",
+      "field": "math"
+    },
+    {
+      "q": "existence of solutions for nonlinear equations",
+      "lang": "en",
+      "field": "math"
+    },
+    {
+      "q": "методы оптимизации и сходимость",
+      "lang": "ru",
+      "field": "math"
+    },
+    {
+      "q": "optimallaşdırma məsələlərinin həlli",
+      "lang": "az",
+      "field": "math"
+    },
+    {
+      "q": "bayesian inference with variational approximation",
+      "lang": "en",
+      "field": "statistics"
+    },
+    {
+      "q": "causal inference from observational data",
+      "lang": "en",
+      "field": "statistics"
+    },
+    {
+      "q": "multiple testing correction in high dimensions",
+      "lang": "en",
+      "field": "statistics"
+    },
+    {
+      "q": "байесовский вывод и апостериорное распределение",
+      "lang": "ru",
+      "field": "statistics"
+    },
+    {
+      "q": "statistik hipotezlərin yoxlanması",
+      "lang": "az",
+      "field": "statistics"
+    },
+    {
+      "q": "randomized controlled trial of a new therapy",
+      "lang": "en",
+      "field": "medicine"
+    },
+    {
+      "q": "early diagnosis using biomarkers",
+      "lang": "en",
+      "field": "medicine"
+    },
+    {
+      "q": "antibiotic resistance in clinical isolates",
+      "lang": "en",
+      "field": "medicine"
+    },
+    {
+      "q": "клинические исследования эффективности лечения",
+      "lang": "ru",
+      "field": "medicine"
+    },
+    {
+      "q": "xəstəliklərin erkən diaqnostikası",
+      "lang": "az",
+      "field": "medicine"
+    },
+    {
+      "q": "functional connectivity in resting state fMRI",
+      "lang": "en",
+      "field": "neuroscience"
+    },
+    {
+      "q": "synaptic plasticity and memory formation",
+      "lang": "en",
+      "field": "neuroscience"
+    },
+    {
+      "q": "neural correlates of decision making",
+      "lang": "en",
+      "field": "neuroscience"
+    },
+    {
+      "q": "нейровизуализация и когнитивные функции",
+      "lang": "ru",
+      "field": "neuroscience"
+    },
+    {
+      "q": "beyin fəaliyyətinin görüntülənməsi",
+      "lang": "az",
+      "field": "neuroscience"
+    },
+    {
+      "q": "monetary policy transmission to inflation",
+      "lang": "en",
+      "field": "economics"
+    },
+    {
+      "q": "labor market effects of automation",
+      "lang": "en",
+      "field": "economics"
+    },
+    {
+      "q": "systemic risk in financial networks",
+      "lang": "en",
+      "field": "economics"
+    },
+    {
+      "q": "влияние денежной политики на инфляцию",
+      "lang": "ru",
+      "field": "economics"
+    },
+    {
+      "q": "iqtisadi artıma təsir edən amillər",
+      "lang": "az",
+      "field": "economics"
+    },
+    {
+      "q": "cognitive load and working memory capacity",
+      "lang": "en",
+      "field": "psychology"
+    },
+    {
+      "q": "interventions for anxiety in students",
+      "lang": "en",
+      "field": "psychology"
+    },
+    {
+      "q": "social media use and adolescent wellbeing",
+      "lang": "en",
+      "field": "psychology"
+    },
+    {
+      "q": "когнитивные искажения при принятии решений",
+      "lang": "ru",
+      "field": "psychology"
+    },
+    {
+      "q": "stressin idrak funksiyalarına təsiri",
+      "lang": "az",
+      "field": "psychology"
+    }
   ]
 }

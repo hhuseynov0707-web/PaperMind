@@ -400,7 +400,9 @@ Kod silinmir: test olunub, xərci yoxdur və sonrakı mərhələlərin təmelidi
 | 3.3 | `citation_label()` tək mənbədə | ✅ kontekst və doğrulama eyni etiketi işlədir |
 | 3.4 | `grounding` cavabda qaytarılır (§8, §20) | ✅ evidence_used, coverage, citations_removed |
 | 3.5 | Korpus konteksti (§16) | 🟡 `corpus_context()` var, UI-ya bağlanmayıb |
-| 3.6 | RAG eval: groundedness, unsupported claim rate | ⏳ eval dəsti genişlənəndən sonra |
+| 3.6 | **Eval dəsti 28 → 95** | ✅ 19 sahənin hamısı; az 4 → 19, ru 6 → 19 |
+| 3.7 | **RAG eval** (`scripts/rag_eval.py`) | ✅ groundedness, citation coverage, uydurma nisbəti |
+
 
 ### Phase 4 — Research intelligence (§7, §9, §10, §11, §12)
 4.1 `paper_insights` + çıxarış · 4.2 müqayisə · 4.3 ziddiyyət təsnifatı · 4.4 landşaft · 4.5 trend təsnifatı

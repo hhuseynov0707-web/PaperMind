@@ -1,0 +1,139 @@
+"""RAG keyfiyyətinin ölçülməsi — §20.
+
+Retrieval benchmark axtarışın nə tapdığını ölçür. Bu skript isə CAVABIN
+sübutla əlaqəsini ölçür — §8-in tələb etdiyi şeyi:
+
+  groundedness        — cavabdakı istinadların neçə faizi kontekstdə həqiqətən var
+  citation correctness— uydurulmuş istinad olan cavabların payı
+  citation coverage   — verilən sübutun neçə faizinə istinad edilib
+  unsupported rate    — heç bir istinadı olmayan cavabların payı
+  weak evidence rate  — sübutu zəif olan sorğuların payı
+  refusal rate        — sistemin "tapılmadı" dediyi hallar
+
+Vacib: bu ölçmə produksiya funksiyalarını (select_evidence, ask_llm,
+validate_citations) BİRBAŞA çağırır — benchmark-la eyni prinsip, ölçülən
+davranışla istifadəçinin gördüyü davranış ayrıla bilməz.
+
+    docker compose exec backend python scripts/rag_eval.py --sample 20
+"""
+
+import argparse
+import json
+import statistics
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, "/app")
+
+from sqlalchemy import func, select                    # noqa: E402
+from app.config import settings                        # noqa: E402
+from app.database import SessionLocal                  # noqa: E402
+from app.models import Paper                           # noqa: E402
+from app.rag.evidence import (                         # noqa: E402
+    citation_label,
+    select_evidence,
+    validate_citations,
+)
+from app.rag.llm import ask_llm                        # noqa: E402
+from app.rag.retriever import retrieve                 # noqa: E402
+from app.rag.translator import retrieval_inputs        # noqa: E402
+
+QUERIES = Path(__file__).resolve().parent.parent / "eval" / "queries.json"
+
+# Cavabın "tapılmadı" olduğunu göstərən işarələr (3 dildə)
+REFUSAL = ("tapılmadı", "tapmadım", "не найдено", "не содержит", "not found",
+           "does not contain", "no information", "məlumat yoxdur")
+
+
+def looks_like_refusal(answer: str) -> bool:
+    low = answer.lower()
+    return any(marker.lower() in low for marker in REFUSAL)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--sample", type=int, default=20, help="neçə sorğu (LLM çağırışı bahalıdır)")
+    ap.add_argument("--top-k", type=int, default=5)
+    args = ap.parse_args()
+
+    if not settings.groq_api_key:
+        print("GROQ_API_KEY yoxdur — RAG ölçməsi LLM tələb edir.")
+        return 1
+
+    spec = json.loads(QUERIES.read_text(encoding="utf-8"))
+    # Determinizm: hər dəfə eyni sorğular, eyni sırada
+    queries = sorted(spec["field_queries"], key=lambda x: (x["lang"], x["field"], x["q"]))
+    queries = queries[:: max(1, len(queries) // args.sample)][: args.sample]
+
+    db = SessionLocal()
+    total_papers = db.scalar(select(func.count(Paper.id))) or 0
+
+    print("PaperMind — RAG evaluation (§20)")
+    print("=" * 56)
+    print(f"  korpus : {total_papers} məqalə")
+    print(f"  sorğu  : {len(queries)}")
+    print(f"  model  : {settings.groq_model}\n")
+
+    stats = {"grounded": [], "coverage": [], "invented": 0, "no_citation": 0,
+             "weak": 0, "refusal": 0, "latency": []}
+
+    for i, item in enumerate(queries, 1):
+        q, lang_hint = item["q"], item["lang"]
+        t0 = time.perf_counter()
+
+        query, also, lang, _ = retrieval_inputs(q)
+        blocks = retrieve(db, query, top_k=args.top_k, also=also,
+                          lang=lang, mode=settings.retrieval_mode)
+        blocks, ev = select_evidence(blocks, max_blocks=args.top_k)
+        if not blocks:
+            print(f"  [{i:>2}] {lang_hint} · sübut yoxdur · {q[:44]}")
+            continue
+
+        try:
+            raw = ask_llm(q, blocks, lang=lang)
+        except Exception as exc:
+            print(f"  [{i:>2}] XƏTA: {str(exc)[:60]}")
+            continue
+
+        allowed = {citation_label(b["paper"]) for b in blocks}
+        answer, cite = validate_citations(raw, allowed)
+        stats["latency"].append((time.perf_counter() - t0) * 1000)
+
+        grounded = cite["valid"] / cite["cited"] if cite["cited"] else 0.0
+        stats["grounded"].append(grounded)
+        stats["coverage"].append(cite["coverage"])
+        if cite["invented"]:
+            stats["invented"] += 1
+        if cite["cited"] == 0:
+            stats["no_citation"] += 1
+        if ev["weak"]:
+            stats["weak"] += 1
+        if looks_like_refusal(answer):
+            stats["refusal"] += 1
+
+        flag = "!" if cite["invented"] else " "
+        print(f"  [{i:>2}]{flag}{lang_hint} · grounded {grounded:.0%} · "
+              f"əhatə {cite['coverage']:.0%} · {q[:40]}")
+
+    n = len(stats["grounded"])
+    if not n:
+        print("\nHeç bir cavab ölçülə bilmədi.")
+        return 1
+
+    print("\n" + "=" * 56)
+    print("  NƏTİCƏ")
+    print(f"    groundedness (istinadların düzgünlüyü)  {statistics.mean(stats['grounded']):.1%}")
+    print(f"    citation coverage (sübutun istifadəsi)  {statistics.mean(stats['coverage']):.1%}")
+    print(f"    uydurulmuş istinadı olan cavab          {stats['invented']}/{n}")
+    print(f"    heç bir istinadı olmayan cavab          {stats['no_citation']}/{n}")
+    print(f"    zəif sübutlu sorğu                      {stats['weak']}/{n}")
+    print(f"    «tapılmadı» cavabı                      {stats['refusal']}/{n}")
+    print(f"    median gecikmə                          {statistics.median(stats['latency']):.0f} ms")
+    print("\n  Qeyd: groundedness < 100% o deməkdir ki, LLM kontekstdə olmayan")
+    print("  istinad yazıb — həmin istinadlar cavabdan silinir (§8).\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
