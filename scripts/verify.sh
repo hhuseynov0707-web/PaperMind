@@ -71,7 +71,18 @@ fi
 # ------------------------------------------------- 5. dedup real bazada
 step "5/6 · Dedup korrektliyi (D1 real data üzərində)"
 merged=$(psql_q "SELECT count(*) FROM (SELECT paper_id FROM paper_sources GROUP BY paper_id HAVING count(DISTINCT source)>1) t")
-ok "${merged:-0} məqalə birdən çox mənbədə tapılıb (birləşdirilmiş)"
+hist=$(psql_q "SELECT COALESCE(sum(merged),0) FROM ingest_runs")
+if [ "${merged:-0}" != "0" ]; then
+  ok "${merged} məqalə birdən çox mənbədə tapılıb (birləşdirilmiş)"
+elif [ "${hist:-0}" != "0" ]; then
+  warn "hazırda 0 çoxmənbəli məqalə var, amma tarixçədə ${hist} birləşmə qeyd olunub"
+  warn "→ baza yenidən qurulub; dedup keçmişdə işləyib"
+else
+  warn "0 birləşmə — nə indi, nə tarixçədə. Dedup REAL SINAQDAN KEÇMƏYİB."
+  warn "→ mənbələr üst-üstə düşməyən dəstlər çəkir; eyni sahə+dövr üzrə yoxla:"
+  warn "  backfill_multi.py --sources arxiv,crossref --fields ai --days 30"
+fi
+psql_q "SELECT source, count(*) FROM papers GROUP BY source ORDER BY 2 DESC" | sed 's/|/: /;s/^/      /'
 
 # D1: eyni başlıq + fərqli DOI = AYRI sətir olmalıdır
 bad=$(psql_q "SELECT count(*) FROM papers a JOIN papers b ON a.title_key=b.title_key AND a.id<b.id WHERE a.doi IS NOT NULL AND b.doi IS NOT NULL AND a.doi=b.doi")
@@ -88,7 +99,9 @@ if [ "${total:-0}" -lt 100 ]; then
   warn "korpus çox kiçikdir (${total:-0}) — benchmark mənalı deyil"
   warn "əvvəlcə: docker compose exec backend python scripts/backfill_multi.py --days 14 --limit 80"
 else
-  docker compose exec -T backend python scripts/benchmark.py --compare 2>&1 | tee /tmp/pm-bench.log | tail -30
+  # tail YOX: kəsilmiş çıxış blokların başlığını itirir və rejimləri qarışdırır
+  # (bir dəfə "ORİJİNAL + TƏRCÜMƏ" bloku produksiya siyasəti kimi oxunmuşdu).
+  docker compose exec -T backend python scripts/benchmark.py --compare 2>&1 | tee /tmp/pm-bench.log
   ok "nəticə /tmp/pm-bench.log faylındadır"
 fi
 
