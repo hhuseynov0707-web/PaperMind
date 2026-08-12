@@ -1,6 +1,8 @@
 # PaperMind — Scientific Intelligence Platform
 
 > **Search less. Understand more.**
+>
+> *English version: [README.en.md](README.en.md)*
 
 **Çoxmənbəli elmi axtarış və trend analitikası.** Sistem hər gün dörd akademik mənbədən — **arXiv, Crossref, DOAJ və OpenAlex** — yeni məqalələri avtomatik yığır, təkrarları birləşdirir, onların üzərində semantik axtarış, mənbəli sual-cavab (RAG) və trend analitikası təqdim edir. Korpus **ingiliscə və rusca** məqalələri əhatə edir. Hər şey lokal Docker mühitində işləyir.
 
