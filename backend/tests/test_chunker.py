@@ -62,3 +62,37 @@ def test_butun_metn_ehate_olunur():
     birlesmis = " ".join(chunk_text(text))
     for token in ("t0", "t450", "t899"):
         assert token in birlesmis
+
+
+# --------------------------------------------------------------------------
+# Phase 2 — embed olunan mətn (başlıq daxil)
+# --------------------------------------------------------------------------
+
+def test_embedding_text_prepends_title():
+    """Vektor indeksində başlıq olmalıdır: istifadəçi məqaləni başlıqla axtaranda
+    semantik axtarış onu tapmalıdır, abstraktda o sözlər olmaya bilər."""
+    from app.rag.chunker import embedding_text
+
+    out = embedding_text("Attention Is All You Need", "We propose the Transformer.")
+    assert out.startswith("Attention Is All You Need")
+    assert "We propose the Transformer." in out
+
+
+def test_embedding_text_without_title():
+    from app.rag.chunker import embedding_text
+
+    assert embedding_text(None, "yalnız chunk") == "yalnız chunk"
+    assert embedding_text("   ", "yalnız chunk") == "yalnız chunk"
+
+
+def test_embedding_signature_marks_representation():
+    """İmza yalnız modeli deyil, TƏMSİLİ də göstərməlidir.
+
+    Bunsuz: embed olunan mətnin quruluşu dəyişəndə model adı eyni qalır və
+    reembed "ediləcək iş yoxdur" deyir — korpusda iki fərqli vektor növü qarışır.
+    """
+    from app.rag.chunker import EMBED_VARIANT, embedding_signature
+
+    sig = embedding_signature("some/model")
+    assert sig != "some/model"
+    assert EMBED_VARIANT in sig

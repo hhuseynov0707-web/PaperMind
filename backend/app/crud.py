@@ -151,7 +151,7 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
     `paper_sources`-a əlavə olunur (`merged`). Beləliklə interfeysdə təkrar
     nəticə görünmür, amma provenans itmir.
     """
-    from .rag.chunker import chunk_text
+    from .rag.chunker import chunk_text, embedding_signature, embedding_text
     from .rag.embedder import embed_texts
     from .sources.common import (
         detect_language,
@@ -261,8 +261,12 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
         new_papers.append(row)
         chunk_map.append((row, chunk_text(p.abstract)))
 
-    # Bütün chunk-ları bir dəfəyə embed etmək tək-tək etməkdən qat-qat sürətlidir
-    all_texts = [t for _, texts in chunk_map for t in texts]
+    # Bütün chunk-ları bir dəfəyə embed etmək tək-tək etməkdən qat-qat sürətlidir.
+    # Embed olunan mətnə başlıq əlavə olunur, SAXLANILAN content isə dəyişmir —
+    # bax: chunker.embedding_text().
+    all_texts = [
+        embedding_text(paper.title, t) for paper, texts in chunk_map for t in texts
+    ]
     vectors = embed_texts(all_texts)
     i = 0
     from .config import settings
@@ -272,7 +276,7 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
             paper.chunks.append(
                 models.Chunk(
                     chunk_index=idx, content=content, embedding=vectors[i],
-                    embedding_model=settings.embedding_model,
+                    embedding_model=embedding_signature(settings.embedding_model),
                 )
             )
             i += 1

@@ -18,12 +18,14 @@ import time
 sys.path.insert(0, "/app")
 
 from sqlalchemy import func, or_, select                # noqa: E402
+from sqlalchemy.orm import joinedload                   # noqa: E402
 from app.config import settings                         # noqa: E402
 from app.database import SessionLocal                   # noqa: E402
 from app.models import Chunk                            # noqa: E402
+from app.rag.chunker import embedding_signature, embedding_text  # noqa: E402
 from app.rag.embedder import embed_texts                # noqa: E402
 
-MODEL = settings.embedding_model
+MODEL = embedding_signature(settings.embedding_model)
 STALE = or_(Chunk.embedding_model.is_(None), Chunk.embedding_model != MODEL)
 
 
@@ -45,11 +47,19 @@ def main() -> int:
     started = time.perf_counter()
     done = 0
     while True:
-        rows = db.scalars(select(Chunk).where(STALE).order_by(Chunk.id).limit(args.batch)).all()
+        rows = db.scalars(
+            select(Chunk)
+            .options(joinedload(Chunk.paper))
+            .where(STALE)
+            .order_by(Chunk.id)
+            .limit(args.batch)
+        ).all()
         if not rows:
             break
 
-        vectors = embed_texts([r.content for r in rows])
+        # Ingest ilə EYNİ təmsil işlədilməlidir, yoxsa korpusda iki fərqli
+        # vektor növü qarışar və oxşarlıq müqayisəsi mənasını itirər.
+        vectors = embed_texts([embedding_text(r.paper.title, r.content) for r in rows])
         for row, vec in zip(rows, vectors):
             row.embedding = vec
             row.embedding_model = MODEL
