@@ -3,6 +3,10 @@
 **Tarix:** 2026-08-12 · **Metod:** statik oxu + test icrası + sxem/indeks yoxlaması
 **Kod bazası:** 3 514 sətir Python (38 fayl), 1 997 sətir frontend, 5 n8n workflow
 
+> **Yenilənmə (Phase 1 tamamlandı, Codespace-də doğrulandı).** Aşağıdakı auditin
+> proqnozlarından ikisi real data ilə yoxlananda dəyişdi — hər ikisi bu sənədin
+> müvafiq yerində qeyd olunub. Ölçülmüş nəticələr: [Phase 1 nəticələri](#phase-1-nəticələri-ölçülmüş).
+
 ## İcra edilə bilənlər / bilinməyənlər
 
 | Yoxlama | Nəticə |
@@ -45,7 +49,7 @@ Bunlar layihənin əsl dəyəridir; yenidən yazılmamalıdır.
 
 | # | Komponent | Niyə saxlanılır |
 |---|---|---|
-| G1 | **Provenanslı kimlik sxemi** (`papers` + `paper_sources`, unique `(source, external_id)`) | §4-ün tələb etdiyi kanonik iş + provenans modeli **artıq doğru qurulub**. Yalnız açarlar genişləndirilməlidir. |
+| G1 ✅ | **Provenanslı kimlik sxemi** (`papers` + `paper_sources`, unique `(source, external_id)`) | §4-ün tələb etdiyi kanonik iş + provenans modeli **artıq doğru qurulub**. **Canlı data ilə təsdiqləndi** (`verify_dedup.py`): bazadakı 15 DOAJ DOI-su Crossref-dən birbaşa çəkiləndə Crossref-in tanıdığı **7-nin 7-si** də tək sətir + iki provenansla mövcud idi, tanımadığı 8-in hamısında yalnız `doaj`. Dublikat yaranmadı. |
 | G2 | **Benchmark produksiya kodunu çağırır** (`retrieval_inputs()` həm API-də, həm benchmark-da) | Ölçülən davranışla istifadəçinin gördüyü davranışın ayrılması mümkün deyil. Bu, çox layihədə olmayan disiplindir — §20-nin təməlidir. |
 | G3 | **Dil əlifbadan təyin olunur**, mənbə etiketindən yox (`common.detect_language`) | §2 üçün doğru qərar; rus jurnalları ingiliscə abstrakt dərc edir. |
 | G4 | **Mənbə adapter registry-si** (`SOURCES` dict, hər modulda eyni `fetch()` imzası) | §3-ün «source-agnostic» tələbi arxitektura səviyyəsində **artıq ödənilib**. Yeni mənbə = yeni fayl. |
@@ -267,20 +271,64 @@ Mövcud strukturu **saxlayaraq** aşağıdakı qatlar əlavə olunur. Yeni infra
 
 ---
 
+## Phase 1 nəticələri (ölçülmüş)
+
+Codespace, 1 596 məqaləlik korpus, `scripts/verify.sh`. **77 test keçir** (39 → 77).
+
+### Auditin proqnozu ilə reallıq arasındakı iki fərq
+
+| Audit nə demişdi | Reallıq | Nəticə |
+|---|---|---|
+| D1 bazada artıq data korrupsiyası yaratmış ola bilər | `uq_papers_doi` unikal indeksi **problemsiz quruldu** — təkrar DOI yox idi | Səhv vaxtında tutulub, təmizləmə lazım deyil |
+| `sum(ingest_runs.merged)=0` → «dedup heç vaxt işə düşməyib» | **Yanlış oxu.** `merged` sütunu miqrasiyada sonradan əlavə olunub, köhnə yığımlar sıfır qalıb. Real yoxlama birləşmənin işlədiyini göstərdi | Sayğac köhnədir, mexanizm sağlamdır |
+
+### Miqrasiya düzəlişinin faktiki təsiri
+
+`migrate.py`-da backfill bloku `except`-in içində idi (HNSW uğurlu olanda heç vaxt işləmirdi). Çıxarıldıqdan sonra ilk icrada **7 məqaləyə çatışmayan provenans qeydi yazıldı** (1 601 → 1 608 sətir).
+
+### Retrieval baza xətti — Phase 2 üçün müqayisə nöqtəsi
+
+| Metrik | Dəyər |
+|---|---|
+| known-item MRR@10 (en) | 0.876 · Recall@10 97% |
+| known-item MRR@10 (ru) | 0.794 · Recall@10 92% |
+| Sahə dəqiqliyi P@10 | az 60% · en 59% · **ru 75%** |
+| **Rusca sorğu → rusdilli nəticə payı** | **22%** |
+| Median gecikmə | 37–67 ms (dilə görə: az 1 vektor, ru 2 vektor) |
+| Korpus | 1 596 məqalə · 792 DOI-lu · 88 rusdilli |
+
+Köhnə ölçmə ilə (korpus 1 047): en 0.900 → 0.876, ru 0.800 → 0.794. Düşüş gözləniləndir — korpus 50% böyüyəndə rəqib sənəd sayı artır, known-item tapmaq çətinləşir.
+
+**Phase 2-nin əsas hədəfi buradan görünür:** rus dilində soruşan istifadəçi nəticələrin yalnız 22%-ini öz dilində alır.
+
+### Mənbə strategiyası — həll olunmamış problem
+
+Dedup mexanizmi işləyir, amma mənbələr bir-birini az kəsir:
+
+| Mənbə | Say | Problem |
+|---|---|---|
+| arXiv | 793 | Yalnız 58-də DOI var → jurnal versiyası ilə bağlana bilmir |
+| Crossref | 470 | — |
+| DOAJ | 300 | — |
+| OpenAlex | 33 | `fetch()` `lang != "ru"` olanda **boş qayıdır**; `arxiv_id` hardcoded `None` |
+
+OpenAlex həm arXiv preprintlərini, həm jurnal nəşrlərini indeksləyən yeganə mənbədir — yəni təbii körpüdür, amma hazırda rusdilli işlərlə məhdudlaşdırılıb. Bu, §14 (fənlərarası) və §15 (əlaqələr) üçün təməldir və Phase 2 ilə paralel həll olunmalıdır.
+
 ## 13. Prioritetləşdirilmiş yol xəritəsi
 
 Ardıcıllıq brief-in §22-sinə uyğundur, amma **§23-ün qaydası** tətbiq olunur: təməl sabit olmadan yuxarı mərtəbə tikilmir.
 
-### Phase 1 — Təməl (əvvəlcə bunlar)
-| # | İş | Səbəb |
+### Phase 1 — Təməl ✅ (endpoint testlərindən başqa tamamlandı)
+| # | İş | Vəziyyət |
 |---|---|---|
-| 1.1 | **D1: ziddiyyətli identifikatorlarda birləşməni qadağan et** + regression test | Data korrupsiyası; geri qaytarmaq çətindir |
-| 1.2 | **D2: `PaperIn`-ə uzunluq limitləri** + test | §17 DoS/xərc |
-| 1.3 | **S1: prompt injection müdafiəsi** — kontekst system-dən çıxarılır, delimiter + «data, əmr deyil» direktivi | §17 birbaşa tələb |
-| 1.4 | **S3: `/api/search` üçün qlobal LLM büdcəsi** | Xərc sızması |
-| 1.5 | **Endpoint testləri** (`TestClient`) — `/search`, `/ask`, `/papers`, `/fields`, 401/422/429 | §21; keçmiş `500` bu boşluqdan keçib |
-| 1.6 | **D3/D5/D6/D7**: doi unikallığı, deterministik seçim, abstract zənginləşdirmə, `pmid`+`openalex_id` | §4 |
-| 1.7 | **Benchmark-ı Codespaces-də yenidən işlət** — baza xətti bərpa olunur | Ölçməsiz iddia yoxdur |
+| 1.1 | **D1: ziddiyyətli identifikatorlarda birləşməni qadağan et** + regression test | ✅ 16 test |
+| 1.2 | **D2: `PaperIn`-ə uzunluq limitləri** | ✅ siyahılar rədd yox, kəsilir |
+| 1.3 | **S1: prompt injection müdafiəsi** | ✅ kontekst `<evidence>` blokunda, 7 test |
+| 1.4 | **S3: `/api/search` üçün qlobal LLM büdcəsi** | ✅ degrade, 429 yox |
+| 1.5 | **Endpoint testləri** (`TestClient`) | ⏳ **qalır** — §21; keçmiş `500` bu boşluqdan keçib |
+| 1.6 | **D3/D5/D6/D7** | ✅ hamısı |
+| 1.7 | **Benchmark baza xətti** | ✅ yuxarıda |
+| 1.8 | `migrate.py`-da `except` bloku səhvi *(auditdə qaçırılmışdı)* | ✅ |
 
 ### Phase 2 — Hybrid retrieval (§5)
 | # | İş |
