@@ -1,6 +1,26 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
+
+# ---------- Giriş həddi (§17: oversized documents) ----------
+# Bir yerdə saxlanılır ki, testlər və validasiya eyni rəqəmə baxsın.
+MAX_TITLE = 1_000
+MAX_ABSTRACT = 50_000      # real korpusda ən uzunu ~8 000
+MAX_ID = 256
+MAX_URL = 2_000
+MAX_ITEM = 300             # bir müəllif adı / kateqoriya kodu
+MAX_AUTHORS = 200          # fizikada 3000+ müəllifli məqalələr var → kəsilir, rədd edilmir
+MAX_CATEGORIES = 50
+MAX_BATCH = 500            # bir ingest sorğusunda məqalə sayı
+
+LIST_CAPS = {"authors": MAX_AUTHORS, "categories": MAX_CATEGORIES, "field_keys": MAX_CATEGORIES}
 
 
 # ---------- Ingest ----------
@@ -12,19 +32,39 @@ class PaperIn(BaseModel):
     verilməyəndə onlar arxiv_id-dən çıxarılır (geriyə uyğunluq).
     """
 
-    title: str
-    abstract: str
-    source: str = "arxiv"
-    external_id: str | None = None
-    arxiv_id: str | None = None
-    doi: str | None = None
-    primary_category: str | None = None
+    # Limitlər sərtdir, çünki bu model xarici mənbələrdən gələn və istifadəçinin
+    # göndərə bildiyi datanı qəbul edir. Limitsiz abstract chunker-i və embedding-i
+    # partladır (bir sətir minlərlə chunk = CPU + yaddaş + xərc).
+    # Ölçülər real korpusa görə seçilib: ən uzun abstract ~8 000 simvoldur.
+    title: str = Field(min_length=1, max_length=MAX_TITLE)
+    abstract: str = Field(max_length=MAX_ABSTRACT)
+    source: str = Field(default="arxiv", max_length=32)
+    external_id: str | None = Field(default=None, max_length=MAX_ID)
+    arxiv_id: str | None = Field(default=None, max_length=MAX_ID)
+    doi: str | None = Field(default=None, max_length=MAX_ID)
+    primary_category: str | None = Field(default=None, max_length=64)
     categories: list[str] = []
     field_keys: list[str] = []
     authors: list[str] = []
     published_at: datetime | None = None
-    pdf_url: str | None = None
-    language: str | None = None       # verilməsə mətndən təyin olunur
+    pdf_url: str | None = Field(default=None, max_length=MAX_URL)
+    language: str | None = Field(default=None, max_length=8)  # verilməsə mətndən təyin olunur
+
+    @field_validator("authors", "categories", "field_keys", mode="before")
+    @classmethod
+    def _bound_list(cls, values, info: ValidationInfo):
+        """Siyahılar RƏDD EDİLMİR, KƏSİLİR.
+
+        Səbəb: fizikada (CERN kollaborasiyaları) 3 000+ müəllifli real məqalələr
+        var. `max_length` ilə rədd etsək həmin məqalələri tamamilə itirərdik —
+        halbuki məqsəd yaddaşı məhdudlaşdırmaqdır, məqaləni atmaq yox.
+        Eyni məntiq element uzunluğuna da aiddir: 10 MB-lıq "müəllif adı"
+        onsuz da zibildir, kəsilməsi bütöv məqaləni itirməkdən yaxşıdır.
+        """
+        if not isinstance(values, list):
+            return values
+        cap = LIST_CAPS.get(info.field_name, MAX_CATEGORIES)
+        return [str(v)[:MAX_ITEM] for v in values[:cap]]
 
     @model_validator(mode="after")
     def _fill_identity(self):
@@ -38,7 +78,8 @@ class PaperIn(BaseModel):
 
 
 class IngestBatch(BaseModel):
-    papers: list[PaperIn]
+    # Partiya limiti: bir sorğu bütün embedding gücünü tutmasın
+    papers: list[PaperIn] = Field(max_length=MAX_BATCH)
 
 
 class IngestResult(BaseModel):

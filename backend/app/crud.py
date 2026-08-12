@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import desc, func, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from . import models
@@ -34,20 +34,54 @@ _PAPER_LOADS = (
 
 # ---------- Ingest ----------
 
-def _find_existing(db: Session, doi: str | None, arxiv_id: str | None, tkey: str | None):
-    """Dublikat axtarışı — güclüdən zəifə doğru üç açar."""
-    conditions = []
+def _find_existing(
+    db: Session,
+    doi: str | None,
+    arxiv_id: str | None,
+    tkey: str | None,
+    authors: list[str] | None = None,
+):
+    """Dublikat axtarışı — güclüdən zəifə doğru üç açar.
+
+    Açarlar AYRI-AYRI yoxlanılır, `or_` ilə yox. Səbəb (audit D1): `or_` ilə
+    yoxlananda başlıq uyğunluğu DOI ziddiyyətini üstələyirdi — DOI-ları fərqli
+    olan iki ayrı iş eyni başlığa görə birləşirdi. §4: uncertain records
+    aqressiv birləşdirilməməlidir.
+
+    DOI və arXiv ID özlüyündə kifayət qədər güclüdür. Başlıq isə yalnız
+    `title_merge_allowed()` icazə verəndə qəbul olunur.
+
+    `order_by(id)` deterministiklik üçündür (audit D5): eyni başlığa bir neçə
+    sətir uyğun gələndə həmişə ən köhnəsi seçilir, Postgres-in ixtiyarına
+    buraxılmır.
+    """
+    from .sources.common import title_merge_allowed
+
+    def _first(condition):
+        return db.scalars(
+            select(models.Paper)
+            .options(*_PAPER_LOADS)
+            .where(condition)
+            .order_by(models.Paper.id)
+            .limit(1)
+        ).first()
+
     if doi:
-        conditions.append(models.Paper.doi == doi)
+        hit = _first(models.Paper.doi == doi)
+        if hit is not None:
+            return hit
     if arxiv_id:
-        conditions.append(models.Paper.arxiv_id == arxiv_id)
+        hit = _first(models.Paper.arxiv_id == arxiv_id)
+        if hit is not None:
+            return hit
     if tkey:
-        conditions.append(models.Paper.title_key == tkey)
-    if not conditions:
-        return None
-    return db.scalars(
-        select(models.Paper).options(*_PAPER_LOADS).where(or_(*conditions)).limit(1)
-    ).first()
+        hit = _first(models.Paper.title_key == tkey)
+        if hit is not None and title_merge_allowed(
+            doi, arxiv_id, authors or [],
+            hit.doi, hit.arxiv_id, [a.name for a in hit.authors],
+        ):
+            return hit
+    return None
 
 
 def _merge_source(db: Session, paper: models.Paper, p: PaperIn, doi: str | None) -> bool:
@@ -86,7 +120,13 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
     """
     from .rag.chunker import chunk_text
     from .rag.embedder import embed_texts
-    from .sources.common import detect_language, normalize_arxiv_id, normalize_doi, title_key
+    from .sources.common import (
+        detect_language,
+        normalize_arxiv_id,
+        normalize_doi,
+        title_key,
+        title_merge_allowed,
+    )
 
     if not papers:
         return 0, 0, 0
@@ -113,9 +153,17 @@ def upsert_papers(db: Session, papers: list[PaperIn]) -> tuple[int, int, int]:
         arxiv_id = normalize_arxiv_id(p.arxiv_id)
         tkey = title_key(p.title)
 
-        hit = next((batch_keys[k] for k in (doi, arxiv_id, tkey) if k and k in batch_keys), None)
+        # Partiya daxilində də eyni prioritet: güclü açarlar sərbəst, başlıq şərtli
+        hit = next((batch_keys[k] for k in (doi, arxiv_id) if k and k in batch_keys), None)
+        if hit is None and tkey and tkey in batch_keys:
+            cand = batch_keys[tkey]
+            if title_merge_allowed(
+                doi, arxiv_id, p.authors,
+                cand.doi, cand.arxiv_id, [a.name for a in cand.authors],
+            ):
+                hit = cand
         if hit is None:
-            hit = _find_existing(db, doi, arxiv_id, tkey)
+            hit = _find_existing(db, doi, arxiv_id, tkey, p.authors)
 
         if hit is not None:
             if _merge_source(db, hit, p, doi):

@@ -80,6 +80,23 @@ def enforce_ask_limits(request: Request) -> None:
         )
 
 
+def translation_budget_ok() -> bool:
+    """Sorğu tərcüməsi üçün qlobal günlük tavan (audit S3).
+
+    Tərcümə `/api/search` yolundadır və Groq çağırışıdır, amma `/api/ask`-ın
+    günlük büdcəsinə daxil deyildi — yəni axtarış endpoint-i vasitəsilə LLM
+    kvotasını yandırmaq mümkün idi.
+
+    Limit aşılanda 429 ATILMIR: axtarış orijinal sorğu ilə davam edir.
+    Səbəb — istifadəçi üçün zəif axtarış, işləməyən axtarışdan yaxşıdır.
+    """
+    if not settings.public_mode:
+        return True
+    day = datetime.now(timezone.utc).strftime("%Y%m%d")
+    ok, _ = _hit(f"rl:translate:global:{day}", settings.translate_daily_budget, 86400)
+    return ok
+
+
 def enforce_search_limits(request: Request) -> None:
     """Axtarış ucuzdur (LLM yoxdur) — yalnız sui-istifadəyə qarşı geniş limit."""
     if not settings.public_mode:

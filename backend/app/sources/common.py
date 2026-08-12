@@ -133,3 +133,63 @@ def detect_language(*parts: str | None) -> str:
     cyr = len(_CYRILLIC_RE.findall(text))
     lat = len(_LATIN_RE.findall(text))
     return "ru" if cyr > lat else "en"
+
+
+# --------------------------------------------------------------------------
+# Birləşmə qərarı (§4: "Never aggressively merge uncertain records")
+# --------------------------------------------------------------------------
+# Bu funksiyalar DB-dən asılı deyil ki, test oluna bilsinlər.
+
+def has_conflicting_ids(
+    doi_a: str | None, arxiv_a: str | None,
+    doi_b: str | None, arxiv_b: str | None,
+) -> bool:
+    """İki qeydin identifikatorları bir-birini İNKAR edirmi?
+
+    Yalnız hər iki tərəfdə eyni növ identifikator olub FƏRQLİ olduqda True.
+    Bir tərəfdə yoxdursa ziddiyyət deyil — sadəcə məlumat çatışmazlığıdır
+    (arXiv preprint-in DOI-su olmaya bilər, elə həmin iş Crossref-də DOI ilə gəlir).
+    """
+    if doi_a and doi_b and doi_a != doi_b:
+        return True
+    if arxiv_a and arxiv_b and arxiv_a != arxiv_b:
+        return True
+    return False
+
+
+def _surnames(names: list[str]) -> set[str]:
+    """Müəllif adlarından soyad çoxluğu — format fərqlərinə davamlı.
+
+    Mənbələr eyni adamı "Yann LeCun", "LeCun, Yann", "Y. LeCun" kimi verir;
+    ona görə yalnız ən uzun hissə (adətən soyad) müqayisə olunur.
+    """
+    out = set()
+    for name in names:
+        parts = [p.strip(" .,") for p in re.split(r"[\s,]+", name.lower()) if len(p.strip(" .,")) > 1]
+        if parts:
+            out.add(max(parts, key=len))
+    return out
+
+
+def title_merge_allowed(
+    doi_a: str | None, arxiv_a: str | None, authors_a: list[str],
+    doi_b: str | None, arxiv_b: str | None, authors_b: list[str],
+) -> bool:
+    """Yalnız BAŞLIQ üst-üstə düşəndə birləşməyə icazə verilirmi?
+
+    Başlıq ən zəif açardır: "Editorial", "Introduction to Machine Learning"
+    kimi başlıqlar müxtəlif işlərdə təkrarlanır. Ona görə iki şərt yoxlanılır:
+
+      1. Identifikatorlar bir-birini inkar etməməlidir (fərqli DOI = fərqli iş).
+      2. Hər iki tərəfdə müəllif siyahısı varsa, ən azı bir soyad üst-üstə
+         düşməlidir. Bu, preprint→jurnal birləşməsini pozmur (müəlliflər eynidir),
+         amma eyni adlı fərqli işləri ayırır.
+
+    Müəllif məlumatı olmayan tərəf varsa 2-ci şərt tətbiq edilmir — məlumatın
+    yoxluğu sübut deyil.
+    """
+    if has_conflicting_ids(doi_a, arxiv_a, doi_b, arxiv_b):
+        return False
+    if authors_a and authors_b:
+        return bool(_surnames(authors_a) & _surnames(authors_b))
+    return True

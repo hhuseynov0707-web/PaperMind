@@ -3,6 +3,7 @@ import re
 
 from .. import cache
 from ..config import settings
+from ..security import translation_budget_ok
 from .llm import translate_to_english
 
 _CYRILLIC = re.compile(r"[Ѐ-ӿ]")
@@ -71,6 +72,11 @@ def query_to_english(text: str) -> tuple[str, str]:
     cached = cache.get_json(key)
     if cached:
         return cached, lang
+
+    # Keşdə yoxdursa bu, REAL LLM çağırışıdır — qlobal günlük tavana tabedir
+    # (audit S3). Tavan dolubsa orijinal sorğu ilə davam edirik.
+    if not translation_budget_ok():
+        return text, lang
 
     try:
         translated = translate_to_english(text)

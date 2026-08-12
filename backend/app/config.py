@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     ask_rate_limit: int = 20         # IP üzrə saatlıq LLM sualı
     ask_daily_budget: int = 500      # bütün istifadəçilər üçün günlük LLM tavanı
     search_rate_limit: int = 120     # IP üzrə saatlıq semantik axtarış
+    # Tərcümə də LLM çağırışıdır: az/ru axtarış Groq-a gedir. /api/ask-ın günlük
+    # tavanı bunu tutmurdu — audit S3. Aşılanda tərcümə dayanır, axtarış işləməyə
+    # davam edir (xəta yox, degrade).
+    translate_daily_budget: int = 2000
 
     chunk_size: int = 1200
     chunk_overlap: int = 150
