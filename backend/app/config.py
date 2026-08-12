@@ -62,8 +62,22 @@ class Settings(BaseSettings):
     translate_daily_budget: int = 2000
 
     # Retrieval üsulu: "vector" | "lexical" | "hybrid".
-    # Defolt qəsdən "vector"-dur — hibrid yalnız benchmark fayda göstərəndən
-    # SONRA açılır (§5: "Keep complexity only when it produces measurable benefit").
+    #
+    # ÖLÇÜLDÜ, "vector" SEÇİLDİ (korpus 1596, n=60, 28 eval sorğusu):
+    #
+    #            P@10 az   P@10 en   P@10 ru   gecikmə
+    #   vector      68%       63%       62%      61 ms
+    #   lexical     40%       75%      100%*      5 ms
+    #   hybrid      65%       65%       63%      64 ms
+    #
+    # Hibridin təsiri: az -3%, en +2%, ru +2% → orta +0.3%, yəni səs-küy.
+    # Leksikin ru=100% rəqəmi artefaktdır: rusca sorğu sv_ru-ya gedir və
+    # ingiliscə məqalələrdə rus kökləri yoxdur, ona görə yalnız rusdilli
+    # nəticələr qayıda bilər — bu, məhsul üçün pisdir (ingiliscə korpus
+    # görünməz olur), yaxşı deyil.
+    #
+    # Kod saxlanılır (test olunub, xərci yoxdur), rejim isə ölçmə fayda
+    # göstərənə qədər "vector" qalır — §5.
     retrieval_mode: str = "vector"
 
     chunk_size: int = 1200

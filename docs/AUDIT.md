@@ -339,8 +339,8 @@ Ardıcıllıq brief-in §22-sinə uyğundur, amma **§23-ün qaydası** tətbiq 
 | 2.4 | RRF ilə birləşmə | ✅ 9 test |
 | 2.5 | Benchmark: NDCG@10 + `vector/lexical/hybrid` | ✅ |
 | 2.6 | Başlığın vektor indeksinə daxil edilməsi | ✅ *(leakage düzəlişi, aşağıda)* |
-| 2.7 | **Qərar: `RETRIEVAL_MODE` nə olsun** | ⏳ ölçmə gözlənilir |
-| 2.8 | Rerank — yalnız 2.7 fayda göstərsə | ⏳ |
+| 2.7 | **Qərar: `RETRIEVAL_MODE`** | ✅ **`vector` qalır** — aşağıda |
+| 2.8 | Rerank — yalnız 2.7 fayda göstərsə | ❌ açılmır: hibrid fayda vermədi |
 
 #### İlk ölçmə etibarsız çıxdı — səbəb sənədləşdirilir
 
@@ -365,8 +365,42 @@ semantically relevant literature regardless of query language»*).
 Sağlam hədəf **30–60% aralığıdır**: rusdilli işlər görünür, ingiliscə ədəbiyyat
 bağlanmır. 22% aşağıdır, 100% nasazlıqdır.
 
+### Phase 2 QƏRARI — ölçüldü, hibrid AÇILMADI
+
+Korpus 1 596, n=60, 28 eval sorğusu. Known-item hər üç üsulda 1.000-ə doydu
+(başlıq hər iki indeksdə olandan sonra), ona görə qərar `P@10`-a qaldı:
+
+| Üsul | P@10 az | P@10 en | P@10 ru | ru payı | gecikmə |
+|---|---|---|---|---|---|
+| **vector** | **68%** | 63% | 62% | 23% | 61 ms |
+| lexical | 40% | 75% | 100%* | 100%* | 5 ms |
+| hybrid | 65% | 65% | 63% | 20% | 64 ms |
+
+Hibridin təsiri: az −3%, en +2%, ru +2% → **orta +0.3%, yəni səs-küy**; gecikmə
+isə artır. §5-ə görə mürəkkəblik saxlanılmır: `RETRIEVAL_MODE=vector`.
+
+`*` Leksikin rus rəqəmləri **artefaktdır**: rusca sorğu `sv_ru`-ya gedir və
+ingiliscə məqalələrdə rus kökləri olmadığı üçün yalnız rusdilli nəticə qayıda
+bilər. Üstəlik rusdilli korpus elə `FIELD_TERMS_RU` terminləri ilə yığılıb, eval
+sorğuları da onlara yaxındır — dairəvi ölçmə. Azərbaycancada isə leksik çökür
+(68% → 40%), çünki tərcümə olunmuş sorğu dəqiq termin uyğunluğu tapmır.
+
+**Metodoloji nəticə:** eval dəstində 28 sorğu var (18 en, 6 ru, 4 az). 4 az
+sorğuda 3% fərq = sorğunun 0.12-si. **Bu ölçüdə fərqləri həll etmək üçün dəst
+çox kiçikdir.** Növbəti qərarlar üçün lazım olan şey çəki tənzimləməsi deyil,
+daha böyük eval dəstidir — əks halda 28 sorğuya overfit edərik.
+
+Kod silinmir: test olunub, xərci yoxdur və sonrakı mərhələlərin təmelidir.
+
 ### Phase 3 — Evidence-grounded RAG (§8)
-3.1 evidence selection (hədd + budget) · 3.2 claim/citation validation · 3.3 dəstəklənməyən iddianın etiketlənməsi · 3.4 korpus konteksti (§16) · 3.5 RAG eval: groundedness, citation correctness, unsupported claim rate (§20)
+| # | İş | Vəziyyət |
+|---|---|---|
+| 3.1 | Evidence selection (mütləq + nisbi hədd) | ✅ zəif nəticələr LLM-ə getmir |
+| 3.2 | Citation validation — uydurulmuş istinad silinir | ✅ 18 test |
+| 3.3 | `citation_label()` tək mənbədə | ✅ kontekst və doğrulama eyni etiketi işlədir |
+| 3.4 | `grounding` cavabda qaytarılır (§8, §20) | ✅ evidence_used, coverage, citations_removed |
+| 3.5 | Korpus konteksti (§16) | 🟡 `corpus_context()` var, UI-ya bağlanmayıb |
+| 3.6 | RAG eval: groundedness, unsupported claim rate | ⏳ eval dəsti genişlənəndən sonra |
 
 ### Phase 4 — Research intelligence (§7, §9, §10, §11, §12)
 4.1 `paper_insights` + çıxarış · 4.2 müqayisə · 4.3 ziddiyyət təsnifatı · 4.4 landşaft · 4.5 trend təsnifatı

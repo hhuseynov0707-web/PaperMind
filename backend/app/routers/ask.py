@@ -8,6 +8,7 @@ from .. import cache, crud
 from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
+from ..rag.evidence import citation_label, select_evidence, validate_citations
 from ..rag.llm import ask_llm
 from ..rag.retriever import retrieve
 from ..rag.translator import retrieval_inputs
@@ -57,6 +58,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             from_cache=True,
             latency_ms=latency,
             query_en=cached.get("query_en"),
+            grounding=cached.get("grounding"),
         )
 
     query, also, lang, query_en = retrieval_inputs(req.question)
@@ -80,10 +82,20 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             detail="GROQ_API_KEY təyin olunmayıb. .env faylını doldur və 'docker compose restart backend' işlət.",
         )
 
+    # §8: retrieval nə qaytarsa hamısı LLM-ə getmirdi — zəif nəticələr
+    # (score 0.2) konteksti çirkləndirirdi. İndi hədd tətbiq olunur.
+    blocks, ev_stats = select_evidence(blocks, max_blocks=req.top_k)
+
     try:
         answer = ask_llm(req.question, blocks, lang=lang)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
+
+    # §8: LLM-in yazdığı hər istinad kontekstlə tutuşdurulur. Kontekstdə
+    # olmayan istinad uydurulmuşdur və mətndən çıxarılır — interfeys istinadları
+    # vurğulayır, saxta istinad orada həqiqi kimi görünür.
+    allowed = {citation_label(b["paper"]) for b in blocks}
+    answer, cite_stats = validate_citations(answer, allowed)
 
     sources, seen = [], set()
     for b in blocks:
@@ -101,11 +113,22 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             }
         )
 
+    grounding = {
+        "evidence_used": ev_stats["kept"],
+        "evidence_dropped": ev_stats["dropped"],
+        "top_score": ev_stats["top_score"],
+        "weak": ev_stats["weak"],
+        "citations_valid": cite_stats["valid"],
+        "citations_removed": cite_stats["invented"],
+        "coverage": cite_stats["coverage"],
+    }
+
     query_en_out = query_en if lang != "en" else None
     latency = int((time.perf_counter() - t0) * 1000)
     cache.set_json(
         key,
-        {"answer": answer, "sources": sources, "query_en": query_en_out},
+        {"answer": answer, "sources": sources, "query_en": query_en_out,
+         "grounding": grounding},
         settings.ask_cache_ttl,
     )
     crud.save_qa(db, req.question, answer, sources, False, latency)
@@ -115,4 +138,5 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         from_cache=False,
         latency_ms=latency,
         query_en=query_en_out,
+        grounding=grounding,
     )

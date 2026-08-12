@@ -3,6 +3,7 @@ import re
 from groq import Groq
 
 from ..config import settings
+from .evidence import citation_label
 
 LANG_NAMES = {
     "az": "Azərbaycan dili",
@@ -69,13 +70,10 @@ def ask_llm(question: str, blocks: list[dict], lang: str = "az") -> str:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY təyin olunmayıb")
 
-    def ref(paper) -> str:
-        """İstinad etiketi: arXiv ID yoxdursa DOI işlədilir.
-
-        Bunsuz qeyri-arXiv mənbələr kontekstə `[None]` kimi düşür və LLM
-        həmin sətri cavaba köçürür.
-        """
-        return paper.arxiv_id or paper.doi or f"id:{paper.id}"
+    # İstinad etiketi ayrıca modula köçürüldü ki, ask.py doğrulama zamanı
+    # EYNİ etiketi hesablasın — iki fərqli tərif olsa, doğru istinad "uydurma"
+    # kimi silinərdi.
+    ref = citation_label
 
     # Kontekst SYSTEM mesajından çıxarılıb user mesajına köçürülüb (audit S1):
     # etibarsız mətn system səlahiyyəti ilə oxunmamalıdır.

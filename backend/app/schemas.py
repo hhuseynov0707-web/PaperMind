@@ -186,12 +186,28 @@ class SourceOut(BaseModel):
     pdf_url: str | None = None
 
 
+class GroundingOut(BaseModel):
+    """Cavabın sübutla əlaqəsi (§8, §20).
+
+    İstifadəçi üçün deyil, ŞƏFFAFLIQ üçün: cavabın nə qədər sübutla dayandığı
+    və LLM-in uydurduğu istinadın olub-olmadığı ölçülə bilən olmalıdır.
+    """
+    evidence_used: int          # LLM-ə verilən sənəd sayı
+    evidence_dropped: int       # həddi keçmədiyi üçün atılan
+    top_score: float            # ən güclü sübutun oxşarlığı
+    weak: bool                  # ən yaxşı sübut da zəifdirsə
+    citations_valid: int        # kontekstdə həqiqətən olan istinadlar
+    citations_removed: list[str] = []   # LLM-in uydurduğu və silinən istinadlar
+    coverage: float = 0.0       # istifadə olunan sübutun neçə faizinə istinad edilib
+
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[SourceOut]
     from_cache: bool
     latency_ms: int
     query_en: str | None = None
+    grounding: GroundingOut | None = None
 
 
 # ---------- Analytics ----------
