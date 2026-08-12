@@ -25,10 +25,12 @@ görünməyə bilərdi.)
     docker compose exec backend python scripts/benchmark.py
     docker compose exec backend python scripts/benchmark.py --compare
     docker compose exec backend python scripts/benchmark.py --sample 40
+    docker compose exec backend python scripts/benchmark.py --compare-retrieval
 """
 
 import argparse
 import json
+import math
 import random
 import statistics
 import sys
@@ -46,14 +48,22 @@ from app.rag.translator import query_to_english, retrieval_inputs   # noqa: E402
 
 QUERIES = Path(__file__).resolve().parent.parent / "eval" / "queries.json"
 K = 10
-CHUNK_POOL = 40          # chunk səviyyəsində çəkilir, sonra məqalə üzrə dedup
 
 
 def top_papers(db, query: str, k: int = K, also: str | None = None,
-               field: str | None = None) -> list[Paper]:
-    """Retrieval nəticələrini məqalə səviyyəsində təkrarsız qaytarır."""
-    blocks = retrieve(db, query, top_k=CHUNK_POOL,
-                      categories=[field] if field else None, also=also)
+               field: str | None = None, lang: str = "en",
+               retrieval: str = "vector") -> list[Paper]:
+    """Retrieval nəticələrini məqalə səviyyəsində təkrarsız qaytarır.
+
+    retrieve() Phase 2-dən sonra onsuz da məqalə səviyyəsində qaytarır, amma
+    dedup burada saxlanılır: benchmark retrieval-in daxili dəyişikliyindən
+    asılı olmamalıdır.
+    """
+    blocks = retrieve(
+        db, query, top_k=k,
+        categories=[field] if field else None, also=also,
+        lang=lang, mode=retrieval,
+    )
     seen, out = set(), []
     for b in blocks:
         p = b["paper"]
@@ -92,9 +102,13 @@ def _prepare(text: str, mode: str) -> tuple[str, str | None]:
     return text, translated
 
 
-def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
+def known_item(db, sample: int, mode: str, retrieval: str = "vector", seed: int = 7) -> dict:
     rng = random.Random(seed)
     results: dict[str, list[float]] = {"en": [], "ru": []}
+    # NDCG ayrica saxlanilir: known-item-de bir dene uygun sened var, ona gore
+    # ideal DCG = 1 ve NDCG = 1/log2(rank+1). MRR ile eyni sey deyil — MRR
+    # sirani xetti cezalandirir, NDCG loqarifmik.
+    ndcgs: dict[str, list[float]] = {"en": [], "ru": []}
     latencies: list[float] = []
 
     for lang in ("en", "ru"):
@@ -113,11 +127,12 @@ def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
             query, also = _prepare(paper.title, mode)
 
             t0 = time.perf_counter()
-            found = top_papers(db, query, also=also)
+            found = top_papers(db, query, also=also, lang=lang, retrieval=retrieval)
             latencies.append((time.perf_counter() - t0) * 1000)
 
             rank = next((i + 1 for i, p in enumerate(found) if p.id == pid), 0)
             results[lang].append(1.0 / rank if rank else 0.0)
+            ndcgs[lang].append(1.0 / math.log2(rank + 1) if rank else 0.0)
 
     return {
         "per_lang": {
@@ -125,6 +140,7 @@ def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
                 "n": len(v),
                 "mrr": statistics.mean(v) if v else 0.0,
                 "recall": sum(1 for x in v if x > 0) / len(v) if v else 0.0,
+                "ndcg": statistics.mean(ndcgs[lang]) if ndcgs[lang] else 0.0,
             }
             for lang, v in results.items() if v
         },
@@ -134,7 +150,7 @@ def known_item(db, sample: int, mode: str, seed: int = 7) -> dict:
 
 # ------------------------------------------------------- 2/3. sahə + çarpaz dilli
 
-def field_precision(db, mode: str) -> dict:
+def field_precision(db, mode: str, retrieval: str = "vector") -> dict:
     spec = json.loads(QUERIES.read_text(encoding="utf-8"))
     by_lang: dict[str, list[float]] = {}
     ru_share: list[float] = []
@@ -143,7 +159,7 @@ def field_precision(db, mode: str) -> dict:
     for item in spec["field_queries"]:
         q, lang, want = item["q"], item["lang"], item["field"]
         query, also = _prepare(q, mode)
-        papers = top_papers(db, query, also=also)
+        papers = top_papers(db, query, also=also, lang=lang, retrieval=retrieval)
         if not papers:
             continue
         hit = sum(1 for p in papers if want in (p.field_keys or [])) / len(papers)
@@ -161,10 +177,10 @@ def field_precision(db, mode: str) -> dict:
 
 # ----------------------------------------------------------------- hesabat
 
-def run(db, sample: int, mode: str) -> dict:
+def run(db, sample: int, mode: str, retrieval: str = "vector") -> dict:
     return {
-        "known": known_item(db, sample, mode),
-        "field": field_precision(db, mode),
+        "known": known_item(db, sample, mode, retrieval),
+        "field": field_precision(db, mode, retrieval),
     }
 
 
@@ -173,6 +189,7 @@ def show(label: str, r: dict) -> None:
     print("  " + "-" * 52)
     for lang, m in r["known"]["per_lang"].items():
         print(f"    known-item {lang}   MRR@10 {m['mrr']:.3f}   "
+              f"NDCG@10 {m.get('ndcg', 0):.3f}   "
               f"Recall@10 {m['recall']:.0%}   (n={m['n']})")
     print(f"    median latency    {r['known']['latency_ms']:.0f} ms")
     for lang, v in sorted(r["field"]["by_lang"].items()):
@@ -187,6 +204,10 @@ def main() -> int:
     ap.add_argument("--sample", type=int, default=60, help="dil başına known-item sayı")
     ap.add_argument("--compare", action="store_true",
                     help="tərcümə vektoru ilə və onsuz müqayisə et")
+    ap.add_argument("--retrieval", choices=["vector", "lexical", "hybrid"],
+                    default=None, help="tək üsulu ölç (defolt: konfiqurasiyadakı)")
+    ap.add_argument("--compare-retrieval", action="store_true",
+                    help="vector / lexical / hybrid üsullarını müqayisə et (§5)")
     args = ap.parse_args()
 
     db = SessionLocal()
@@ -196,14 +217,52 @@ def main() -> int:
     print(f"  model  : {settings.embedding_model}")
     print(f"  korpus : {total} məqalə")
 
-    current = run(db, args.sample, "policy")
+    retrieval = args.retrieval or settings.retrieval_mode
+    print(f"  üsul   : {retrieval}")
+
+    # ------------------------------------------------ §5: üsulların müqayisəsi
+    if args.compare_retrieval:
+        print("\n  Tərcümə strategiyası hər üçündə eynidir (produksiya siyasəti);")
+        print("  yalnız RETRIEVAL ÜSULU dəyişir.")
+        results = {}
+        for method in ("vector", "lexical", "hybrid"):
+            results[method] = run(db, args.sample, "policy", method)
+            show(f"ÜSUL: {method.upper()}", results[method])
+
+        base = results["vector"]
+        print("\n  " + "=" * 52)
+        print("  HİBRİDİN TƏSİRİ — vektora nisbətən")
+        for method in ("lexical", "hybrid"):
+            r = results[method]
+            print(f"\n    {method}:")
+            for lang in sorted(r["known"]["per_lang"]):
+                a = base["known"]["per_lang"].get(lang, {})
+                b = r["known"]["per_lang"][lang]
+                print(f"      MRR ({lang})   {a.get('mrr', 0):.3f} → {b['mrr']:.3f}"
+                      f"   ({b['mrr'] - a.get('mrr', 0):+.3f})")
+                print(f"      NDCG ({lang})  {a.get('ndcg', 0):.3f} → {b['ndcg']:.3f}"
+                      f"   ({b['ndcg'] - a.get('ndcg', 0):+.3f})")
+            for lang in sorted(r["field"]["by_lang"]):
+                a = base["field"]["by_lang"].get(lang, 0.0)
+                b = r["field"]["by_lang"][lang]
+                print(f"      P@10 ({lang})  {a:.0%} → {b:.0%}   ({b - a:+.0%})")
+            ra, rb = base["field"]["ru_share"], r["field"]["ru_share"]
+            print(f"      rusdilli pay  {ra:.0%} → {rb:.0%}   ({rb - ra:+.0%})")
+            la, lb = base["known"]["latency_ms"], r["known"]["latency_ms"]
+            print(f"      gecikmə       {la:.0f} → {lb:.0f} ms")
+
+        print("\n  Qərar qaydası (§5): mürəkkəblik yalnız ÖLÇÜLƏN fayda")
+        print("  verəndə saxlanılır. Fayda yoxdursa RETRIEVAL_MODE=vector qalır.\n")
+        return 0
+
+    current = run(db, args.sample, "policy", retrieval)
     show("DİLƏ GÖRƏ STRATEGİYA (produksiya)", current)
 
     if args.compare:
-        show("YALNIZ ORİJİNAL SORĞU", run(db, args.sample, "original"))
-        show("ORİJİNAL + TƏRCÜMƏ (dildən asılı olmayaraq)", run(db, args.sample, "both"))
+        show("YALNIZ ORİJİNAL SORĞU", run(db, args.sample, "original", retrieval))
+        show("ORİJİNAL + TƏRCÜMƏ (dildən asılı olmayaraq)", run(db, args.sample, "both", retrieval))
 
-        legacy = run(db, args.sample, "translated")
+        legacy = run(db, args.sample, "translated", retrieval)
         show("YALNIZ TƏRCÜMƏ", legacy)
 
         print("\n  " + "=" * 52)

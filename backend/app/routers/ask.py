@@ -63,6 +63,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
     blocks = retrieve(
         db, query, top_k=req.top_k,
         categories=[req.field] if req.field else None, also=also,
+        lang=lang, mode=settings.retrieval_mode,
     )
     if not blocks:
         latency = int((time.perf_counter() - t0) * 1000)

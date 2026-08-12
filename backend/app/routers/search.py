@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from .. import crud
+from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
 from ..rag.retriever import retrieve
@@ -27,20 +28,15 @@ def semantic_search(
         raise HTTPException(status_code=422, detail=f"Naməlum sahə: {field}")
     # Dilə görə strategiya translator-də, benchmark ilə ölçülüb
     query, also, lang, query_en = retrieval_inputs(q)
+    # retrieve() artıq məqalə səviyyəsində qaytarır (audit W2) — əvvəllər
+    # chunk-lara limit qoyulduğu üçün top_k*2 çəkib Python-da təkrarları
+    # atmaq lazım gəlirdi. İndi buna ehtiyac yoxdur.
     blocks = retrieve(
-        db, query, top_k=max(top_k * 2, 10),
+        db, query, top_k=top_k,
         categories=[field] if field else None, also=also,
+        lang=lang, mode=settings.retrieval_mode,
     )
-
-    hits, seen = [], set()
-    for b in blocks:
-        paper = b["paper"]
-        if paper.id in seen:
-            continue
-        seen.add(paper.id)
-        hits.append({"paper": crud.paper_to_out(paper), "score": b["score"]})
-        if len(hits) >= top_k:
-            break
+    hits = [{"paper": crud.paper_to_out(b["paper"]), "score": b["score"]} for b in blocks]
 
     return {
         "query": q,

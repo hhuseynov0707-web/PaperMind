@@ -46,6 +46,35 @@ DOI_UNIQUE_INDEX = (
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_papers_doi ON papers (doi) WHERE doi IS NOT NULL"
 )
 
+# --- Phase 2: leksik axtarış (§5 hibrid retrieval) ---------------------------
+#
+# İki ayrı sütun, bir yox. Səbəb: `to_tsvector(config, text)` yalnız config
+# SABİT olduqda IMMUTABLE-dir, ona görə sətrin `language` sütununa görə dinamik
+# konfiqurasiya seçmək GENERATED sütunda mümkün deyil. Trigger yazmaq olardı,
+# amma generated sütun kod tərəfindən sinxron saxlanmağa ehtiyac duymur —
+# abstrakt zənginləşəndə (D6) indeks özü yenilənir.
+#
+# Praktikada bu, düzgün davranış da verir: rusca sorğu `sv_ru`-ya, ingiliscə
+# sorğu `sv_en`-ə gedir. Rus stemmer-i ingiliscə mətndən mənasız token çıxarır,
+# amma o tokenlər heç vaxt sorğulanmır.
+#
+# setweight: başlıq abstraktdan güclüdür (A > B) — known-item axtarışında
+# başlıq uyğunluğu abstraktdakı təsadüfi termindən qat-qat mühümdür.
+TSVECTOR_DDL = [
+    """ALTER TABLE papers ADD COLUMN IF NOT EXISTS sv_en tsvector
+       GENERATED ALWAYS AS (
+           setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+           setweight(to_tsvector('english', coalesce(abstract, '')), 'B')
+       ) STORED""",
+    """ALTER TABLE papers ADD COLUMN IF NOT EXISTS sv_ru tsvector
+       GENERATED ALWAYS AS (
+           setweight(to_tsvector('russian', coalesce(title, '')), 'A') ||
+           setweight(to_tsvector('russian', coalesce(abstract, '')), 'B')
+       ) STORED""",
+    "CREATE INDEX IF NOT EXISTS ix_papers_sv_en ON papers USING gin (sv_en)",
+    "CREATE INDEX IF NOT EXISTS ix_papers_sv_ru ON papers USING gin (sv_ru)",
+]
+
 # Vektor axtarışı üçün ANN indeksi. Bunsuz hər sorğu bütün chunks cədvəlini
 # ardıcıl skan edir — bir neçə min sətirdə hiss olunmur, yüz minlərlə sətirdə
 # sistem dayanır. Boş cədvəldə yaradılması anidir, ona görə korpus böyüməzdən
@@ -91,6 +120,17 @@ def run() -> None:
         log.info("HNSW vektor indeksi hazırdır")
     except Exception as exc:
         log.warning("HNSW indeksi yaradıla bilmədi (sistem indekssiz işləyəcək): %s", exc)
+
+    # Leksik indeks (Phase 2). Ayrıca tranzaksiyada: GENERATED sütun əlavəsi
+    # cədvəli yenidən yazır və köhnə Postgres versiyalarında dəstəklənmir —
+    # uğursuz olsa sistem yalnız vektor axtarışı ilə işləməyə davam edir.
+    try:
+        with engine.begin() as conn:
+            for stmt in TSVECTOR_DDL:
+                conn.execute(text(stmt))
+        log.info("Leksik indekslər (sv_en, sv_ru) hazırdır")
+    except Exception as exc:
+        log.warning("Leksik indeks qurula bilmədi (hibrid axtarış sönülü qalacaq): %s", exc)
 
     # DOI unikallığı (audit D3). Dedup yalnız tətbiq qatında idi — paralel ingest
     # eyni DOI-nu iki sətir kimi yaza bilərdi. Partial index, çünki DOI-suz

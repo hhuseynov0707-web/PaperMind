@@ -4,6 +4,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     Column,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -12,7 +13,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint
 
@@ -57,6 +58,27 @@ class Paper(Base):
     primary_category: Mapped[str | None] = mapped_column(Text, index=True)
     field_keys = mapped_column(ARRAY(Text), default=list)                    # 8 sahədən hansılara aiddir
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    # Leksik axtarış üçün (Phase 2). Postgres özü hesablayır və saxlayır —
+    # abstrakt zənginləşəndə (D6) indeks avtomatik yenilənir, kod sinxronlaşdırmır.
+    # İki ayrı sütun, çünki to_tsvector yalnız SABİT konfiqurasiya ilə IMMUTABLE-dir.
+    sv_en = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
+            "setweight(to_tsvector('english', coalesce(abstract, '')), 'B')",
+            persisted=True,
+        ),
+        nullable=True,
+    )
+    sv_ru = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('russian', coalesce(title, '')), 'A') || "
+            "setweight(to_tsvector('russian', coalesce(abstract, '')), 'B')",
+            persisted=True,
+        ),
+        nullable=True,
+    )
     pdf_url: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

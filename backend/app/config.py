@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     # davam edir (xəta yox, degrade).
     translate_daily_budget: int = 2000
 
+    # Retrieval üsulu: "vector" | "lexical" | "hybrid".
+    # Defolt qəsdən "vector"-dur — hibrid yalnız benchmark fayda göstərəndən
+    # SONRA açılır (§5: "Keep complexity only when it produces measurable benefit").
+    retrieval_mode: str = "vector"
+
     chunk_size: int = 1200
     chunk_overlap: int = 150
 
