@@ -254,8 +254,12 @@ def trend_classes(
         }
         return {"weeks": ordered_weeks, "classes": classify_series(series)}
 
+    # Açar versiyası v2: hesablama dəyişdi (indeks əhatəsi yoxlaması əlavə
+    # olundu). Köhnə açarda 6 saatlıq keşdə YANLIŞ təsnifat qalırdı —
+    # «təbiət elmləri yeni yaranır». Hesablama məntiqi dəyişəndə açar da
+    # dəyişməlidir, yoxsa düzəliş istifadəçiyə çatmır.
     value, hit = cache.get_or_set(
-        f"analytics:trendclass:v1:{weeks}", settings.analytics_cache_ttl, build
+        f"analytics:trendclass:v2:{weeks}", settings.analytics_cache_ttl, build
     )
     response.headers["X-Cache"] = "HIT" if hit else "MISS"
     return value
