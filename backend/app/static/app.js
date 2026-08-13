@@ -24,6 +24,20 @@ const I18N = {
   az: {
     product_kicker: 'Elmi İntellekt Platforması',
     corpus_note: 'Bu cavab indekslənmiş korpusa əsaslanır: {n} məqalə · {src} · {langs}',
+    nav_landscape: 'Landşaft',
+    landscape_title: 'Tədqiqat landşaftı',
+    landscape_sub: 'Klasterlər, aktiv müəlliflər və fənlərarası əlaqələr — yalnız indekslənmiş korpusdan.',
+    landscape_empty: 'Landşaft üçün əvvəlcə axtarış et.',
+    lx_clusters: 'Klasterlər',
+    lx_authors: 'Ən aktiv müəlliflər',
+    lx_cross: 'Fənlərarası əlaqələr',
+    lx_papers: 'məqalə',
+    trend_classes_title: 'Trend təsnifatı',
+    tc_EMERGING: 'Yeni yaranır',
+    tc_GROWING: 'Artır',
+    tc_STABLE: 'Sabit',
+    tc_DECLINING: 'Azalır',
+    tc_INSUFFICIENT_DATA: 'Data kifayət etmir',
     skip_to_content: 'Əsas məzmuna keç',
     nav_discover: 'Kəşf', nav_search: 'Axtarış', nav_browse: 'Vərəqlə', nav_trends: 'Trendlər', nav_digest: 'İcmal',
     m_papers: 'Məqalə', m_chunks: 'Fraqment', m_updated: 'Yeniləndi',
@@ -113,6 +127,20 @@ const I18N = {
   ru: {
     product_kicker: 'Платформа научного интеллекта',
     corpus_note: 'Этот ответ основан на индексированном корпусе: {n} статей · {src} · {langs}',
+    nav_landscape: 'Ландшафт',
+    landscape_title: 'Ландшафт исследований',
+    landscape_sub: 'Кластеры, активные авторы и междисциплинарные связи — только из индексированного корпуса.',
+    landscape_empty: 'Сначала выполните поиск.',
+    lx_clusters: 'Кластеры',
+    lx_authors: 'Самые активные авторы',
+    lx_cross: 'Междисциплинарные связи',
+    lx_papers: 'статей',
+    trend_classes_title: 'Классификация трендов',
+    tc_EMERGING: 'Зарождается',
+    tc_GROWING: 'Растёт',
+    tc_STABLE: 'Стабильно',
+    tc_DECLINING: 'Снижается',
+    tc_INSUFFICIENT_DATA: 'Недостаточно данных',
     skip_to_content: 'Перейти к содержимому',
     nav_discover: 'Обзор', nav_search: 'Поиск', nav_browse: 'Листать', nav_trends: 'Тренды', nav_digest: 'Дайджест',
     m_papers: 'Статей', m_chunks: 'Фрагментов', m_updated: 'Обновлено',
@@ -202,6 +230,20 @@ const I18N = {
   en: {
     product_kicker: 'Scientific Intelligence Platform',
     corpus_note: 'This answer is based on the indexed corpus: {n} papers · {src} · {langs}',
+    nav_landscape: 'Landscape',
+    landscape_title: 'Research landscape',
+    landscape_sub: 'Clusters, active authors and cross-field links — built from the indexed corpus only.',
+    landscape_empty: 'Run a search first to build the landscape.',
+    lx_clusters: 'Clusters',
+    lx_authors: 'Most active authors',
+    lx_cross: 'Cross-disciplinary links',
+    lx_papers: 'papers',
+    trend_classes_title: 'Trend classification',
+    tc_EMERGING: 'Emerging',
+    tc_GROWING: 'Growing',
+    tc_STABLE: 'Stable',
+    tc_DECLINING: 'Declining',
+    tc_INSUFFICIENT_DATA: 'Insufficient data',
     skip_to_content: 'Skip to content',
     nav_discover: 'Discover', nav_search: 'Search', nav_browse: 'Browse', nav_trends: 'Trends', nav_digest: 'Digest',
     m_papers: 'Papers', m_chunks: 'Chunks', m_updated: 'Updated',
@@ -621,6 +663,10 @@ async function runSearch(q) {
 
   if (!data.hits.length) return renderEmpty();
 
+  // §11: axtarış nəticəsi hazır olan kimi landşaft da qurulur — istifadəçi
+  // «hansı məqalələr var» sualından «bu sahə necə qurulub» sualına keçə bilsin.
+  loadLandscape(q);
+
   const head = `
     <div class="res-head">
       <h2>${t('res_search')}</h2>
@@ -743,6 +789,80 @@ function weeklyByField(rows) {
     (map[r.category] ||= {})[r.week] = (map[r.category][r.week] || 0) + r.count;
   });
   return { weeks, map };
+}
+
+/* ---------------------------------------------------------------- Phase 4
+   Trend təsnifatı (§12) və tədqiqat landşaftı (§11).
+   Hər ikisi serverdə hesablanır; burada yalnız göstərilir. Xüsusilə vacib:
+   təsnifatın SƏBƏBİ də göstərilir — «artır» sözü tək başına heç nə demir. */
+
+const TC_TONE = {
+  EMERGING: 'up', GROWING: 'up', STABLE: 'flat',
+  DECLINING: 'down', INSUFFICIENT_DATA: 'muted',
+};
+
+async function loadTrendClasses() {
+  const box = $('#trend-classes');
+  if (!box) return;
+  try {
+    const { data } = await api('/api/analytics/trend-classes?weeks=16');
+    const rows = (data.classes || []).filter((c) => c.classification !== 'INSUFFICIENT_DATA');
+    if (!rows.length) { box.innerHTML = ''; return; }
+    box.innerHTML = `
+      <div class="tc-head">${t('trend_classes_title')}</div>
+      ${rows.map((c) => `
+        <div class="tc-row tc-${TC_TONE[c.classification] || 'flat'}">
+          <span class="tc-badge">${esc(t('tc_' + c.classification))}</span>
+          <b>${esc(groupName(c.label))}</b>
+          <span class="tc-why">${esc(c.reason)}</span>
+        </div>`).join('')}`;
+  } catch (e) { box.innerHTML = ''; }
+}
+
+async function loadLandscape(query) {
+  const panel = $('#landscape');
+  const body = $('#landscape-body');
+  if (!panel || !body || !query) return;
+  panel.hidden = false;
+  try {
+    const [lxRes, crossRes] = await Promise.all([
+      api('/api/landscape?q=' + encodeURIComponent(query)),
+      api('/api/cross-disciplinary?q=' + encodeURIComponent(query)),
+    ]);
+    const lx = lxRes.data, cross = crossRes.data;
+    const L = lx.landscape || {};
+    const scope = $('#landscape-scope');
+    if (scope) {
+      scope.hidden = false;
+      scope.textContent = `${nf().format(L.total || 0)} ${t('lx_papers')}`;
+    }
+    const clusters = (L.clusters || []).map((c) => `
+      <div class="lx-cluster">
+        <div class="lx-bar"><i style="width:${Math.round((c.share || 0) * 100)}%"></i></div>
+        <b>${esc(fieldName(c.key))}</b>
+        <span>${c.count} · ${Math.round((c.share || 0) * 100)}%</span>
+      </div>`).join('');
+    const authors = (L.authors || []).map((a) =>
+      `<li><span>${esc(a.name)}</span><b>${a.count}</b></li>`).join('');
+    const links = (cross.connections || []).slice(0, 6).map((c) =>
+      `<li><span>${esc(fieldName(c.fields[0]))} ↔ ${esc(fieldName(c.fields[1]))}</span>
+         <b>${c.papers}</b></li>`).join('');
+
+    body.innerHTML = `
+      <div class="lx-grid">
+        <section><h3>${t('lx_clusters')}</h3>${clusters || '<p class="muted">—</p>'}</section>
+        <section><h3>${t('lx_authors')}</h3><ol class="lx-list">${authors || ''}</ol></section>
+        <section><h3>${t('lx_cross')}</h3><ol class="lx-list">${links || '<li class="muted">—</li>'}</ol></section>
+      </div>
+      ${lx.corpus ? `<p class="corpus-note">${esc(
+        t('corpus_note')
+          .replace('{n}', nf().format(lx.corpus.papers))
+          .replace('{src}', lx.corpus.sources.join(' · '))
+          .replace('{langs}', lx.corpus.languages.join('/'))
+      )}</p>` : ''}`;
+  } catch (e) {
+    body.innerHTML = `<p class="muted">${esc(errTitle(e))}</p>`;
+  }
 }
 
 async function loadTrends() {
@@ -1144,5 +1264,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* loadAll trend qrafikini çəkir, o isə sahə→qrup xəritəsinə möhtacdır.
      Paralel buraxılsa trend keşdən daha tez qayıdır və hər şey «Digər» olur. */
-  loadFields().then(loadAll);
+  loadFields().then(loadAll).then(loadTrendClasses);
 });

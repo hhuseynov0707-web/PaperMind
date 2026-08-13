@@ -677,3 +677,47 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 }
 .cite { cursor: pointer; text-decoration: none; }
 .cite:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------- Phase 4
+   Trend təsnifatı (§12) və tədqiqat landşaftı (§11). */
+
+.trend-classes { margin-top: 18px; display: grid; gap: 8px; }
+.tc-head {
+  font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+}
+.tc-row {
+  display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: baseline;
+  padding: 9px 12px; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.tc-badge {
+  font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-2); white-space: nowrap;
+}
+.tc-up   .tc-badge { background: rgba(52,211,153,.14); color: #34D399; }
+.tc-down .tc-badge { background: rgba(248,113,113,.14); color: #F87171; }
+.tc-muted .tc-badge { background: var(--surface-3); color: var(--muted); }
+.tc-why { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+.lx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px; }
+.lx-grid h3 {
+  font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px;
+}
+.lx-cluster { margin-bottom: 10px; font-size: 13.5px; }
+.lx-cluster b { display: inline-block; margin-right: 6px; }
+.lx-cluster span { color: var(--muted); font-size: 12.5px; }
+.lx-bar { height: 4px; background: var(--surface-3); border-radius: 999px; margin-bottom: 6px; }
+.lx-bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.lx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.lx-list li {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 13.5px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+}
+.lx-list li b { color: var(--accent-2); }
+
+@media (max-width: 640px) {
+  .tc-row { grid-template-columns: auto 1fr; }
+  .tc-why { grid-column: 1 / -1; }
+}

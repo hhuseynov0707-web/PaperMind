@@ -40,6 +40,15 @@ DDL = [
     "ALTER TABLE papers ADD COLUMN IF NOT EXISTS openalex_id text",
     "CREATE INDEX IF NOT EXISTS ix_papers_pmid ON papers (pmid)",
     "CREATE INDEX IF NOT EXISTS ix_papers_openalex_id ON papers (openalex_id)",
+    # Phase 4 (§7): məqalə səviyyəli çıxarışlar
+    """CREATE TABLE IF NOT EXISTS paper_insights (
+           paper_id integer PRIMARY KEY REFERENCES papers(id) ON DELETE CASCADE,
+           data jsonb DEFAULT '{}'::jsonb,
+           model text,
+           created_at timestamptz DEFAULT now()
+       )""",
+    "CREATE INDEX IF NOT EXISTS ix_insights_model ON paper_insights (model)",
+    "CREATE INDEX IF NOT EXISTS ix_insights_data ON paper_insights USING gin (data)",
 ]
 
 DOI_UNIQUE_INDEX = (

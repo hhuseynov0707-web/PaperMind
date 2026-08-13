@@ -139,6 +139,31 @@ class Chunk(Base):
     paper: Mapped[Paper] = relationship(back_populates="chunks")
 
 
+class PaperInsight(Base):
+    """Məqalə səviyyəli çıxarış — §7.
+
+    Niyə JSONB, niyə 12 ayrı sütun deyil: §7 hər sahə üçün yalnız DƏYƏRİ yox,
+    həm də SÜBUT TİPİNİ tələb edir (stated / synthesized / inferred) və dəyəri
+    dayaqlayan sitatı. Bu, sahə başına üç sütun demək olardı. JSONB struktur
+    dəyişəndə miqrasiya tələb etmir və axtarış GIN indeksi ilə işləyir.
+
+    `model` sütunu vacibdir: çıxarış LLM-dən gəlir, model dəyişəndə hansı
+    sətirlərin yenidən hesablanmalı olduğu buradan bilinir (chunk-lardakı
+    `embedding_model` ilə eyni məntiq).
+    """
+
+    __tablename__ = "paper_insights"
+
+    paper_id: Mapped[int] = mapped_column(
+        ForeignKey("papers.id", ondelete="CASCADE"), primary_key=True
+    )
+    data = mapped_column(JSONB, default=dict)
+    model: Mapped[str | None] = mapped_column(Text, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    paper: Mapped[Paper] = relationship()
+
+
 class QaHistory(Base):
     __tablename__ = "qa_history"
 

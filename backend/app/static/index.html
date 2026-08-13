@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
-  <link rel="stylesheet" href="/style.css?v=2.8.0">
+  <link rel="stylesheet" href="/style.css?v=2.9.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=2.8.0" defer></script>
+  <script src="/app.js?v=2.9.0" defer></script>
 </head>
 <body>
 
@@ -31,6 +31,7 @@
       <a href="#discover" data-nav="discover" data-i18n="nav_discover">Discover</a>
       <a href="#results" data-nav="results" data-i18n="nav_search">Search</a>
       <a href="#browse" data-nav="browse" data-i18n="nav_browse">Browse</a>
+      <a href="#landscape" data-nav="landscape" data-i18n="nav_landscape">Landscape</a>
       <a href="#trends" data-nav="trends" data-i18n="nav_trends">Trends</a>
       <a href="#digest" data-nav="digest" data-i18n="nav_digest">Digest</a>
     </nav>
@@ -107,6 +108,17 @@
       <div class="deck-dots" id="deck-dots"></div>
     </section>
 
+    <section class="panel" id="landscape" hidden>
+      <div class="panel-head">
+        <div>
+          <h2 data-i18n="landscape_title">Research landscape</h2>
+          <p class="panel-sub" data-i18n="landscape_sub">Clusters, active authors and cross-field links — built from the indexed corpus only.</p>
+        </div>
+        <span class="pill" id="landscape-scope" hidden></span>
+      </div>
+      <div id="landscape-body"></div>
+    </section>
+
     <section class="panel" id="trends">
       <div class="panel-head">
         <div>
@@ -122,6 +134,7 @@
       </div>
       <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
       <div class="deltas" id="trend-deltas"></div>
+      <div class="trend-classes" id="trend-classes"></div>
       <p class="foot-note" id="trend-note"></p>
     </section>
 

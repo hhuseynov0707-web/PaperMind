@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from . import cache, crud, migrate, models  # noqa: F401 — models: Base.metadata qeydiyyatı üçün
 from .config import settings
 from .database import Base, engine, get_db
-from .routers import analytics, ask, digests, ingest, logs, papers, search
+from .routers import analytics, ask, digests, ingest, intelligence, logs, papers, search
 from .schemas import ServiceHealth
 
 
@@ -70,6 +70,7 @@ for r in (
     analytics.router,
     logs.router,
     digests.router,
+    intelligence.router,
 ):
     app.include_router(r)
 

@@ -467,8 +467,44 @@ Kod silinmir: test olunub, xərci yoxdur və sonrakı mərhələlərin təmelidi
 | 3.7 | **RAG eval** (`scripts/rag_eval.py`) | ✅ groundedness, citation coverage, uydurma nisbəti |
 
 
-### Phase 4 — Research intelligence (§7, §9, §10, §11, §12)
-4.1 `paper_insights` + çıxarış · 4.2 müqayisə · 4.3 ziddiyyət təsnifatı · 4.4 landşaft · 4.5 trend təsnifatı
+### Phase 4 — Research intelligence ✅ (kod hazır, çıxarış korpusa tətbiq olunmalıdır)
+| # | İş | Vəziyyət |
+|---|---|---|
+| 4.1 | `paper_insights` + çıxarış (§7) | ✅ JSONB, sübut tipi ilə |
+| 4.2 | Müqayisə (§9) | ✅ `/api/compare`, 7 ox |
+| 4.3 | Ziddiyyət təsnifatı (§10) | ✅ `/api/conflicts`, 4 sinif |
+| 4.4 | Landşaft (§11) | ✅ `/api/landscape` |
+| 4.5 | Trend təsnifatı (§12) | ✅ `/api/analytics/trend-classes` |
+| 4.6 | Boşluqlar (§13) | ✅ `/api/gaps` |
+| 4.7 | Fənlərarası (§14) | ✅ `/api/cross-disciplinary` |
+| 4.8 | UI (§19) | ✅ landşaft paneli + trend təsnifatı, 3 dildə |
+
+#### Üç qayda koda yazıldı, prompt-a həvalə edilmədi
+
+Prompt niyyət bildirir, zəmanət vermir. Ona görə §7/§10-un ən vacib qaydaları
+parse mərhələsində tətbiq olunur və test edilir:
+
+1. **Sitat yoxlanır.** Model «stated» deyib abstraktda olmayan sitat gətirə
+   bilər. Sitat mətndə tapılmasa silinir, etiket «synthesized»-ə endirilir.
+   Dəyərin doğruluğunu maşınla yoxlaya bilmirik — sitatın mövcudluğunu bilirik.
+2. **Naməlum etiket ən ehtiyatlı dəyərə çevrilir.** Yoxlanmayan «stated»
+   iddiasını fakt kimi göstərmək, sintezi nəticə kimi göstərməkdən pisdir.
+3. **Şərtlər fərqlidirsə, `direct_conflict` mümkün deyil** — tərifə görə
+   `conditional_conflict`-dir. Model bunu qarışdırır; qayda kodda tətbiq olunur.
+
+#### §13-ün dil qaydası koda bağlandı
+
+«X haqqında tədqiqat yoxdur» ifadəsi qadağandır — sistem bunu bilmir, yalnız öz
+indeksini görür. İcazə verilən ifadə `GAP_PHRASING`-də üç dildə saxlanılır və
+test onun heç bir dildə «yoxdur» iddiası etmədiyini yoxlayır.
+
+#### Nə hələ yoxdur
+
+Çıxarış korpusa **tətbiq olunmayıb** — `paper_insights` boşdur. `/api/landscape`
+və `/api/gaps` işləyir, amma çıxarışdan gələn siqnallar (mövzular, metodlar,
+təkrarlanan məhdudiyyətlər) yalnız `extract_insights.py` işlədiləndən sonra
+görünəcək. Sahə klasterləri və müəlliflər isə indi də işləyir, çünki onlar
+`field_keys` üzərindən hesablanır.
 
 ### Phase 5 — Cross-disciplinary (§14) · Phase 6 — Research gaps (§13)
 
