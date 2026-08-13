@@ -201,6 +201,22 @@ class GroundingOut(BaseModel):
     coverage: float = 0.0       # istifadə olunan sübutun neçə faizinə istinad edilib
 
 
+class CorpusOut(BaseModel):
+    """Cavabın əsaslandığı korpus (§16).
+
+    "Bu təhlil indekslənmiş korpusa əsaslanır" mesajını RƏQƏMLƏ dəstəkləyir —
+    istifadəçi əhatənin sərhədini görməlidir, sistem isə heç vaxt bütün elmi
+    ədəbiyyatı təmsil etdiyini ima etməməlidir.
+    """
+    papers: int
+    sources: list[str] = []
+    languages: list[str] = []
+    from_: str | None = Field(default=None, alias="from")
+    to: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class AskResponse(BaseModel):
     answer: str
     sources: list[SourceOut]
@@ -208,6 +224,7 @@ class AskResponse(BaseModel):
     latency_ms: int
     query_en: str | None = None
     grounding: GroundingOut | None = None
+    corpus: CorpusOut | None = None
 
 
 # ---------- Analytics ----------

@@ -360,8 +360,22 @@ xəritələmə. Real identifikator cavabın `sources` siyahısında qalır, inte
 isə `[1]` birbaşa həmin mənbəyə keçid olur. Keş açarı `ask:v2:`-ə keçirildi
 (köhnə cavablarda DOI etiketləri var).
 
-Bu düzəlişdən sonra groundedness yenidən ölçülməlidir — **iddia yalnız ölçmədən
-sonra sənədləşdiriləcək**.
+### Düzəlişdən sonra — ölçüldü
+
+| Metrik | Əvvəl (DOI etiketi) | Sonra (nömrəli etiket) |
+|---|---|---|
+| **groundedness** | 54.1% | **91.4%** |
+| citation coverage | 30.0% | **56.0%** |
+| uydurulmuş istinadı olan cavab | 9/18 | **1/15** |
+| median gecikmə | 8.8 san | 1.8 san |
+
+Diaqnoz təsdiqləndi: problem hallüsinasiya deyil, **etiketin köçürülməsi** idi.
+
+**Ölçmə qüsuru da düzəldildi:** istinad YAZMAYAN cavab (adətən «tapılmadı»)
+ortalamada `0%` kimi sayılırdı və nəticəni haqsız aşağı çəkirdi. İstinad yazan
+14 cavab arasında real rəqəm **97.9%**-dir. İndi groundedness yalnız istinad
+yazan cavablar üzərində hesablanır, istinadsız cavabların payı isə ayrıca
+metrikdir.
 
 ## 13. Prioritetləşdirilmiş yol xəritəsi
 
@@ -448,7 +462,7 @@ Kod silinmir: test olunub, xərci yoxdur və sonrakı mərhələlərin təmelidi
 | 3.2 | Citation validation — uydurulmuş istinad silinir | ✅ 18 test |
 | 3.3 | `citation_label()` tək mənbədə | ✅ kontekst və doğrulama eyni etiketi işlədir |
 | 3.4 | `grounding` cavabda qaytarılır (§8, §20) | ✅ evidence_used, coverage, citations_removed |
-| 3.5 | Korpus konteksti (§16) | 🟡 `corpus_context()` var, UI-ya bağlanmayıb |
+| 3.5 | Korpus konteksti (§16) | ✅ `/api/ask` cavabında `corpus` bloku + UI-da 3 dildə qeyd |
 | 3.6 | **Eval dəsti 28 → 95** | ✅ 19 sahənin hamısı; az 4 → 19, ru 6 → 19 |
 | 3.7 | **RAG eval** (`scripts/rag_eval.py`) | ✅ groundedness, citation coverage, uydurma nisbəti |
 

@@ -531,3 +531,29 @@ def latest_digest(db: Session):
     return db.scalars(
         select(models.Digest).order_by(desc(models.Digest.created_at)).limit(1)
     ).first()
+
+
+def corpus_snapshot(db: Session) -> dict:
+    """Korpusun cari vəziyyəti — §16 (corpus transparency).
+
+    Cavabla birlikdə qaytarılır ki, sistem heç vaxt bütün elmi ədəbiyyatı
+    təmsil etdiyini ima etməsin. Analitika keşi ilə eyni TTL-də saxlanılır,
+    çünki hər sual üçün dörd aqreqat sorğu işlətmək mənasızdır.
+    """
+    total = db.scalar(select(func.count(models.Paper.id))) or 0
+    sources = [r[0] for r in db.execute(
+        select(models.PaperSource.source).distinct()
+    ).all()]
+    languages = [r[0] for r in db.execute(
+        select(models.Paper.language).distinct().where(models.Paper.language.is_not(None))
+    ).all()]
+    span = db.execute(
+        select(func.min(models.Paper.published_at), func.max(models.Paper.published_at))
+    ).first()
+    return {
+        "papers": total,
+        "sources": sorted(s for s in sources if s),
+        "languages": sorted(l for l in languages if l),
+        "from": span[0].date().isoformat() if span and span[0] else None,
+        "to": span[1].date().isoformat() if span and span[1] else None,
+    }

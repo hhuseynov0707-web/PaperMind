@@ -59,6 +59,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             latency_ms=latency,
             query_en=cached.get("query_en"),
             grounding=cached.get("grounding"),
+            corpus=cached.get("corpus"),
         )
 
     query, also, lang, query_en = retrieval_inputs(req.question)
@@ -123,12 +124,19 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         "coverage": cite_stats["coverage"],
     }
 
+    # §16: cavab hansı korpusa əsaslanır. Analitika ilə eyni TTL-də keşlənir —
+    # hər sual üçün dörd aqreqat sorğu işlətməyin mənası yoxdur.
+    corpus, _ = cache.get_or_set(
+        "analytics:corpus:v1", settings.analytics_cache_ttl,
+        lambda: crud.corpus_snapshot(db),
+    )
+
     query_en_out = query_en if lang != "en" else None
     latency = int((time.perf_counter() - t0) * 1000)
     cache.set_json(
         key,
         {"answer": answer, "sources": sources, "query_en": query_en_out,
-         "grounding": grounding},
+         "grounding": grounding, "corpus": corpus},
         settings.ask_cache_ttl,
     )
     crud.save_qa(db, req.question, answer, sources, False, latency)
@@ -139,4 +147,5 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         latency_ms=latency,
         query_en=query_en_out,
         grounding=grounding,
+        corpus=corpus,
     )

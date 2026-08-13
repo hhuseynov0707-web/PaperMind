@@ -78,7 +78,7 @@ def main() -> int:
     print(f"  model  : {settings.groq_model}\n")
 
     stats = {"grounded": [], "coverage": [], "invented": 0, "no_citation": 0,
-             "weak": 0, "refusal": 0, "latency": []}
+             "weak": 0, "refusal": 0, "latency": [], "answers": []}
 
     for i, item in enumerate(queries, 1):
         q, lang_hint = item["q"], item["lang"]
@@ -112,8 +112,14 @@ def main() -> int:
         answer, cite = validate_citations(raw, allowed)
         stats["latency"].append((time.perf_counter() - t0) * 1000)
 
-        grounded = cite["valid"] / cite["cited"] if cite["cited"] else 0.0
-        stats["grounded"].append(grounded)
+        # Groundedness YALNIZ istinad yazan cavablar üzərində hesablanır.
+        # İstinadsız cavab (adətən "tapılmadı") 0% kimi sayılsa, ortalama haqsız
+        # aşağı düşür — halbuki o cavab yanlış istinad vermir, heç vermir.
+        # İstinadsız cavabların payı ayrıca metrikdir.
+        grounded = cite["valid"] / cite["cited"] if cite["cited"] else None
+        if grounded is not None:
+            stats["grounded"].append(grounded)
+        stats["answers"].append(1)
         stats["coverage"].append(cite["coverage"])
         if cite["invented"]:
             stats["invented"] += 1
@@ -126,17 +132,20 @@ def main() -> int:
 
         time.sleep(args.delay)
         flag = "!" if cite["invented"] else " "
-        print(f"  [{i:>2}]{flag}{lang_hint} · grounded {grounded:.0%} · "
+        shown = "istinadsız" if grounded is None else f"grounded {grounded:.0%}"
+        print(f"  [{i:>2}]{flag}{lang_hint} · {shown} · "
               f"əhatə {cite['coverage']:.0%} · {q[:40]}")
 
-    n = len(stats["grounded"])
+    n = len(stats["answers"])
     if not n:
         print("\nHeç bir cavab ölçülə bilmədi.")
         return 1
 
     print("\n" + "=" * 56)
     print("  NƏTİCƏ")
-    print(f"    groundedness (istinadların düzgünlüyü)  {statistics.mean(stats['grounded']):.1%}")
+    cited_n = len(stats["grounded"])
+    grounded_avg = statistics.mean(stats["grounded"]) if cited_n else 0.0
+    print(f"    groundedness (istinad yazan {cited_n} cavab)      {grounded_avg:.1%}")
     print(f"    citation coverage (sübutun istifadəsi)  {statistics.mean(stats['coverage']):.1%}")
     print(f"    uydurulmuş istinadı olan cavab          {stats['invented']}/{n}")
     print(f"    heç bir istinadı olmayan cavab          {stats['no_citation']}/{n}")

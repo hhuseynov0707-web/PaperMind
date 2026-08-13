@@ -23,6 +23,7 @@ const MIN_VOLUME_FOR_DELTA = 40;
 const I18N = {
   az: {
     product_kicker: 'Elmi İntellekt Platforması',
+    corpus_note: 'Bu cavab indekslənmiş korpusa əsaslanır: {n} məqalə · {src} · {langs}',
     skip_to_content: 'Əsas məzmuna keç',
     nav_discover: 'Kəşf', nav_search: 'Axtarış', nav_browse: 'Vərəqlə', nav_trends: 'Trendlər', nav_digest: 'İcmal',
     m_papers: 'Məqalə', m_chunks: 'Fraqment', m_updated: 'Yeniləndi',
@@ -111,6 +112,7 @@ const I18N = {
 
   ru: {
     product_kicker: 'Платформа научного интеллекта',
+    corpus_note: 'Этот ответ основан на индексированном корпусе: {n} статей · {src} · {langs}',
     skip_to_content: 'Перейти к содержимому',
     nav_discover: 'Обзор', nav_search: 'Поиск', nav_browse: 'Листать', nav_trends: 'Тренды', nav_digest: 'Дайджест',
     m_papers: 'Статей', m_chunks: 'Фрагментов', m_updated: 'Обновлено',
@@ -199,6 +201,7 @@ const I18N = {
 
   en: {
     product_kicker: 'Scientific Intelligence Platform',
+    corpus_note: 'This answer is based on the indexed corpus: {n} papers · {src} · {langs}',
     skip_to_content: 'Skip to content',
     nav_discover: 'Discover', nav_search: 'Search', nav_browse: 'Browse', nav_trends: 'Trends', nav_digest: 'Digest',
     m_papers: 'Papers', m_chunks: 'Chunks', m_updated: 'Updated',
@@ -692,6 +695,12 @@ async function runAsk(q) {
       </div>
       ${data.query_en ? `<p class="translated" style="margin-bottom:14px">${t('translated_as')} <code>${esc(data.query_en)}</code></p>` : ''}
       <div class="answer-body">${answer}</div>
+      ${data.corpus ? `<p class="corpus-note">${esc(
+        t('corpus_note')
+          .replace('{n}', nf().format(data.corpus.papers))
+          .replace('{src}', data.corpus.sources.join(' · '))
+          .replace('{langs}', data.corpus.languages.join('/'))
+      )}</p>` : ''}
       ${data.sources.length ? `
         <div class="sources-head">${t('sources_head')}</div>
         <div class="sources">
