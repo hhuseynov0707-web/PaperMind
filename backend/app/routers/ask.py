@@ -8,7 +8,7 @@ from .. import cache, crud
 from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
-from ..rag.evidence import citation_label, select_evidence, validate_citations
+from ..rag.evidence import label_blocks, select_evidence, validate_citations
 from ..rag.llm import ask_llm
 from ..rag.retriever import retrieve
 from ..rag.translator import retrieval_inputs
@@ -44,7 +44,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
 
     t0 = time.perf_counter()
     key = (
-        f"ask:{hashlib.sha256(_normalize(req.question).encode()).hexdigest()}"
+        f"ask:v2:{hashlib.sha256(_normalize(req.question).encode()).hexdigest()}"
         f":{req.top_k}:{req.field or 'all'}"
     )
 
@@ -94,7 +94,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
     # §8: LLM-in yazdığı hər istinad kontekstlə tutuşdurulur. Kontekstdə
     # olmayan istinad uydurulmuşdur və mətndən çıxarılır — interfeys istinadları
     # vurğulayır, saxta istinad orada həqiqi kimi görünür.
-    allowed = {citation_label(b["paper"]) for b in blocks}
+    allowed = set(label_blocks(blocks))
     answer, cite_stats = validate_citations(answer, allowed)
 
     sources, seen = [], set()

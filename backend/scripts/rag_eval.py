@@ -31,7 +31,7 @@ from app.config import settings                        # noqa: E402
 from app.database import SessionLocal                  # noqa: E402
 from app.models import Paper                           # noqa: E402
 from app.rag.evidence import (                         # noqa: E402
-    citation_label,
+    label_blocks,
     select_evidence,
     validate_citations,
 )
@@ -55,6 +55,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", type=int, default=20, help="neçə sorğu (LLM çağırışı bahalıdır)")
     ap.add_argument("--top-k", type=int, default=5)
+    # Groq pulsuz qatında dəqiqəlik limit var — fasilə olmadan 429 alınır
+    ap.add_argument("--delay", type=float, default=3.0, help="sorğular arası fasilə (san)")
     args = ap.parse_args()
 
     if not settings.groq_api_key:
@@ -93,10 +95,20 @@ def main() -> int:
         try:
             raw = ask_llm(q, blocks, lang=lang)
         except Exception as exc:
-            print(f"  [{i:>2}] XƏTA: {str(exc)[:60]}")
-            continue
+            msg = str(exc)
+            if "429" in msg or "rate limit" in msg.lower():
+                print(f"  [{i:>2}] limit — 20 san gözlənilir, təkrar")
+                time.sleep(20)
+                try:
+                    raw = ask_llm(q, blocks, lang=lang)
+                except Exception as exc2:
+                    print(f"  [{i:>2}] XƏTA: {str(exc2)[:60]}")
+                    continue
+            else:
+                print(f"  [{i:>2}] XƏTA: {msg[:60]}")
+                continue
 
-        allowed = {citation_label(b["paper"]) for b in blocks}
+        allowed = set(label_blocks(blocks))
         answer, cite = validate_citations(raw, allowed)
         stats["latency"].append((time.perf_counter() - t0) * 1000)
 
@@ -112,6 +124,7 @@ def main() -> int:
         if looks_like_refusal(answer):
             stats["refusal"] += 1
 
+        time.sleep(args.delay)
         flag = "!" if cite["invented"] else " "
         print(f"  [{i:>2}]{flag}{lang_hint} · grounded {grounded:.0%} · "
               f"əhatə {cite['coverage']:.0%} · {q[:40]}")

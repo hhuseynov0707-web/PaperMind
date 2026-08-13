@@ -4,12 +4,11 @@ Auditdə tapılan boşluq: LLM istinad uydura bilirdi və bunu heç nə yoxlamı
 Prompt qaydası niyyət bildirir, zəmanət vermir.
 """
 
-from types import SimpleNamespace
-
 from app.rag.evidence import (
     MIN_EVIDENCE_SCORE,
     citation_label,
     corpus_context,
+    label_blocks,
     select_evidence,
     validate_citations,
 )
@@ -23,16 +22,30 @@ def _b(score):
 # İstinad etiketi — kontekst və doğrulama EYNİ olmalıdır
 # --------------------------------------------------------------------------
 
-def test_label_prefers_arxiv_then_doi_then_id():
-    assert citation_label(SimpleNamespace(arxiv_id="2601.1", doi="10.1/a", id=5)) == "2601.1"
-    assert citation_label(SimpleNamespace(arxiv_id=None, doi="10.1/a", id=5)) == "10.1/a"
-    assert citation_label(SimpleNamespace(arxiv_id=None, doi=None, id=5)) == "id:5"
+def test_labels_are_short_numbers():
+    """ÖLÇÜLDÜ: DOI etiketləri ilə groundedness 54% idi.
+
+    Səbəbin böyük hissəsi hallüsinasiya deyil, köçürmə xətası idi — model uzun
+    DOI-nu səhvsiz təkrarlaya bilmir. Nömrə həm köçürməsi asandır, həm də
+    doğrulaması dəqiqdir.
+    """
+    assert citation_label(1) == "1"
+    assert citation_label(12) == "12"
+
+
+def test_label_blocks_numbers_from_one():
+    """Nömrələmə `sources` siyahısının sırası ilə eyni olmalıdır ki, interfeys
+    `[2]` etiketini ikinci mənbəyə bağlaya bilsin."""
+    blocks = [_b(0.9), _b(0.8), _b(0.7)]
+    labelled = label_blocks(blocks)
+    assert list(labelled) == ["1", "2", "3"]
+    assert labelled["1"] is blocks[0]
+    assert labelled["3"] is blocks[2]
 
 
 def test_label_never_none():
     """REGRESSION: `[None]` kontekstə düşəndə LLM onu bir neçə fərqli işə yapışdırırdı."""
-    label = citation_label(SimpleNamespace(arxiv_id=None, doi=None, id=42))
-    assert "None" not in label
+    assert "None" not in "".join(label_blocks([_b(0.5)]))
 
 
 # --------------------------------------------------------------------------

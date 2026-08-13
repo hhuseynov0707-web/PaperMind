@@ -27,18 +27,30 @@ RELATIVE_FLOOR = 0.55
 CITATION_RE = re.compile(r"\[([^\]\s]+)\]")
 
 
-def citation_label(paper) -> str:
-    """Bir məqalənin istinad etiketi: arXiv ID → DOI → id:N.
+def citation_label(index: int) -> str:
+    """İstinad etiketi — sadəcə sıra nömrəsi.
 
-    TƏK MƏNBƏ olmalıdır: kontekst qurulanda (llm.py) və istinad doğrulananda
-    (ask.py) eyni etiket hesablanmalıdır. İki fərqli tərif olsa, düzgün istinad
-    "uydurma" sayılıb silinərdi.
+    ƏVVƏL DOI/arXiv ID işlədilirdi və ÖLÇÜLDÜ: groundedness 54% çıxdı, yəni
+    istinadların təxminən yarısı "uydurma" sayılırdı. Səbəbin böyük hissəsi
+    hallüsinasiya deyil, KÖÇÜRMƏ XƏTASI idi — model
+    `10.1080/10095020.2026.2712868` kimi sətri səhvsiz təkrarlaya bilmir və
+    bir simvol dəyişəndə etiket tanınmır. Bəzən isə model onsuz da öz
+    nömrələməsini (`[1]`) yazırdı.
 
-    Korpusun yarıdan çoxu arXiv-dən kənardır — yalnız arxiv_id işlətsək həmin
-    məqalələr kontekstə `[None]` kimi düşür və LLM eyni etiketi bir neçə fərqli
-    işə yapışdırır.
+    Qısa nömrə hər iki problemi aradan qaldırır: köçürmək asandır, doğrulamaq
+    dəqiqdir. Real identifikator (DOI/arXiv) cavabın `sources` siyahısında
+    qalır — istifadəçi onu itirmir.
     """
-    return paper.arxiv_id or paper.doi or f"id:{paper.id}"
+    return str(index)
+
+
+def label_blocks(blocks: list[dict]) -> dict[str, dict]:
+    """Sübut bloklarını nömrələyir: {"1": block, "2": block, ...}.
+
+    Sıra `sources` siyahısının sırası ilə eynidir, ona görə interfeys `[2]`
+    etiketini ikinci mənbəyə bağlaya bilir.
+    """
+    return {citation_label(i): b for i, b in enumerate(blocks, start=1)}
 
 
 def select_evidence(blocks: list[dict], max_blocks: int = 8) -> tuple[list[dict], dict]:

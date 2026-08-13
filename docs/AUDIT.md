@@ -314,6 +314,55 @@ Dedup mexanizmi işləyir, amma mənbələr bir-birini az kəsir:
 
 OpenAlex həm arXiv preprintlərini, həm jurnal nəşrlərini indeksləyən yeganə mənbədir — yəni təbii körpüdür, amma hazırda rusdilli işlərlə məhdudlaşdırılıb. Bu, §14 (fənlərarası) və §15 (əlaqələr) üçün təməldir və Phase 2 ilə paralel həll olunmalıdır.
 
+## Phase 3 nəticələri (ölçülmüş)
+
+### Genişləndirilmiş eval dəsti nə göstərdi
+
+95 sorğu ilə (əvvəl 28) sahə dəqiqliyi aşağı düşdü:
+
+| | 28 sorğu (8 sahə) | 95 sorğu (19 sahə) |
+|---|---|---|
+| P@10 az | 68% | **56%** |
+| P@10 en | 63% | **50%** |
+| P@10 ru | 62% | **51%** |
+| rusdilli pay | 23% | **12%** |
+
+**Bu, pisləşmə deyil.** Əvvəlki dəst yalnız texnologiya sahələrini ölçürdü —
+korpusun ən güclü hissəsini. İndi tibb, fizika, iqtisadiyyat, psixologiya kimi
+nazik təmsil olunan sahələr də ölçülür. 50% rəqəmi **əvvəllər görünməyən
+reallıqdır**; köhnə 63% isə seçilmiş nümunənin nəticəsi idi.
+
+### RAG evaluation — əsas tapıntı
+
+İlk ölçmə (n=18, 2 sorğu Groq limitinə düşdü):
+
+| Metrik | Dəyər |
+|---|---|
+| **groundedness** | **54.1%** |
+| citation coverage | 30.0% |
+| uydurulmuş istinadı olan cavab | 9/18 |
+| istinadsız cavab | 1/18 |
+| «tapılmadı» cavabı | 4/18 |
+| median gecikmə | 8.8 san |
+
+Groundedness 54% o deməkdir ki, LLM-in yazdığı istinadların təxminən yarısı
+kontekstdə mövcud deyil. Doğrulama qatı onları silir (§8 işləyir), amma səbəb
+araşdırıldı və **böyük hissəsi hallüsinasiya deyil**:
+
+- İstinad etiketi kimi DOI işlədilirdi: `10.1080/10095020.2026.2712868`.
+  Model bu uzunluqda sətri səhvsiz köçürə bilmir — bir simvol dəyişəndə etiket
+  tanınmır və «uydurma» sayılır.
+- Model bəzən onsuz da öz nömrələməsini (`[1]`) yazırdı; doğrulama isə onu
+  naməlum etiket kimi oxuyurdu.
+
+**Düzəliş:** kontekstdə qısa nömrəli etiketlər (`<doc id="1">`), serverdə geri
+xəritələmə. Real identifikator cavabın `sources` siyahısında qalır, interfeysdə
+isə `[1]` birbaşa həmin mənbəyə keçid olur. Keş açarı `ask:v2:`-ə keçirildi
+(köhnə cavablarda DOI etiketləri var).
+
+Bu düzəlişdən sonra groundedness yenidən ölçülməlidir — **iddia yalnız ölçmədən
+sonra sənədləşdiriləcək**.
+
 ## 13. Prioritetləşdirilmiş yol xəritəsi
 
 Ardıcıllıq brief-in §22-sinə uyğundur, amma **§23-ün qaydası** tətbiq olunur: təməl sabit olmadan yuxarı mərtəbə tikilmir.

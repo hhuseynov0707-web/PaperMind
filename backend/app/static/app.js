@@ -671,10 +671,15 @@ async function runAsk(q) {
     ? `<span class="badge cached" title="${esc(t('cached_hint'))}">⚡ ${t('cached')} · ${ms(data.latency_ms)}</span>`
     : `<span class="badge live" title="${esc(t('live_hint'))}"><span class="dot"></span>${t('processing')} · ${ms(data.latency_ms)}</span>`;
 
-  // arXiv ID (2608.01234) və DOI (10.1145/xxx) istinadlarının hər ikisi vurğulanır
-  const answer = esc(data.answer)
-    .replace(/\[(\d{4}\.\d{4,5}(?:v\d+)?)\]/g, '<span class="cite">[$1]</span>')
-    .replace(/\[(10\.\d{4,9}\/[^\]\s]+)\]/g, '<span class="cite">[$1]</span>');
+  // İstinadlar nömrəlidir: [1], [2]... Nömrə mənbə siyahısındakı sıra ilə eynidir,
+  // ona görə etiket birbaşa həmin mənbəyə keçid olur.
+  // (Əvvəl DOI/arXiv ID işlədilirdi — model uzun DOI-nu səhvsiz köçürə bilmirdi.)
+  const answer = esc(data.answer).replace(
+    /\[(\d{1,2})\]/g,
+    (m, n) => (Number(n) >= 1 && Number(n) <= data.sources.length
+      ? `<a class="cite" href="#src-${n}">[${n}]</a>`
+      : m)
+  );
 
   r.innerHTML = `
     <div class="answer-panel">
@@ -691,7 +696,7 @@ async function runAsk(q) {
         <div class="sources-head">${t('sources_head')}</div>
         <div class="sources">
           ${data.sources.map((s, i) => `
-            <a class="source" href="${esc(s.pdf_url || '#')}" target="_blank" rel="noopener">
+            <a class="source" id="src-${i + 1}" href="${esc(s.pdf_url || '#')}" target="_blank" rel="noopener">
               <span class="idx">${i + 1}</span>
               <span class="st"><b>${esc(s.title)}</b><span>${esc(paperRef(s))}</span></span>
               <span class="sc">${Math.round(s.score * 100)}% ${esc(t('rel_short'))}</span>

@@ -3,7 +3,7 @@ import re
 from groq import Groq
 
 from ..config import settings
-from .evidence import citation_label
+from .evidence import label_blocks
 
 LANG_NAMES = {
     "az": "Azərbaycan dili",
@@ -17,8 +17,9 @@ mesajındakı <evidence> blokunda verilmiş abstraktlara əsaslanaraq cavab ver.
 Qaydalar:
 1. CAVABIN DİLİ MÜTLƏQ BUDUR: {answer_lang}. Bütün cavabı yalnız bu dildə yaz —
    sualın dili fərqli görünsə belə.
-2. Hər əsas iddiadan sonra mənbəni [id] formatında göstər — id məhz həmin
-   sənədin <doc id="..."> atributundakı dəyərdir. Orada olmayan id UYDURMA.
+2. Hər əsas iddiadan sonra mənbənin NÖMRƏSİNİ [1] formatında göstər — nömrə
+   məhz həmin sənədin <doc id="..."> atributundakı rəqəmdir. Yalnız verilmiş
+   nömrələri işlət; başqa nömrə və ya DOI/arXiv ID YAZMA.
 3. <evidence> blokunda cavab yoxdursa, bunu həmin dildə açıq bildir. Heç nə uydurma.
 4. Texniki terminləri ingiliscə saxla (məs. retrieval, fine-tuning).
 
@@ -70,17 +71,18 @@ def ask_llm(question: str, blocks: list[dict], lang: str = "az") -> str:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY təyin olunmayıb")
 
-    # İstinad etiketi ayrıca modula köçürüldü ki, ask.py doğrulama zamanı
-    # EYNİ etiketi hesablasın — iki fərqli tərif olsa, doğru istinad "uydurma"
-    # kimi silinərdi.
-    ref = citation_label
-
     # Kontekst SYSTEM mesajından çıxarılıb user mesajına köçürülüb (audit S1):
     # etibarsız mətn system səlahiyyəti ilə oxunmamalıdır.
+    #
+    # Etiketlər NÖMRƏDİR, DOI deyil. Ölçüldü: DOI etiketləri ilə groundedness
+    # 54% çıxdı — səbəbin böyük hissəsi hallüsinasiya yox, köçürmə xətası idi
+    # (`10.1080/10095020.2026.2712868` kimi sətri model səhvsiz təkrarlamır).
+    # `label_blocks` ask.py ilə eyni nömrələməni verir, ona görə doğrulama
+    # dəqiqdir. Real identifikator cavabın `sources` siyahısında qalır.
     docs = "\n".join(
-        f'<doc id="{_sanitize(ref(b["paper"]))}">\n'
+        f'<doc id="{label}">\n'
         f"{_sanitize(b['paper'].title)}\n{_sanitize(b['chunk'].content)}\n</doc>"
-        for b in blocks
+        for label, b in label_blocks(blocks).items()
     )
     user_content = (
         f"<evidence>\n{docs}\n</evidence>\n\n"
