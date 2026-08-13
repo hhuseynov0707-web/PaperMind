@@ -721,3 +721,21 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   .tc-row { grid-template-columns: auto 1fr; }
   .tc-why { grid-column: 1 / -1; }
 }
+
+/* §6 + §19: sorğunun niyyəti və aktiv süzgəclər.
+   Nəticələrin üstündə, amma diqqəti oğurlamadan — əsas axın axtarışdır. */
+.plan-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-bottom: 14px; padding: 10px 14px;
+  background: var(--accent-soft); border: 1px solid rgba(99,102,241,.22);
+  border-radius: var(--r-md); font-size: 13px;
+}
+.plan-intent { color: var(--accent-2); }
+.plan-go {
+  background: var(--accent); color: #fff; border: 0;
+  padding: 4px 12px; border-radius: 999px; font-size: 12.5px;
+  font-weight: 600; cursor: pointer;
+}
+.plan-go:hover { background: var(--accent-2); }
+.plan-filters { color: var(--muted); margin-left: auto; }
+@media (max-width: 640px) { .plan-filters { margin-left: 0; width: 100%; } }

@@ -17,7 +17,9 @@ Phase 2 (§5). Üç qərar burada verilir və hər üçü ölçmə ilə yoxlanı
    problemi ümumiyyətlə yaranmır.
 """
 
-from sqlalchemy import func, select
+from datetime import datetime, timezone
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models
@@ -42,6 +44,40 @@ def _candidate_count(top_k: int) -> int:
     return max(top_k * CANDIDATE_MULTIPLIER, MIN_CANDIDATES)
 
 
+def apply_filters(stmt, *, fields=None, year_from=None, year_to=None, authors=None):
+    """§5-in metadata filtrləri: sahə, tarix aralığı, müəllif.
+
+    `published_at` onsuz da indekslidir, amma retrieval ona baxmırdı (audit).
+    Filtrlər HƏM vektor, HƏM leksik yolda eyni funksiyadan keçir ki, iki yerdə
+    fərqli davranış yaranmasın.
+
+    Müəllif uyğunluğu `ilike` ilə hissəvi axtarır: mənbələr adı «LeCun, Yann»,
+    «Y. LeCun», «Yann LeCun» kimi fərqli yazır və dəqiq bərabərlik demək olar
+    heç vaxt tutmur.
+    """
+    if fields:
+        stmt = stmt.where(models.Paper.field_keys.overlap(fields))
+    if year_from is not None:
+        stmt = stmt.where(
+            models.Paper.published_at >= datetime(year_from, 1, 1, tzinfo=timezone.utc)
+        )
+    if year_to is not None:
+        stmt = stmt.where(
+            models.Paper.published_at <= datetime(year_to, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        )
+    if authors:
+        conditions = [models.Author.name.ilike(f"%{a}%") for a in authors if a]
+        if conditions:
+            stmt = stmt.where(
+                models.Paper.id.in_(
+                    select(models.paper_authors.c.paper_id)
+                    .join(models.Author, models.Author.id == models.paper_authors.c.author_id)
+                    .where(or_(*conditions))
+                )
+            )
+    return stmt
+
+
 # ---------------------------------------------------------------- vektor
 def vector_search(
     db: Session,
@@ -49,6 +85,7 @@ def vector_search(
     top_k: int,
     fields: list[str] | None = None,
     also: str | None = None,
+    filters: dict | None = None,
 ) -> list[dict]:
     """pgvector cosine — məqalə səviyyəsində, hər məqalədən ən yaxın chunk.
 
@@ -81,8 +118,7 @@ def vector_search(
         .distinct(models.Chunk.paper_id)
         .order_by(models.Chunk.paper_id, distance)
     )
-    if fields:
-        inner = inner.where(models.Paper.field_keys.overlap(fields))
+    inner = apply_filters(inner, fields=fields, **(filters or {}))
 
     sub = inner.subquery()
     rows = db.execute(
@@ -104,6 +140,7 @@ def lexical_search(
     top_k: int,
     lang: str = "en",
     fields: list[str] | None = None,
+    filters: dict | None = None,
 ) -> list[dict]:
     """Postgres tam mətn axtarışı (`ts_rank_cd`), başlıq ağırlıqlı.
 
@@ -124,8 +161,7 @@ def lexical_search(
         .order_by(rank.desc())
         .limit(top_k)
     )
-    if fields:
-        stmt = stmt.where(models.Paper.field_keys.overlap(fields))
+    stmt = apply_filters(stmt, fields=fields, **(filters or {}))
 
     rows = db.execute(stmt).all()
     return [{"paper_id": r.paper_id, "chunk_id": None, "score": round(float(r.rank), 4)} for r in rows]
@@ -167,6 +203,7 @@ def retrieve(
     also: str | None = None,
     lang: str = "en",
     mode: str = "hybrid",
+    filters: dict | None = None,
 ) -> list[dict]:
     """Sorğuya uyğun məqalələri qaytarır: [{chunk, paper, score}].
 
@@ -179,18 +216,18 @@ def retrieve(
     pool = _candidate_count(top_k)
 
     if mode == "vector":
-        hits = vector_search(db, question, top_k, categories, also)
+        hits = vector_search(db, question, top_k, categories, also, filters)
     elif mode == "lexical":
-        hits = lexical_search(db, question, top_k, lang, categories)
+        hits = lexical_search(db, question, top_k, lang, categories, filters)
     else:
         rankings = [
-            vector_search(db, question, pool, categories, also),
-            lexical_search(db, question, pool, lang, categories),
+            vector_search(db, question, pool, categories, also, filters),
+            lexical_search(db, question, pool, lang, categories, filters),
         ]
         # Rusca sorğuda tərcümə də ayrıca leksik sıralama verir: orijinal rusca
         # termin rusdilli məqalələri, tərcümə isə ingiliscə korpusu tutur.
         if also and also.strip() != question.strip():
-            rankings.append(lexical_search(db, also, pool, "en", categories))
+            rankings.append(lexical_search(db, also, pool, "en", categories, filters))
         hits = rrf_fuse(rankings, top_k)
 
     return _hydrate(db, hits)

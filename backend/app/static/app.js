@@ -24,6 +24,19 @@ const I18N = {
   az: {
     product_kicker: 'Elmi İntellekt Platforması',
     corpus_note: 'Bu cavab indekslənmiş korpusa əsaslanır: {n} məqalə · {src} · {langs}',
+    intent_hint: 'Bu, «{i}» sualına oxşayır.',
+    intent_go: 'Aç',
+    intent_pick_papers: 'Müqayisə üçün nəticələrdən məqalə seç.',
+    i_COMPARE: 'müqayisə',
+    i_CONTRADICTION: 'ziddiyyətli sübut',
+    i_TREND: 'trend',
+    i_EMERGING_TOPIC: 'yeni yaranan mövzular',
+    i_RESEARCH_GAP: 'tədqiqat boşluğu',
+    i_CROSS_DISCIPLINARY: 'fənlərarası əlaqə',
+    i_EXPLAIN: 'izah',
+    filter_note: 'Süzgəc: {f}',
+    f_author: 'müəllif',
+    f_years: 'il',
     nav_landscape: 'Landşaft',
     landscape_title: 'Tədqiqat landşaftı',
     landscape_sub: 'Klasterlər, aktiv müəlliflər və fənlərarası əlaqələr — yalnız indekslənmiş korpusdan.',
@@ -127,6 +140,20 @@ const I18N = {
   ru: {
     product_kicker: 'Платформа научного интеллекта',
     corpus_note: 'Этот ответ основан на индексированном корпусе: {n} статей · {src} · {langs}',
+    intent_hint: 'Похоже на вопрос типа «{i}».',
+    intent_go: 'Открыть',
+    intent_pick_papers: 'Pick papers from the results to compare.',
+    intent_pick_papers: 'Выберите статьи из результатов для сравнения.',
+    i_COMPARE: 'сравнение',
+    i_CONTRADICTION: 'противоречивые данные',
+    i_TREND: 'тренд',
+    i_EMERGING_TOPIC: 'новые темы',
+    i_RESEARCH_GAP: 'пробел в исследованиях',
+    i_CROSS_DISCIPLINARY: 'междисциплинарная связь',
+    i_EXPLAIN: 'объяснение',
+    filter_note: 'Фильтр: {f}',
+    f_author: 'автор',
+    f_years: 'годы',
     nav_landscape: 'Ландшафт',
     landscape_title: 'Ландшафт исследований',
     landscape_sub: 'Кластеры, активные авторы и междисциплинарные связи — только из индексированного корпуса.',
@@ -230,6 +257,18 @@ const I18N = {
   en: {
     product_kicker: 'Scientific Intelligence Platform',
     corpus_note: 'This answer is based on the indexed corpus: {n} papers · {src} · {langs}',
+    intent_hint: 'This looks like a “{i}” question.',
+    intent_go: 'Open',
+    i_COMPARE: 'comparison',
+    i_CONTRADICTION: 'conflicting evidence',
+    i_TREND: 'trend',
+    i_EMERGING_TOPIC: 'emerging topics',
+    i_RESEARCH_GAP: 'research gap',
+    i_CROSS_DISCIPLINARY: 'cross-disciplinary link',
+    i_EXPLAIN: 'explanation',
+    filter_note: 'Filter: {f}',
+    f_author: 'author',
+    f_years: 'years',
     nav_landscape: 'Landscape',
     landscape_title: 'Research landscape',
     landscape_sub: 'Clusters, active authors and cross-field links — built from the indexed corpus only.',
@@ -663,11 +702,26 @@ async function runSearch(q) {
 
   if (!data.hits.length) return renderEmpty();
 
+  /* §6 + §19: sorğunun niyyəti tapılıbsa, uyğun imkan TƏKLİF olunur —
+     istifadəçi ayrıca menyu axtarmır, amma əsas axın da dəyişmir.
+     Süzgəclər (müəllif, il) də görünür ki, nəticənin niyə daraldığı aydın olsun. */
+  const P = data.plan || {};
+  const bits = [];
+  if (P.authors && P.authors.length) bits.push(`${t('f_author')}: ${P.authors.join(', ')}`);
+  if (P.year_from) bits.push(`${t('f_years')}: ${P.year_from}${P.year_to && P.year_to !== P.year_from ? '–' + P.year_to : ''}`);
+  const planBar = (P.suggested_endpoint || bits.length) ? `
+    <div class="plan-bar">
+      ${P.suggested_endpoint ? `<span class="plan-intent">${esc(
+          t('intent_hint').replace('{i}', t('i_' + P.intent) || P.intent))}</span>
+        <button type="button" class="plan-go" data-intent="${esc(P.intent)}">${t('intent_go')}</button>` : ''}
+      ${bits.length ? `<span class="plan-filters">${esc(t('filter_note').replace('{f}', bits.join(' · ')))}</span>` : ''}
+    </div>` : '';
+
   // §11: axtarış nəticəsi hazır olan kimi landşaft da qurulur — istifadəçi
   // «hansı məqalələr var» sualından «bu sahə necə qurulub» sualına keçə bilsin.
   loadLandscape(q);
 
-  const head = `
+  const head = planBar + `
     <div class="res-head">
       <h2>${t('res_search')}</h2>
       <div class="res-meta">
@@ -800,6 +854,25 @@ const TC_TONE = {
   EMERGING: 'up', GROWING: 'up', STABLE: 'flat',
   DECLINING: 'down', INSUFFICIENT_DATA: 'muted',
 };
+
+/* Niyyət təklifi: düyməyə basanda uyğun imkana aparır.
+   Landşaft/boşluq/fənlərarası panel içindədir; müqayisə və ziddiyyət isə
+   məqalə seçimi tələb edir, ona görə hələlik izah göstərilir. */
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.plan-go');
+  if (!b) return;
+  const intent = b.dataset.intent;
+  if (intent === 'TREND' || intent === 'EMERGING_TOPIC') {
+    document.querySelector('#trends')?.scrollIntoView({ behavior: 'smooth' });
+  } else if (intent === 'CROSS_DISCIPLINARY' || intent === 'RESEARCH_GAP') {
+    document.querySelector('#landscape')?.scrollIntoView({ behavior: 'smooth' });
+  } else if (intent === 'EXPLAIN') {
+    setMode('ask');
+    $('#query-form').requestSubmit();
+  } else {
+    toast(t('intent_pick_papers'));
+  }
+});
 
 async function loadTrendClasses() {
   const box = $('#trend-classes');

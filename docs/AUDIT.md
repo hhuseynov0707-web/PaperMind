@@ -525,7 +525,40 @@ təkrarlanan məhdudiyyətlər) yalnız `extract_insights.py` işlədiləndən s
 görünəcək. Sahə klasterləri və müəlliflər isə indi də işləyir, çünki onlar
 `field_keys` üzərindən hesablanır.
 
-### Phase 5 — Cross-disciplinary (§14) · Phase 6 — Research gaps (§13)
+### Phase 5 — Sorğu anlama (§6) və metadata filtrləri (§5) ✅
+| # | İş | Vəziyyət |
+|---|---|---|
+| 5.1 | Niyyət aşkarlaması — 8 niyyət, 3 dil | ✅ 22 test |
+| 5.2 | Müəllif filtri (`author:`) | ✅ |
+| 5.3 | Tarix məhdudiyyəti (il, aralıq, «son N il») | ✅ |
+| 5.4 | Retrieval filtrləri (sahə, tarix, müəllif) — vektor VƏ leksik | ✅ |
+| 5.5 | UI: niyyət təklifi + aktiv süzgəclər, 3 dildə | ✅ |
+| 5.6 | §14 fənlərarası, §13 boşluqlar | ✅ *(Phase 4-də)* |
+
+**LLM işlədilmədi.** `/api/search` onsuz da az/ru sorğular üçün Groq tərcüməsi
+çağırır; ikinci LLM çağırışı gecikməni ~40 ms-dən saniyələrə qaldırar və xərci
+ikiqat edərdi. Niyyət sabit ifadə nümunələri ilə etibarlı tapılır — 10/10.
+
+#### İki səhv yazarkən tapıldı
+
+**Müəllif regex-i bütün sorğunu udurdu.** `[^
+,;]+` işlədirdi, ona görə
+`author:LeCun attention mechanism` sorğusunda ad kimi bütün mətn götürülürdü:
+filtr yanlış olurdu, axtarış mətni isə boşalırdı. İndi yalnız iki forma qəbul
+edilir — tək söz (`author:LeCun`) və dırnaqda çoxsözlü ad (`author:"Yann LeCun"`).
+Dırnaqsız çoxsözlü formada adın harada bitdiyini bilmək mümkün deyil.
+
+**Niyyət nümunələri diakritika ilə yazılmışdı.** İstifadəçilər «fərq» yerinə
+«ferq», «mövzu» yerinə «movzu» yazır — nümunələrin çoxu heç vaxt tutmazdı.
+İndi mətn uyğunlaşdırmadan əvvəl ASCII-yə qatlanır. Layihədə eyni problem
+`translator._AZ_ASCII_HINTS`-də də həll olunmuşdu.
+
+### Phase 6 — qalan işlər
+| # | İş |
+|---|---|
+| 6.1 | §15 məqalələr arası əlaqələr (`cites`, `builds_on`) — OpenAlex `referenced_works` |
+| 6.2 | §18 provider abstraksiyası (LLM/embedding/rerank dəyişdirilə bilən) |
+| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə |
 
 ### Ayrıca (paralel gedə bilər)
 - **Mənbə genişlənməsi:** Europe PMC (tibb/biologiya) — ən yüksək dəyərli əlavə; `philosophy` sahəsinin `fields.py`-a əlavəsi (§1 tələb edir, hazırda yoxdur)

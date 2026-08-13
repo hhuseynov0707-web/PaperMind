@@ -142,11 +142,29 @@ class SearchHit(BaseModel):
     score: float
 
 
+class QueryPlanOut(BaseModel):
+    """Sorğudan çıxarılan niyyət və məhdudiyyətlər (§6).
+
+    İnterfeys buna görə uyğun imkanı təklif edir: «bu, müqayisə sualına
+    oxşayır — seçdiyin məqalələri müqayisə edim?» Beləliklə əsas axın sadə
+    qalır, qabaqcıl funksiyalar isə görünən olur (§19).
+    """
+    intent: str = "SEARCH"
+    intents: list[str] = []
+    suggested_endpoint: str | None = None
+    authors: list[str] = []
+    year_from: int | None = None
+    year_to: int | None = None
+    # Məhdudiyyətlər çıxarıldıqdan sonra faktiki axtarılan mətn
+    core: str = ""
+
+
 class SearchResponse(BaseModel):
     query: str
     lang: str
     query_en: str | None = None  # az/ru sorğunun ingiliscə tərcüməsi
     hits: list[SearchHit]
+    plan: QueryPlanOut | None = None
 
 
 # ---------- Ask (RAG) ----------
