@@ -25,6 +25,9 @@ PaperMind removes the keyword step. You ask in Azerbaijani or Russian; a multili
 - **Trend analytics** across five discipline groups, cached in Redis
 - **Trilingual UI** (AZ / RU / EN), 128 keys each
 - **Automated ingestion** — three daily n8n workflows with retries and a dedicated error-handler workflow
+- **Paper intelligence** — problem, methodology, dataset, findings and limitations extracted per paper, each tagged with its *evidence type*: stated in the paper / synthesized / AI inference. Only abstracts are indexed, so that distinction is never hidden
+- **Comparison and conflicting evidence** — 2–5 papers compared across seven axes; conflicts classified from *conditions*, not from opposite wording (a different population or metric means conditional, not direct, conflict). The system never declares which paper is right
+- **Research landscape, trends and gaps** — clusters, active authors and cross-field links counted from the indexed corpus; trends classified as emerging/growing/stable/declining *with the reason*; gaps labelled explicitly as AI-generated opportunities, never as "no research exists"
 
 ## Architecture
 
@@ -111,7 +114,7 @@ Low-RAM machine? The repo ships a [devcontainer](.devcontainer/devcontainer.json
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-103 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
+156 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
 
 ## Known limitations
 
@@ -125,7 +128,7 @@ Stated plainly, because they shape what this is useful for:
 - **Azerbaijani goes through translation**, since the model supports it less strongly than Russian or English.
 - **Medicine and psychology** are not on arXiv and arrive only via Crossref/DOAJ text queries, so those fields are thin.
 
-Planned next, in order: decide hybrid on measurement → reranking → paper-level intelligence → comparison and contradiction analytics.
+Planned next, in order: reranking (only if measured) → knowledge relationships between papers → provider abstraction for LLM/embedding backends.
 
 ## License
 

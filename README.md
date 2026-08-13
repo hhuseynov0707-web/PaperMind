@@ -21,6 +21,11 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 - 📖 **Vərəqlənən məqalə dəsti:** son həftənin məqalələri bir-bir göstərilir; ox düymələri, klaviatura və ya sürüşdürmə ilə vərəqləyirsən, xoşuna gələni açırsan
 - ✨ **"Discover" paneli:** bazadan təsadüfi seçmə məqalələr yanda sakit şəkildə fırlanır (15 saniyəlik interval, kursor üstünə gələndə dayanır)
 - 🩺 **Sistem statusu:** Postgres, pgvector, Redis, Groq açarı və son ingest — hamısı `/health/services`-dən real yoxlanır, heç bir status fərz edilmir
+- 🧠 **Məqalə intellekti:** hər məqalədən problem, metodologiya, dataset, nəticə, məhdudiyyət çıxarılır — və hər biri **sübut tipi** ilə işarələnir: *məqalədə yazılıb* / *sintez* / *AI nəticəsi*. Yalnız abstrakt indeksləndiyi üçün bu fərq gizlədilmir
+- ⚖️ **Müqayisə və ziddiyyət:** iki-beş məqalə 7 ox üzrə müqayisə olunur; ziddiyyət isə əks sözlərdən yox, **şəraitdən** çıxarılır (fərqli populyasiya/metrik = birbaşa ziddiyyət deyil). Sistem heç vaxt hansının doğru olduğunu demir
+- 🗺 **Tədqiqat landşaftı:** mövzu üzrə klasterlər, aktiv müəlliflər, fənlərarası əlaqələr — hamısı real indekslənmiş məqalələrdən sayılır, nümayəndə məqalələrlə birlikdə
+- 📊 **Trend təsnifatı:** hər fənn qrupu üçün *yeni yaranır / artır / sabit / azalır / data kifayət etmir* — və **səbəbi**. LLM yox, deterministik arifmetika
+- 🔍 **Tədqiqat boşluqları:** təkrarlanan məhdudiyyətlərdən çıxarılır və açıq şəkildə «AI nəticəsi» kimi etiketlənir. Sistem heç vaxt «bu mövzuda tədqiqat yoxdur» demir — yalnız «indeksdə məhdud sübut var»
 - 🔗 **Çoxmənbəli yığım + deduplikasiya:** arXiv (preprint), Crossref (nəşr olunmuş), DOAJ (açıq giriş), OpenAlex (çoxdilli). Eyni iş bir neçə mənbədə varsa **bir dəfə** göstərilir, mənbələrin hamısı isə qeyd olunur
 
 ## Arxitektura
@@ -84,6 +89,11 @@ docker compose exec backend python scripts/backfill_multi.py --sources crossref,
 
 # Rusdilli korpus:
 docker compose exec backend python scripts/backfill_multi.py --sources openalex,doaj --lang ru --days 30
+
+# 4. Məqalə çıxarışları (landşaft və boşluq analizi bunun üzərində işləyir).
+#    Bərpa olunandır: kəsilsə qaldığı yerdən davam edir.
+docker compose exec -d backend sh -c "python scripts/extract_insights.py > /tmp/ins.log 2>&1"
+docker compose exec backend tail -5 /tmp/ins.log
 ```
 
 > **Embedding modelini dəyişsən** bütün vektorları yenidən hesablamaq lazımdır — fərqli
@@ -149,6 +159,13 @@ curl -i "http://localhost:8000/api/analytics/trends?weeks=8"
 | GET | `/api/analytics/trends` | Həftəlik trend (keşli, X-Cache header) |
 | GET | `/api/analytics/top-authors` | Ən aktiv müəlliflər (keşli) |
 | GET | `/api/analytics/summary` | Ümumi statistika (keşli) |
+| GET | `/api/papers/{id}/insights` | Məqalə çıxarışı + sübut tipləri (§7) |
+| POST | `/api/compare` | 2–5 məqaləni 7 ox üzrə müqayisə (§9) |
+| POST | `/api/conflicts` | Ziddiyyət təsnifatı: birbaşa / şərti / zahiri / yox (§10) |
+| GET | `/api/landscape?q=` | Mövzu üzrə klasterlər və müəlliflər (§11) |
+| GET | `/api/analytics/trend-classes` | Trend təsnifatı + səbəb (§12) |
+| GET | `/api/gaps?q=` | Potensial tədqiqat imkanları (§13) |
+| GET | `/api/cross-disciplinary?q=` | Sahələr arası əlaqələr (§14) |
 | POST | `/api/digests` · GET `/api/digests/latest` | Həftəlik LLM icmalı |
 | POST | `/api/logs/error` · GET `/api/logs/*` | n8n xəta logları, ingest tarixçəsi, son suallar |
 
@@ -251,7 +268,7 @@ Sistemin ən kritik funksiyaları (dedup açarları, dil təyini, chunking) **he
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-**103 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
+**156 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
 
 ### Retrieval benchmark
 
