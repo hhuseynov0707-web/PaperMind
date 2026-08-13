@@ -498,6 +498,25 @@ parse mərhələsində tətbiq olunur və test edilir:
 indeksini görür. İcazə verilən ifadə `GAP_PHRASING`-də üç dildə saxlanılır və
 test onun heç bir dildə «yoxdur» iddiası etmədiyini yoxlayır.
 
+#### Canlı işə salınanda iki səhv üzə çıxdı
+
+**1. Trend təsnifatı öz yığım cədvəlimizi elmi trend kimi göstərdi.**
+İlk icra belə nəticə verdi: *«təbiət elmləri YENİ YARANIR — əvvəlki yarıda 0,
+son yarıda 276 məqalə»*. Arifmetika düzgün idi, nəticə isə absurd: təbiət
+elmləri sahəsini biz **yenicə yığmağa başlamışdıq**. Bu, ədəbiyyatın deyil,
+indeksləmə tarixçəmizin artefaktıdır.
+
+Düzəliş: `classify_trend()` artıq **indeks əhatəsini** yoxlayır — korpusun özü
+əvvəlki dövrü örtmürsə (<15%), təsnifat verilmir və səbəb açıq yazılır. Həqiqi
+EMERGING siqnalı (əhatə hər iki yarıda var) toxunulmadan qalır; hər üç hal
+regression testi ilə qorunur.
+
+**2. Çıxarış 70B modeli ilə rate limit-ə dirəndi** — 300 məqalədən yalnız 11-i
+alındı. Struktur çıxarış minlərlə məqalə üçün təkrarlanan mexaniki işdir və
+cavab keyfiyyəti qədər kritik deyil. Ona görə `EXTRACT_MODEL` ayrıldı
+(`llama-3.1-8b-instant`), `max_tokens` 1200 → 900 endirildi, backoff isə
+eksponensial oldu (15/30/60 san). Cavab keyfiyyəti üçün 70B qalır.
+
 #### Nə hələ yoxdur
 
 Çıxarış korpusa **tətbiq olunmayıb** — `paper_insights` boşdur. `/api/landscape`

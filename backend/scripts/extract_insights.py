@@ -34,7 +34,8 @@ TAG = insight_model_tag()
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="0 = hamısı")
-    ap.add_argument("--delay", type=float, default=2.5, help="sorğular arası fasilə (san)")
+    ap.add_argument("--delay", type=float, default=1.5, help="sorğular arası fasilə (san)")
+    ap.add_argument("--max-retries", type=int, default=4, help="limit halında neçə cəhd")
     ap.add_argument("--field", type=str, default=None, help="yalnız bu sahə")
     args = ap.parse_args()
 
@@ -68,23 +69,26 @@ def main() -> int:
     started = time.perf_counter()
     ok = failed = 0
     for i, paper in enumerate(todo, start=1):
-        try:
-            data = extract_insight(paper.title, paper.abstract)
-        except Exception as exc:
-            msg = str(exc)
-            if "429" in msg or "rate limit" in msg.lower():
-                print(f"  [{i}/{len(todo)}] limit — 20 san gözlənilir", flush=True)
-                time.sleep(20)
-                try:
-                    data = extract_insight(paper.title, paper.abstract)
-                except Exception as exc2:
-                    print(f"  [{i}/{len(todo)}] XƏTA: {str(exc2)[:70]}", flush=True)
-                    failed += 1
+        # Eksponensial backoff: sabit 20 saniyə kifayət etmirdi — limit
+        # dolduqdan sonra pəncərənin açılması daha uzun çəkir və hər cəhd
+        # limiti bir az da doldurur.
+        data = None
+        for attempt in range(args.max_retries):
+            try:
+                data = extract_insight(paper.title, paper.abstract)
+                break
+            except Exception as exc:
+                msg = str(exc)
+                if ("429" in msg or "rate limit" in msg.lower()) and attempt < args.max_retries - 1:
+                    wait = 15 * (2 ** attempt)      # 15, 30, 60 saniyə
+                    print(f"  [{i}/{len(todo)}] limit — {wait} san", flush=True)
+                    time.sleep(wait)
                     continue
-            else:
                 print(f"  [{i}/{len(todo)}] XƏTA: {msg[:70]}", flush=True)
-                failed += 1
-                continue
+                break
+        if data is None:
+            failed += 1
+            continue
 
         row = db.get(PaperInsight, paper.id)
         if row is None:

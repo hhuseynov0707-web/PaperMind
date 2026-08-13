@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     # davam edir (xəta yox, degrade).
     translate_daily_budget: int = 2000
 
+    # Çıxarış (§7) üçün AYRICA model. Cavab keyfiyyəti kritikdir və 70B işlədilir,
+    # amma struktur çıxarış minlərlə məqalə üçün təkrarlanan mexaniki işdir:
+    # ölçüldü — 70B ilə 300 məqalədən yalnız 11-i alındı, qalanı rate limit-ə
+    # dirəndi. Kiçik model bu işi görür və limiti qat-qat gec doldurur.
+    extract_model: str = "llama-3.1-8b-instant"
+
     # Retrieval üsulu: "vector" | "lexical" | "hybrid".
     #
     # ÖLÇÜLDÜ, "vector" SEÇİLDİ (korpus 1596, n=60, 28 eval sorğusu):

@@ -298,3 +298,44 @@ def test_gap_signals_carry_evidence_type():
     insights = {1: {"limitations": {"value": "maybe biased", "evidence": "inferred"}}}
     out = find_gaps(papers, insights, "az")
     assert out["repeated_limitations"][0]["evidence"] == "inferred"
+
+
+# ==========================================================================
+# §12 — indeks əhatəsi (real ölçmədə tapılan səhv)
+# ==========================================================================
+
+def test_index_coverage_blocks_false_emerging():
+    """REGRESSION: canlı sistemdə «təbiət elmləri YENİ YARANIR — əvvəlki yarıda
+    0, son yarıda 276 məqalə» çıxdı.
+
+    Arifmetika düzgün idi, nəticə isə yanlış: həmin sahəni biz yenicə yığmağa
+    başlamışdıq. Bu, ədəbiyyatın deyil, indeksləmə tarixçəmizin artefaktıdır.
+    """
+    out = classify_trend([0, 0, 0, 0, 90, 95, 91], "natural",
+                         coverage=[0, 0, 0, 0, 300, 320, 310])
+    assert out["classification"] == "INSUFFICIENT_DATA"
+    assert "əhatəsi" in out["reason"]
+
+
+def test_real_emerging_survives_when_index_covers_period():
+    """Əhatə hər iki yarıda varsa, EMERGING həqiqi siqnaldır və qalmalıdır."""
+    out = classify_trend([0, 1, 0, 0, 8, 9, 10], "new-topic",
+                         coverage=[100, 110, 105, 108, 115, 120, 118])
+    assert out["classification"] == "EMERGING"
+
+
+def test_real_growth_survives():
+    out = classify_trend([10, 11, 12, 13, 20, 22, 24], "ai",
+                         coverage=[100, 110, 105, 108, 115, 120, 118])
+    assert out["classification"] == "GROWING"
+
+
+def test_series_derives_coverage_from_topics():
+    """Əhatə verilməyəndə mövzuların cəmindən hesablanır — endpoint bunu
+    ayrıca ötürməyi unutsa da qoruma işləməlidir."""
+    series = {
+        "natural": [0, 0, 0, 0, 90, 95, 91],
+        "tech": [0, 0, 0, 0, 40, 45, 44],
+    }
+    for row in classify_series(series):
+        assert row["classification"] == "INSUFFICIENT_DATA"

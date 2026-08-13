@@ -31,6 +31,17 @@ EMERGING_RECENT_MIN = 6     # ikinci yarıda ən azı bu qədər
 
 CLASSES = ("EMERGING", "GROWING", "STABLE", "DECLINING", "INSUFFICIENT_DATA")
 
+# İndeks əhatəsi həddi. Korpusun ÖZÜ bir dövrü örtmürsə, həmin dövr üçün
+# «artım» və ya «yeni yaranma» demək olmaz.
+#
+# Bu, real ölçmədə tapıldı: «təbiət elmləri YENİ YARANIR — əvvəlki yarıda 0,
+# son yarıda 276 məqalə» kimi absurd nəticə çıxdı. Arifmetika düzgün idi,
+# nəticə isə yanlış: təbiət elmləri sahəsini biz YENİCƏ yığmağa başlamışdıq.
+# Bu, ədəbiyyatın deyil, indeksləmə tarixçəmizin artefaktıdır.
+#
+# §12 təsnifatın SƏBƏBİNİ tələb edir — dürüst səbəb budur və gizlədilmir.
+MIN_COVERAGE_SHARE = 0.15   # əvvəlki yarı korpusun ən azı bu qədərini örtməlidir
+
 
 def _split(counts: list[int]) -> tuple[list[int], list[int]]:
     """Seriyanı iki bərabər yarıya bölür (tək sayda olsa orta nöqtə atılır).
@@ -44,10 +55,16 @@ def _split(counts: list[int]) -> tuple[list[int], list[int]]:
     return counts[:half], counts[half:]
 
 
-def classify_trend(counts: list[int], label: str = "") -> dict:
+def classify_trend(counts: list[int], label: str = "",
+                   coverage: list[int] | None = None) -> dict:
     """Həftəlik sayları təsnif edir və səbəbini izah edir.
 
-    `counts` zaman sırası ilə (köhnədən yeniyə) verilməlidir.
+    `counts`   — bu mövzunun həftəlik sayları, köhnədən yeniyə
+    `coverage` — KORPUSUN həftəlik ümumi sayları (eyni uzunluqda)
+
+    `coverage` verilirsə indeks əhatəsi yoxlanılır: korpusun özü əvvəlki dövrü
+    örtmürsə, təsnifat verilmir. Bunsuz sistem öz yığım cədvəlini elmi trend
+    kimi təqdim edir.
     """
     counts = [int(c) for c in (counts or [])]
     total = sum(counts)
@@ -70,6 +87,25 @@ def classify_trend(counts: list[int], label: str = "") -> dict:
 
     earlier_series, recent_series = _split(counts)
     earlier, recent = sum(earlier_series), sum(recent_series)
+
+    # İndeks əhatəsi yoxlaması — arifmetikadan ƏVVƏL
+    if coverage and len(coverage) == len(counts):
+        cov_earlier, cov_recent = _split(coverage)
+        cov_earlier, cov_recent = sum(cov_earlier), sum(cov_recent)
+        cov_total = cov_earlier + cov_recent
+        if cov_total and cov_earlier / cov_total < MIN_COVERAGE_SHARE:
+            return {
+                "label": label,
+                "classification": "INSUFFICIENT_DATA",
+                "reason": (
+                    "İndeksin əhatəsi bu dövrə çatmır: korpusun "
+                    f"{cov_earlier / cov_total:.0%}-i əvvəlki yarıya düşür "
+                    f"({cov_earlier} vs {cov_recent} məqalə). Belə datada «artım» "
+                    "ədəbiyyatın deyil, yığım cədvəlimizin göstəricisi olardı."
+                ),
+                "total": total, "weeks": weeks, "change": None,
+                "recent": recent, "earlier": earlier,
+            }
 
     # Sıfır bazada faiz hesablamaq mümkün deyil — EMERGING məhz bu haldır
     change = (recent - earlier) / earlier if earlier else None
@@ -113,14 +149,22 @@ def classify_trend(counts: list[int], label: str = "") -> dict:
     }
 
 
-def classify_series(series: dict[str, list[int]]) -> list[dict]:
+def classify_series(series: dict[str, list[int]],
+                    coverage: list[int] | None = None) -> list[dict]:
     """Bir neçə mövzunu təsnif edir və ən diqqətəlayiqləri önə çıxarır.
 
     Sıralama: EMERGING → GROWING → DECLINING → STABLE → INSUFFICIENT_DATA.
     Səbəb: istifadəçi üçün dəyər dəyişmədədir, sabit mövzuda deyil.
     """
     order = {"EMERGING": 0, "GROWING": 1, "DECLINING": 2, "STABLE": 3, "INSUFFICIENT_DATA": 4}
-    results = [classify_trend(counts, label) for label, counts in series.items()]
+    # Əhatə verilməyibsə, mövzuların cəmindən hesablanır — korpusun bu dövrdəki
+    # ümumi həcmi budur.
+    if coverage is None and series:
+        length = max(len(v) for v in series.values())
+        coverage = [
+            sum(v[i] for v in series.values() if i < len(v)) for i in range(length)
+        ]
+    results = [classify_trend(counts, label, coverage) for label, counts in series.items()]
     return sorted(
         results,
         key=lambda r: (order[r["classification"]], -(r["change"] or 0), -r["total"]),

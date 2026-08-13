@@ -206,7 +206,7 @@ def insight_model_tag() -> str:
     Model adı + prompt versiyası: prompt dəyişəndə də yenidən çıxarış lazımdır,
     təkcə model dəyişəndə yox (chunker.embedding_signature ilə eyni məntiq).
     """
-    return f"{settings.groq_model}#{INSIGHT_MODEL_TAG}"
+    return f"{settings.extract_model}#{INSIGHT_MODEL_TAG}"
 
 
 def extract_insight(title: str, abstract: str) -> dict:
@@ -220,13 +220,13 @@ def extract_insight(title: str, abstract: str) -> dict:
 
     client = Groq(api_key=settings.groq_api_key)
     resp = client.chat.completions.create(
-        model=settings.groq_model,
+        model=settings.extract_model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": build_user_prompt(title, abstract, _sanitize)},
         ],
         temperature=0.0,           # çıxarış yaradıcılıq deyil
-        max_tokens=1200,
+        max_tokens=900,
         response_format={"type": "json_object"},
     )
     return parse_insight_response(resp.choices[0].message.content or "", abstract)
