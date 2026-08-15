@@ -174,11 +174,40 @@ crontab -e
 0 3 * * * cd ~/papermind && bash scripts/backup.sh >> ~/backup.log 2>&1
 ```
 
-**Bərpa**
+**Bərpa — YALNIZ BOŞ BAZADA**
+
+Bu, korpusu yeni serverə köçürmək üçündür. Mövcud, dolu bazada işlətmək lazım
+DEYİL: Postgres təkrarları rədd edir, ekran isə `already exists` və
+`duplicate key` xətaları ilə dolur. Heç nə pozulmur — sadəcə mənasız işdir.
+
+Ardıcıllıq vacibdir. **Əvvəlcə yalnız Postgres qalxır**, çünki backend qalxsa
+`migrate.py` cədvəlləri yaradır və dump onlarla toqquşur:
+
 ```bash
-gunzip -c backup-2026-08-10.sql.gz | docker compose -f docker-compose.prod.yml exec -T postgres \
-  psql -U elmradari -d elmradari
+# 1. YALNIZ baza
+docker compose -f docker-compose.prod.yml up -d postgres
+sleep 15
+
+# 2. Dump tökülür
+gunzip -c papermind-backup.sql.gz | \
+  docker compose -f docker-compose.prod.yml exec -T postgres psql -U elmradari -d elmradari
+
+# 3. İndi qalan servislər
+docker compose -f docker-compose.prod.yml up -d
+
+# 4. Yoxlama
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U elmradari -d elmradari -c "SELECT count(*) FROM papers"
 ```
+
+Köçürmədən əvvəl köhnə mühitdə nüsxə götür:
+```bash
+docker compose exec -T postgres pg_dump -U elmradari elmradari | gzip > papermind-backup.sql.gz
+```
+
+**Niyə dəyərlidir:** korpusu sıfırdan yığmaq (ingest + embedding + çıxarış) bir
+neçə saat çəkir. Dump bir neçə dəqiqədə tökülür və **vektorları da özündə
+saxlayır** — yeni serverdə yenidən embed etməyə ehtiyac qalmır.
 
 **Loglar**
 ```bash
