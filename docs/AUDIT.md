@@ -622,22 +622,37 @@ tapmadığını yox; kiçik hovuzda düzəldəcəyi bir şey qalmır.
 
 Xəta halında orijinal sıra qaytarılır — rerank təkmilləşdirmədir, tələb deyil.
 
-#### Rerank qərarı: xərc tərəfi ölçüldü, fayda ölçülmədi
+#### Rerank qərarı: ÖLÇÜLDÜ və RƏDD EDİLDİ
 
-Adətən qərar üçün hər iki tərəf lazımdır. Burada **xərc tək başına kifayət etdi**:
+`--compare-rerank --sample 8 --field-limit 20 --rerank-pool 15`
+(`BAAI/bge-reranker-base`, korpus 1 596):
 
-| Xərc | Ölçülmüş |
-|---|---|
-| Model faylı | 1.13 GB |
-| Backend yaddaşı | ~700 MB → **2.99 GB** |
-| CPU | 2 nüvə tam dolu, sorğu başına saniyələr |
-| Hədəf server (Hetzner CX22, 4 GB) | Postgres + Redis + n8n ilə birlikdə **sığmır** |
+| Metrik | Rerank yox | Rerank var | Fərq |
+|---|---|---|---|
+| known-item MRR (en) | 1.000 | 1.000 | 0 |
+| known-item MRR (ru) | 0.838 | 0.938 | +0.100 |
+| P@10 (az) | 62% | 70% | +7% |
+| P@10 (en) | 60% | 55% | **−5%** |
+| P@10 (ru) | 65% | 65% | 0 |
+| **median gecikmə** | **61 ms** | **12 928 ms** | **212×** |
 
-`P@10`-da hətta 5 faizlik qazanc da hədəf serverə sığmamağı doğrultmaz, ona görə
-faydanı ölçməyi dayandırdıq — nəticə qərarı dəyişməyəcəkdi.
+Xərc tərəfi ayrıca: model 1.13 GB, backend yaddaşı ~700 MB → **2.99 GB**,
+yəni 4 GB-lıq hədəf serverdə (Hetzner CX22) stack ilə birlikdə sığmır.
 
-Kod və ölçmə aparatı qalır (`--compare-rerank`): daha güclü serverə keçiləndə
-qərar bir əmrlə yenidən nəzərdən keçirilə bilər. `RERANK_PROVIDER` boşdur.
+**Qərar: rədd.** Səbəb iki qatlıdır:
+
+1. **Fayda yoxdur.** P@10-da xalis dəyişmə ~+0.7% (az +7, en −5, ru 0). Rus
+   known-item-dəki +0.100 isə n=8-də təxminən BİR məqalənin yerdəyişməsidir —
+   o ölçüdə bir sıra dəyişikliyi MRR-i ~0.083 hərəkət etdirir.
+2. **Xərc qəbuledilməzdir.** 13 saniyəlik axtarış axtarış deyil; istifadəçi
+   2-3 saniyədən sonra tərk edir.
+
+Rəqəmlərin səs-küylü olması qərarı dəyişmir: böyük keyfiyyət qazancı da 212×
+gecikməni və 2.99 GB yaddaşı doğrultmazdı.
+
+Kod və ölçmə aparatı qalır. Daha güclü serverə (və ya GPU-ya) keçiləndə qərar
+bir əmrlə yenidən nəzərdən keçirilə bilər — bu, mənfi nəticənin sənədləşdirilmiş
+formasıdır, silinmiş kod deyil.
 
 #### §18 — provider abstraksiyası
 

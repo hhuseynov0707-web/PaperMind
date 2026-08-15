@@ -125,7 +125,7 @@ Stated plainly, because they shape what this is useful for:
 
 - **The corpus is small — roughly 1,600 papers.** This is a self-hosted index built from daily ingestion, not a mirror of the literature. Scale here is a hosting question, not an engineering one.
 - **Hybrid search is built but off by default.** A lexical `tsvector` index and RRF fusion exist; `RETRIEVAL_MODE=vector` stays until benchmarking proves a gain (§5: complexity only when measured).
-- **Reranking is implemented but off.** A multilingual cross-encoder is wired in; it stays disabled because the cost is measured and disqualifying: the model is 1.13 GB and pushes backend memory from ~700 MB to 2.99 GB, which does not fit the 4 GB deployment target. Measure it yourself with `benchmark.py --compare-rerank`.
+- **Reranking is implemented but off — measured and rejected.** A multilingual cross-encoder is wired in. Measured effect: latency 61 ms → 12,928 ms (212×), P@10 az +7 / en −5 / ru 0 (net ≈ +0.7%, i.e. noise), and backend memory ~700 MB → 2.99 GB. A 13-second search is not a search. The code and the measurement stay in the repo (`benchmark.py --compare-rerank`) so the decision can be revisited on stronger hardware.
 - **Abstracts only**, not full text.
 - **Endpoint coverage is thin.** It now exists (validation, auth, response models) but retrieval quality itself is proven by benchmark, not tests.
 - **Azerbaijani goes through translation**, since the model supports it less strongly than Russian or English.
