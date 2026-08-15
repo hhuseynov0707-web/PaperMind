@@ -10,12 +10,13 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 
 ## Nə edir?
 
-- 🤖 **Sual-cavab (RAG):** sual verirsən → sistem öz bazasından ən uyğun abstraktları tapır (pgvector cosine axtarışı) → Groq LLM mənbəli cavab qaytarır
+- 💬 **Söhbət, tək sual yox:** cavabın altından davam edirsən — «bəs ikincisi?», «bunu sadə izah et». Sistem əvvəlki növbələri yadda saxlayır; qısa follow-up sualda axtarış üçün əvvəlki kontekst də işlədilir
+- 🤖 **Sual-cavab (RAG):** sual verirsən → sistem öz bazasından ən uyğun abstraktları tapır (pgvector cosine axtarışı) → Groq LLM mənbəli cavab qaytarır. Uyğun material zəifdirsə **«tapılmadı» deyib dayanmır** — ən yaxın işləri göstərir və məhdudiyyəti açıq deyir
 - 🔎 **Semantik axtarış:** açar söz yox, *məna* üzrə axtarış
 - 📈 **Trend analitikası:** həftələr üzrə **5 fənn qrupunun** paylanması, ən aktiv müəlliflər (Redis-də keşlənir)
 - 🔄 **Avtomatik yenilənmə:** n8n hər gün üç dəfə yığım aparır — arXiv (09:00), Crossref+DOAJ (10:30), rusdilli mənbələr (11:30). Hamısında retry + error handling
 - 📰 **Həftəlik AI icmalı:** n8n bazar günləri həftənin statistikasını Groq-a verib icmal yazdırır
-- 🌐 **3 dilli interfeys (AZ / RU / EN)** və **həqiqi çoxdilli axtarış:** çoxdilli embedding modeli sayəsində rusca sorğu ingiliscə məqalələri də tapır (RU↔EN oxşarlıq testdə 0.79). Cavab həmişə sənin dilində qayıdır
+- 🌐 **3 dilli interfeys (AZ / RU / EN)** və **həqiqi çoxdilli axtarış:** çoxdilli embedding modeli sayəsində rusca sorğu ingiliscə məqalələri də tapır (RU↔EN oxşarlıq testdə 0.79). Cavab həmişə sənin dilində qayıdır — **diakritikasız yazsan da** («mene oxumaqa ne vere bilersen» → azərbaycanca cavab), çünki dil funksiya sözləri və şəkilçilərlə tanınır, təkcə hərflərlə yox
 - 🇷🇺 **Rusdilli korpus:** rus interfeysini seçən istifadəçi öz dilində məqalələr də tapır. Mənbənin dil etiketinə güvənilmir — mətnin **öz əlifbası** yoxlanılır, çünki rus jurnalları çox vaxt ingiliscə abstrakt dərc edir
 - 🗂 **19 elm sahəsi, 5 fənn qrupu:** texnologiya, təbiət elmləri (fizika, biologiya, kimya, astronomiya, Yer elmləri), formal elmlər (riyaziyyat, statistika), tibb və sağlamlıq, sosial elmlər — yan paneldən sahə seçəndə axtarış, sual-cavab və vərəqlənən dəst yalnız orada işləyir
 - 📖 **Vərəqlənən məqalə dəsti:** son həftənin məqalələri bir-bir göstərilir; ox düymələri, klaviatura və ya sürüşdürmə ilə vərəqləyirsən, xoşuna gələni açırsan
@@ -164,7 +165,7 @@ curl -i "http://localhost:8000/api/analytics/trends?weeks=8"
 | GET | `/api/papers?field=&days=` | Sahə üzrə süzülmüş siyahı (vərəqlənən dəst bunu işlədir) |
 | GET | `/health` · `/health/services` | Sadə health · Postgres/pgvector/Redis/Groq real yoxlaması |
 | GET | `/api/search?q=&field=` | Semantik axtarış (pgvector), sahə üzrə daralda bilər |
-| POST | `/api/ask` | RAG sual-cavab (Redis keşli), `field` ilə daralda bilər |
+| POST | `/api/ask` | RAG sual-cavab; `history` ilə söhbət davam edir, `field` ilə daralda bilər |
 | GET | `/api/analytics/trends` | Həftəlik trend (keşli, X-Cache header) |
 | GET | `/api/analytics/top-authors` | Ən aktiv müəlliflər (keşli) |
 | GET | `/api/analytics/summary` | Ümumi statistika (keşli) |
@@ -278,7 +279,7 @@ Sistemin ən kritik funksiyaları (dedup açarları, dil təyini, chunking) **he
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-**214 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
+**230 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
 
 ### Retrieval benchmark
 
@@ -401,7 +402,7 @@ papermind/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── eval/queries.json       # benchmark sorğu dəsti (28 sorğu, 3 dil)
-│   ├── tests/                  # 214 test: dedup, dil, sübut, ziddiyyət, endpoint, provider
+│   ├── tests/                  # 230 test: dedup, dil, sübut, ziddiyyət, endpoint, provider
 │   ├── scripts/
 │   │   ├── backfill.py         # yalnız arXiv (köhnə, sadə)
 │   │   ├── backfill_multi.py   # bütün mənbələr + dil seçimi (--lang ru)

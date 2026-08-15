@@ -37,11 +37,12 @@ It describes IT-adjacent students, not students in general.)*
 ## What it does
 
 - **Semantic search** over 19 scientific fields — meaning, not keywords
-- **Source-grounded Q&A (RAG)** — every claim carries a citation; when the context has no answer, the model says so
+- **Conversation, not one-shot** — follow up under the answer ("what about the second one?", "explain that more simply"). Prior turns are kept, and a short follow-up reuses the earlier context for retrieval
+- **Source-grounded Q&A (RAG)** — every claim carries a citation. When the index has no strong match it does not dead-end on "not found": it says so plainly and offers the closest work it does have
 - **Genuinely multilingual retrieval** — measured RU↔EN similarity of 0.79, not a translation shim
 - **Cross-source deduplication** — the same work indexed by arXiv, Crossref and DOAJ appears once, with all three recorded as provenance
 - **Trend analytics** across five discipline groups, cached in Redis
-- **Trilingual UI** (AZ / RU / EN), 128 keys each
+- **Trilingual UI** (AZ / RU / EN) — and the answer comes back in the language you asked in even when Azerbaijani is typed without diacritics, because the language is detected from function words and suffixes rather than characters alone
 - **Automated ingestion** — three daily n8n workflows with retries and a dedicated error-handler workflow
 - **Paper intelligence** — problem, methodology, dataset, findings and limitations extracted per paper, each tagged with its *evidence type*: stated in the paper / synthesized / AI inference. Only abstracts are indexed, so that distinction is never hidden
 - **Comparison and conflicting evidence** — 2–5 papers compared across seven axes; conflicts classified from *conditions*, not from opposite wording (a different population or metric means conditional, not direct, conflict). The system never declares which paper is right
@@ -149,7 +150,7 @@ Low-RAM machine? The repo ships a [devcontainer](.devcontainer/devcontainer.json
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-214 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
+230 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
 
 ## Known limitations
 
