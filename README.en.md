@@ -1,8 +1,8 @@
 # PaperMind — Scientific Intelligence Platform
 
-> **Ask in your language, find research in English.**
+> **Answers you can check — every claim links to a paper you can open.**
 
-Multilingual semantic search and source-grounded answers over four academic sources — **arXiv, Crossref, DOAJ and OpenAlex**. A Russian query finds English papers, and the answer comes back in the language you asked in.
+Semantic search and source-grounded answers over four academic sources — **arXiv, Crossref, DOAJ and OpenAlex**. Ask in Azerbaijani, Russian or English; every claim in the answer carries a citation that is verified against the retrieved evidence before you see it.
 
 Self-hosted, open source, one `docker compose up`. Retrieval quality is **measured and reproducible**, not asserted.
 
@@ -12,9 +12,27 @@ Self-hosted, open source, one `docker compose up`. Retrieval quality is **measur
 
 ## Why this exists
 
-Most research is published in English. Most students outside the English-speaking world do not think in English. That gap is not a translation problem — it is a **retrieval** problem: if you cannot pick the right English keywords, keyword search returns nothing, and you never learn that the paper you needed was three results away.
+Students already use ChatGPT to find and understand papers. In a survey of 40
+students, **67.5% named a general AI chatbot** as where they look for research —
+and **0% named a specialised research tool** like Elicit or Semantic Scholar.
 
-PaperMind removes the keyword step. You ask in Azerbaijani or Russian; a multilingual embedding model maps your question into the same vector space as the English abstracts; the answer is written back in your language with citations.
+The problem is not that the chatbot is unhelpful. It is that you cannot check
+it. It will produce a confident paragraph with a citation that may or may not
+exist, and there is no way to tell from the outside.
+
+PaperMind answers the same kind of question, but every citation is matched
+against the evidence actually retrieved. Invented references are stripped before
+the answer is rendered, and the response reports how much of it was grounded.
+Measured groundedness: **91.4%** — up from 54.1% before the citation format was
+fixed, a change that was found by measuring, not by reading the output.
+
+The survey also showed what students actually struggle with: papers being long
+and time-consuming (57.5%), finding the right paper (47.5%), and paywalls
+(42.5%). English comprehension came in at 10%, which is why multilingual
+retrieval is a *feature* here and not the headline claim.
+
+*(Sample caveat: n=40, 65% from IT, no responses from medicine or psychology.
+It describes IT-adjacent students, not students in general.)*
 
 ## What it does
 
