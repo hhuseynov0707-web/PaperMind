@@ -275,9 +275,25 @@ def main() -> int:
 
     # ------------------------------------------------ §5: rerank qərarı
     if args.compare_rerank:
-        print("\n  Retrieval üsulu hər ikisində eynidir; yalnız RERANK dəyişir.")
+        if args.rerank_pool:
+            settings.rerank_pool = args.rerank_pool
+
+        # Rerank CPU-da hər namizəd üçün model keçidi deməkdir. 2 nüvəli
+        # maşında tam dəst (30 namizəd × 155 sorğu ≈ 4 600 keçid) saatlarla
+        # çəkir, ona görə gözlənilən yük ölçmədən ƏVVƏL çap olunur.
+        n_field = args.field_limit or 95
+        total_q = args.sample * 2 + n_field
+        print(f"\n  Sorğu: ~{total_q} (known-item {args.sample * 2} + sahə {n_field})")
+        print(f"  Namizəd/sorğu: {settings.rerank_pool} "
+              f"· təxmini cross-encoder keçidi: ~{total_q * settings.rerank_pool}")
+        print("  Retrieval üsulu hər ikisində eynidir; yalnız RERANK dəyişir.")
         print(f"  Rerank modeli: {settings.rerank_model}\n")
-        base = run(db, args.sample, "policy", retrieval, rerank="")
+
+        # HƏR İKİ tərəf EYNİ sorğu dəsti ilə işləməlidir. İlk versiyada
+        # `field_limit` yalnız rerank tərəfinə ötürülürdü — baza 95, rerank isə
+        # 20 sorğu görürdü və nəticələr müqayisə oluna bilməzdi.
+        base = run(db, args.sample, "policy", retrieval, rerank="",
+                   field_limit=args.field_limit)
         show("RERANK YOXDUR", base)
         try:
             reranked = run(db, args.sample, "policy", retrieval, rerank="fastembed",
