@@ -1,21 +1,17 @@
-from functools import lru_cache
+"""Embedding — nazik örtük.
 
-from fastembed import TextEmbedding
+Faktiki implementasiya `app/providers/`-dədir (§18). Bu modul qalır, çünki
+kod bazasında `embed_texts` onlarla yerdə çağırılır və provider abstraksiyası
+üçün hamısını dəyişmək lazımsız risk idi.
+"""
 
-from ..config import settings
-
-
-@lru_cache(maxsize=1)
-def _model() -> TextEmbedding:
-    # İlk çağırışda model (~90 MB) yüklənir və /models volume-unda saxlanılır,
-    # sonrakı restartlarda yenidən yüklənmir.
-    return TextEmbedding(model_name=settings.embedding_model, cache_dir=settings.hf_cache_dir)
+from ..providers import get_embedder
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
-    return [vec.tolist() for vec in _model().embed(texts)]
+    return get_embedder().embed(texts)
 
 
 def embed_query(text: str) -> list[float]:

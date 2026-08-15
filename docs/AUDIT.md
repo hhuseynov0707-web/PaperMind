@@ -553,12 +553,35 @@ Dırnaqsız çoxsözlü formada adın harada bitdiyini bilmək mümkün deyil.
 İndi mətn uyğunlaşdırmadan əvvəl ASCII-yə qatlanır. Layihədə eyni problem
 `translator._AZ_ASCII_HINTS`-də də həll olunmuşdu.
 
-### Phase 6 — qalan işlər
-| # | İş |
-|---|---|
-| 6.1 | §15 məqalələr arası əlaqələr (`cites`, `builds_on`) — OpenAlex `referenced_works` |
-| 6.2 | §18 provider abstraksiyası (LLM/embedding/rerank dəyişdirilə bilən) |
-| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə |
+### Phase 6
+| # | İş | Vəziyyət |
+|---|---|---|
+| 6.1 | §15 məqalələr arası əlaqələr — OpenAlex `referenced_works` | ⏳ |
+| 6.2 | §18 provider abstraksiyası | ✅ 8 test |
+| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | ⏳ protokol hazır |
+
+#### §18 — provider abstraksiyası
+
+`Protocol` seçildi, abstrakt baza sinfi yox: provider-lər xarici kitabxanaları
+(groq, fastembed) örtür və miras tələb etsək hər yeni provider bizim sinifdən
+törəməli olardı. Protocol strukturaldır — uyğun metodu olan istənilən obyekt
+işləyir, ona görə test üçün sadə saxta sinif kifayətdir, mock kitabxanası
+lazım deyil.
+
+Yoxlanılan invariant: `grep -rn "from groq import" app/` yalnız
+`app/providers/`-i qaytarır. Biznes məntiqi (`llm.py`, `insights.py`,
+`compare.py`, `embedder.py`) artıq heç bir provider adı bilmir.
+
+Provider `.env`-dən seçilir:
+
+```
+LLM_PROVIDER=groq
+EMBEDDING_PROVIDER=fastembed
+```
+
+`RerankProvider` protokolu indidən var, implementasiyası isə yoxdur — §5-in
+qaydası ilə rerank yalnız ölçmə fayda göstərəndən sonra əlavə olunacaq, amma
+o vaxt retriever imzasının dəyişməməsi üçün protokol hazır saxlanılır.
 
 ### Ayrıca (paralel gedə bilər)
 - **Mənbə genişlənməsi:** Europe PMC (tibb/biologiya) — ən yüksək dəyərli əlavə; `philosophy` sahəsinin `fields.py`-a əlavəsi (§1 tələb edir, hazırda yoxdur)

@@ -1,8 +1,7 @@
 import re
 
-from groq import Groq
-
 from ..config import settings
+from ..providers import get_llm
 from .evidence import label_blocks
 
 LANG_NAMES = {
@@ -46,20 +45,14 @@ def _sanitize(text: str) -> str:
 
 def translate_to_english(text: str) -> str:
     """Axtarış sorğusunu ingiliscəyə çevirir (çoxdilli axtarış yönləndirməsi)."""
-    client = Groq(api_key=settings.groq_api_key)
-    resp = client.chat.completions.create(
-        model=settings.groq_model,
-        messages=[
-            {
-                "role": "system",
-                "content": "Translate the user's text to English for a scientific search engine. Return ONLY the English translation, nothing else.",
-            },
-            {"role": "user", "content": text},
-        ],
+    out = get_llm().complete(
+        "Translate the user's text to English for a scientific search engine. "
+        "Return ONLY the English translation, nothing else.",
+        text,
         temperature=0.0,
         max_tokens=300,
     )
-    return (resp.choices[0].message.content or text).strip()
+    return (out or text).strip()
 
 
 def ask_llm(question: str, blocks: list[dict], lang: str = "az") -> str:
@@ -90,17 +83,9 @@ def ask_llm(question: str, blocks: list[dict], lang: str = "az") -> str:
         f"{_sanitize(question)}"
     )
 
-    client = Groq(api_key=settings.groq_api_key)
-    resp = client.chat.completions.create(
-        model=settings.groq_model,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT.format(answer_lang=LANG_NAMES.get(lang, "English")),
-            },
-            {"role": "user", "content": user_content},
-        ],
+    return get_llm().complete(
+        SYSTEM_PROMPT.format(answer_lang=LANG_NAMES.get(lang, "English")),
+        user_content,
         temperature=0.3,
         max_tokens=800,
     )
-    return resp.choices[0].message.content or ""

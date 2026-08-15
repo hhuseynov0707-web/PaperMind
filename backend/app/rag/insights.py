@@ -211,22 +211,15 @@ def insight_model_tag() -> str:
 
 def extract_insight(title: str, abstract: str) -> dict:
     """Bir məqalə üçün çıxarış — LLM çağırışı."""
-    from groq import Groq
-
+    from ..providers import get_llm
     from .llm import _sanitize
 
-    if not settings.groq_api_key:
-        raise RuntimeError("GROQ_API_KEY təyin olunmayıb")
-
-    client = Groq(api_key=settings.groq_api_key)
-    resp = client.chat.completions.create(
-        model=settings.extract_model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(title, abstract, _sanitize)},
-        ],
-        temperature=0.0,           # çıxarış yaradıcılıq deyil
+    raw = get_llm().complete(
+        SYSTEM_PROMPT,
+        build_user_prompt(title, abstract, _sanitize),
+        temperature=0.0,                 # çıxarış yaradıcılıq deyil
         max_tokens=900,
-        response_format={"type": "json_object"},
+        json_mode=True,
+        model=settings.extract_model,    # çıxarış üçün kiçik model
     )
-    return parse_insight_response(resp.choices[0].message.content or "", abstract)
+    return parse_insight_response(raw, abstract)

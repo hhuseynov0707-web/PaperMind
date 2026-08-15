@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     # davam edir (xəta yox, degrade).
     translate_daily_budget: int = 2000
 
+    # §18: provider seçimi konfiqurasiyadan gəlir, koddan yox.
+    llm_provider: str = "groq"
+    embedding_provider: str = "fastembed"
+
     # Çıxarış (§7) üçün AYRICA model. Cavab keyfiyyəti kritikdir və 70B işlədilir,
     # amma struktur çıxarış minlərlə məqalə üçün təkrarlanan mexaniki işdir:
     # ölçüldü — 70B ilə 300 məqalədən yalnız 11-i alındı, qalanı rate limit-ə
