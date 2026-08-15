@@ -28,13 +28,13 @@ class GroqLLM:
 
     def complete(self, system: str, user: str, *, temperature: float = 0.3,
                  max_tokens: int = 800, json_mode: bool = False,
-                 model: str | None = None) -> str:
+                 model: str | None = None, history: list[dict] | None = None) -> str:
+        messages = [{"role": "system", "content": system}]
+        messages.extend(history or [])
+        messages.append({"role": "user", "content": user})
         kwargs = {
             "model": model or self._model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }

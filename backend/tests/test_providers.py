@@ -25,9 +25,10 @@ class FakeLLM:
         self.calls = []
 
     def complete(self, system, user, *, temperature=0.3, max_tokens=800,
-                 json_mode=False, model=None):
+                 json_mode=False, model=None, history=None):
         self.calls.append({"system": system, "user": user, "json": json_mode,
-                           "model": model, "temperature": temperature})
+                           "model": model, "temperature": temperature,
+                           "history": history or []})
         return '{"ok": true}' if json_mode else "saxta cavab"
 
 

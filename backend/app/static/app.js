@@ -24,6 +24,10 @@ const I18N = {
   az: {
     product_kicker: 'Elmi İntellekt Platforması',
     corpus_note: 'Bu cavab indekslənmiş korpusa əsaslanır: {n} məqalə · {src} · {langs}',
+    chat_you: 'Sən',
+    chat_placeholder: 'Davam et — sual ver...',
+    chat_send: 'Göndər',
+    chat_new: 'Yeni söhbət',
     intent_hint: 'Bu, «{i}» sualına oxşayır.',
     intent_go: 'Aç',
     intent_pick_papers: 'Müqayisə üçün nəticələrdən məqalə seç.',
@@ -140,6 +144,10 @@ const I18N = {
   ru: {
     product_kicker: 'Платформа научного интеллекта',
     corpus_note: 'Этот ответ основан на индексированном корпусе: {n} статей · {src} · {langs}',
+    chat_you: 'Вы',
+    chat_placeholder: 'Продолжить — задайте вопрос...',
+    chat_send: 'Отправить',
+    chat_new: 'Новый чат',
     intent_hint: 'Похоже на вопрос типа «{i}».',
     intent_go: 'Открыть',
     intent_pick_papers: 'Pick papers from the results to compare.',
@@ -257,6 +265,10 @@ const I18N = {
   en: {
     product_kicker: 'Scientific Intelligence Platform',
     corpus_note: 'This answer is based on the indexed corpus: {n} papers · {src} · {langs}',
+    chat_you: 'You',
+    chat_placeholder: 'Keep going — ask a follow-up...',
+    chat_send: 'Send',
+    chat_new: 'New chat',
     intent_hint: 'This looks like a “{i}” question.',
     intent_go: 'Open',
     i_COMPARE: 'comparison',
@@ -642,8 +654,17 @@ function renderEmpty() {
     </div>`;
 }
 
-function skeleton(kind) {
+function skeleton(kind, keepHistory = false) {
   const r = $('#results');
+  // Davam edən söhbətdə əvvəlki növbələr silinmir — ekran boşalsa,
+  // istifadəçi kontekstin itdiyini düşünür.
+  if (keepHistory) {
+    const old = r.querySelector('.chat-history');
+    const prev = old ? old.outerHTML : '';
+    r.setAttribute('aria-busy', 'true');
+    r.innerHTML = prev + `<div class="loading-note"><span class="spinner"></span>${t('loading_ask')}</div>`;
+    return;
+  }
   r.classList.toggle('ai', kind === 'ask');
   r.setAttribute('aria-busy', 'true');
   const note = `<div class="loading-note"><span class="spinner"></span>${t(kind === 'ask' ? 'loading_ask' : 'loading_search')}</div>`;
@@ -760,13 +781,47 @@ async function runSearch(q) {
   }).join('');
 }
 
+/* Söhbət tarixçəsi. Backend son 6 növbəni işlədir, biz 10 saxlayırıq ki,
+   ekranda görünən dialoq kəsilməsin. Sahə və ya dil dəyişəndə sıfırlanır —
+   yeni kontekstdə köhnə növbələr yanıldıcı olur. */
+let CHAT = [];
+
+function resetChat() { CHAT = []; }
+
+/* Söhbətin davamı: cavabın altındakı sahə. Əsas axtarış qutusu toxunulmur —
+   ora yeni sorğu üçündür, bura isə eyni mövzunu davam etdirmək üçün. */
+document.addEventListener('submit', (e) => {
+  if (e.target && e.target.id === 'chat-next') {
+    e.preventDefault();
+    const input = document.querySelector('#chat-more');
+    const text = (input?.value || '').trim();
+    if (text.length < 1) return;
+    input.value = '';
+    runAsk(text).catch((err) => showError(err));
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'chat-reset') {
+    resetChat();
+    $('#results').innerHTML = '';
+    $('#q')?.focus();
+  }
+});
+
 async function runAsk(q) {
-  skeleton('ask');
+  const isFollowUp = CHAT.length > 0;
+  skeleton('ask', isFollowUp);
   const { data } = await api('/api/ask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question: q, top_k: 5, field: FIELD || null }),
+    body: JSON.stringify({
+      question: q, top_k: 5, field: FIELD || null,
+      history: CHAT.slice(-10),
+    }),
   });
+  CHAT.push({ role: 'user', content: q });
+  CHAT.push({ role: 'assistant', content: (data.answer || '').slice(0, 2000) });
   const r = $('#results');
   r.setAttribute('aria-busy', 'false');
 
@@ -784,8 +839,18 @@ async function runAsk(q) {
       : m)
   );
 
+  /* Əvvəlki növbələr — sonuncu cütdən başqası. Söhbətin davam etdiyi
+     görünməlidir, yoxsa istifadəçi hər dəfə sıfırdan başladığını düşünür. */
+  const past = CHAT.slice(0, -2).map((turn) => `
+    <div class="chat-turn ${turn.role}">
+      <span class="chat-role">${turn.role === 'user' ? t('chat_you') : 'PaperMind'}</span>
+      <div>${esc(turn.content)}</div>
+    </div>`).join('');
+
   r.innerHTML = `
+    ${past ? `<div class="chat-history">${past}</div>` : ''}
     <div class="answer-panel">
+      <div class="chat-question">${esc(q)}</div>
       <div class="answer-head">
         <h2><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>${t('res_ask')}</h2>
         <div class="res-meta">
@@ -795,6 +860,12 @@ async function runAsk(q) {
       </div>
       ${data.query_en ? `<p class="translated" style="margin-bottom:14px">${t('translated_as')} <code>${esc(data.query_en)}</code></p>` : ''}
       <div class="answer-body">${answer}</div>
+      <form class="chat-next" id="chat-next">
+        <input type="text" id="chat-more" autocomplete="off" maxlength="500"
+               data-i18n-ph="chat_placeholder">
+        <button type="submit">${t('chat_send')}</button>
+        <button type="button" id="chat-reset" class="chat-reset">${t('chat_new')}</button>
+      </form>
       ${data.corpus ? `<p class="corpus-note">${esc(
         t('corpus_note')
           .replace('{n}', nf().format(data.corpus.papers))

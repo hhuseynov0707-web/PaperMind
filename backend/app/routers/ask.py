@@ -43,12 +43,15 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
     enforce_ask_limits(request)
 
     t0 = time.perf_counter()
+    # Davam edən söhbət keşlənmir: eyni sual fərqli kontekstdə fərqli cavab
+    # tələb edir («bəs ikincisi?» əvvəlki növbədən asılıdır). Yalnız TƏK
+    # sual keşlənir — ilk sorğunun ucuz olması onsuz da əsas qazancdır.
     key = (
-        f"ask:v2:{hashlib.sha256(_normalize(req.question).encode()).hexdigest()}"
+        f"ask:v3:{hashlib.sha256(_normalize(req.question).encode()).hexdigest()}"
         f":{req.top_k}:{req.field or 'all'}"
-    )
+    ) if not req.history else None
 
-    cached = cache.get_json(key)
+    cached = cache.get_json(key) if key else None
     if cached:
         latency = int((time.perf_counter() - t0) * 1000)
         crud.save_qa(db, req.question, cached["answer"], cached["sources"], True, latency)
@@ -62,7 +65,16 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             corpus=cached.get("corpus"),
         )
 
-    query, also, lang, query_en = retrieval_inputs(req.question)
+    # Davam edən söhbətdə sual tək başına mənasız ola bilər («bəs ikincisi?»).
+    # Retrieval üçün son istifadəçi növbəsi də əlavə olunur — cavab üçün yox,
+    # yalnız axtarış mətni kimi.
+    search_text = req.question
+    if req.history:
+        prev = [t.content for t in req.history if t.role == "user"]
+        if prev and len(req.question) < 40:
+            search_text = f"{prev[-1]} {req.question}"
+
+    query, also, lang, query_en = retrieval_inputs(search_text)
     blocks = retrieve(
         db, query, top_k=req.top_k,
         categories=[req.field] if req.field else None, also=also,
@@ -88,7 +100,12 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
     blocks, ev_stats = select_evidence(blocks, max_blocks=req.top_k)
 
     try:
-        answer = ask_llm(req.question, blocks, lang=lang)
+        answer = ask_llm(
+            req.question, blocks, lang=lang,
+            history=[t.model_dump() for t in req.history],
+            # Sübut zəifdirsə model susmur — dürüst olub əlindəkini təklif edir
+            weak=ev_stats["weak"],
+        )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
 
@@ -133,12 +150,13 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
 
     query_en_out = query_en if lang != "en" else None
     latency = int((time.perf_counter() - t0) * 1000)
-    cache.set_json(
-        key,
-        {"answer": answer, "sources": sources, "query_en": query_en_out,
-         "grounding": grounding, "corpus": corpus},
-        settings.ask_cache_ttl,
-    )
+    if key:
+        cache.set_json(
+            key,
+            {"answer": answer, "sources": sources, "query_en": query_en_out,
+             "grounding": grounding, "corpus": corpus},
+            settings.ask_cache_ttl,
+        )
     crud.save_qa(db, req.question, answer, sources, False, latency)
     return AskResponse(
         answer=answer,

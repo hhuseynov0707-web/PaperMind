@@ -169,10 +169,21 @@ class SearchResponse(BaseModel):
 
 # ---------- Ask (RAG) ----------
 
+class ChatTurn(BaseModel):
+    """Söhbətin bir növbəsi. Tarixçə istifadəçidən gəlir, ona görə həm rol,
+    həm uzunluq məhdudlaşdırılır — əks halda ixtiyari «assistant» mesajı
+    göndərib modelin davranışını dəyişmək mümkün olardı."""
+
+    role: str = Field(pattern="^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=2000)
+
+
 class AskRequest(BaseModel):
-    question: str = Field(min_length=3, max_length=500)
+    question: str = Field(min_length=1, max_length=500)
     top_k: int = Field(5, ge=1, le=10)
     field: str | None = None  # sahə açarı (fields.FIELDS) — axtarışı daraldır
+    # Söhbətin davam etməsi üçün. Son 6 növbə saxlanılır (llm._clean_history).
+    history: list[ChatTurn] = Field(default=[], max_length=20)
 
 
 class FieldOut(BaseModel):

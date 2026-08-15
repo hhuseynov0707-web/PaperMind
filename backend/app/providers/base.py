@@ -31,8 +31,14 @@ class LLMProvider(Protocol):
         max_tokens: int = 800,
         json_mode: bool = False,
         model: str | None = None,
+        history: list[dict] | None = None,
     ) -> str:
-        """Cavab mətnini qaytarır. Xəta halında istisna atır."""
+        """Cavab mətnini qaytarır. Xəta halında istisna atır.
+
+        `history` — əvvəlki növbələr, system və cari user mesajı arasına düzülür.
+        Çağıran tərəf onu ONSUZ DA təmizləməlidir (rol yoxlanışı, uzunluq);
+        provider yalnız ötürür.
+        """
         ...
 
 

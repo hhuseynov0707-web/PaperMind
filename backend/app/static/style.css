@@ -739,3 +739,35 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 .plan-go:hover { background: var(--accent-2); }
 .plan-filters { color: var(--muted); margin-left: auto; }
 @media (max-width: 640px) { .plan-filters { margin-left: 0; width: 100%; } }
+
+/* Söhbət: əvvəlki növbələr və davam sahəsi.
+   Əsas axtarış qutusu yeni sorğu üçündür; bura eyni mövzunu davam etdirir. */
+.chat-history { margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-turn {
+  padding: 10px 14px; border-radius: var(--r-md);
+  border: 1px solid var(--line); font-size: 13.5px; line-height: 1.55;
+}
+.chat-turn.user { background: var(--accent-soft); border-color: rgba(99,102,241,.22); }
+.chat-turn.assistant { background: var(--surface-2); }
+.chat-role {
+  display: block; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted); margin-bottom: 4px;
+}
+.chat-question {
+  font-size: 14px; color: var(--muted); margin-bottom: 12px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line);
+}
+.chat-next { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.chat-next input {
+  flex: 1; min-width: 200px; padding: 10px 14px;
+  background: var(--surface-3); border: 1px solid var(--line);
+  border-radius: var(--r-md); color: var(--fg); font-size: 14px; font-family: inherit;
+}
+.chat-next input:focus { outline: none; border-color: var(--accent); }
+.chat-next button {
+  background: var(--accent); color: #fff; border: 0; cursor: pointer;
+  padding: 10px 18px; border-radius: var(--r-md); font-weight: 600; font-size: 13.5px;
+}
+.chat-next button:hover { background: var(--accent-2); }
+.chat-reset { background: transparent !important; color: var(--muted) !important; }
+.chat-reset:hover { color: var(--fg) !important; }
