@@ -89,11 +89,36 @@ docker compose -f docker-compose.prod.yml exec backend \
 ```
 
 ### 7. n8n-i qur (SSH tuneli ilə)
-n8n paneli internetə açıq deyil. Öz kompüterindən:
+
+n8n paneli internetə açıq deyil — `docker-compose.prod.yml`-də portu qəsdən
+publish olunmur. Öz kompüterindən tunel aç:
+
 ```bash
-ssh -L 5679:localhost:5678 user@SERVER_IP
+ssh -L 5679:localhost:5678 root@SERVER_IP     # Oracle-da: ubuntu@
 ```
-Sonra brauzerdə `http://localhost:5679` aç → owner hesabı yarat → 4 workflow-un hamısı artıq import olunub, W1/W2/W4-ü **Publish** et.
+
+Brauzerdə `http://localhost:5679` → **owner hesabı yarat** (bu, n8n-in öz
+admin hesabıdır, serverin deyil).
+
+Sonra workflow-ları **import et**. `./n8n/workflows` qovluğu konteynerə mount
+olunub, amma mount import demək deyil — n8n onları özü oxumur:
+
+```bash
+docker compose -f docker-compose.prod.yml exec n8n \
+  n8n import:workflow --separate --input=/workflows
+```
+
+`Successfully imported 5 workflows` görməlisən. Brauzeri yenilə — beşi də siyahıda çıxacaq:
+
+| | Workflow | Nə edir | Aktiv? |
+|---|---|---|---|
+| W1 | `daily_ingest` | arXiv-dən gündəlik yığım | **bəli** |
+| W2 | `weekly_digest` | həftəlik xülasə | **bəli** |
+| W3 | `error_handler` | xəta workflow-u — W1/W2/W4/W5 buna bağlanır | xeyr (özü çağırılır) |
+| W4 | `multi_source_ingest` | Crossref · DOAJ · OpenAlex | **bəli** |
+| W5 | `russian_ingest` | rusdilli mənbələr | istəyə görə |
+
+Aktiv etmək üçün hər workflow-u aç → sağ yuxarıdakı **Active** açarını yandır.
 
 > Workflow-lar `X-API-Key` başlığını `{{ $env.ADMIN_API_KEY }}`-dən oxuyur — `.env`-dəki açar avtomatik işləyir.
 
