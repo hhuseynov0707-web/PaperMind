@@ -109,10 +109,15 @@ services:
       - GENERIC_TIMEZONE=Asia/Baku
       - TZ=Asia/Baku
       - N8N_DIAGNOSTICS_ENABLED=false
-    # Port QƏSDƏN açılmır. Admin panelinə SSH tuneli ilə gir:
-    #   ssh -L 5679:localhost:5678 user@server   ->  http://localhost:5679
-    expose:
-      - "5678"
+    # İnternetə QƏSDƏN açılmır — yalnız serverin loopback interfeysinə bağlanır.
+    # `expose:` burada işləmirdi: o, portu yalnız digər KONTEYNERLƏRƏ açır, host-un
+    # localhost-una yox, ona görə `ssh -L ... localhost:5678` tuneli
+    # «Connection refused» verirdi. 127.0.0.1 prefiksi ilə port host-da görünür,
+    # amma kənardan çatmır (Docker DNAT qaydasını loopback ilə məhdudlaşdırır).
+    # Admin panelinə giriş:
+    #   ssh -L 15678:localhost:5678 root@server   ->  http://localhost:15678
+    ports:
+      - "127.0.0.1:5678:5678"
     volumes:
       - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/workflows:ro

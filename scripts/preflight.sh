@@ -63,12 +63,31 @@ if [ ! -f docker-compose.prod.yml ]; then
 else
   if docker compose -f docker-compose.prod.yml config > /tmp/pm_cfg.yml 2>/dev/null; then
     ok "docker-compose.prod.yml sintaksisi düzgündür"
-    PORTS=$(grep -c 'published:' /tmp/pm_cfg.yml || true)
-    PUBLISHED=$(grep 'published:' /tmp/pm_cfg.yml | tr -d ' "' | sed 's/published://' | sort -u | tr '\n' ' ')
-    if [ "$PORTS" -eq 2 ] && [ "$PUBLISHED" = "443 80 " -o "$PUBLISHED" = "80 443 " ]; then
-      ok "yalnız 80 və 443 internetə açıqdır"
+    # Portu SAYMAQ kifayət deyil — hansı interfeysə bağlandığı vacibdir.
+    # "127.0.0.1:5678:5678" host-da görünür, amma internetdən çatmır; köhnə
+    # yoxlama sadəcə sayırdı və belə portu təhlükə kimi qeyd edirdi.
+    PORTMAP=$(awk '
+      function flush() {
+        if (pub != "")
+          printf "%s %s\n", pub, (hip == "" || hip == "0.0.0.0" || hip == "::") ? "public" : hip
+        pub = ""; hip = ""
+      }
+      /^[[:space:]]*-[[:space:]]*mode:/           { flush(); inblk = 1; next }
+      inblk && /^[[:space:]]*published:/          { pub = $2; gsub(/"/, "", pub) }
+      inblk && /^[[:space:]]*host_ip:/            { hip = $2; gsub(/"/, "", hip) }
+      END { flush() }
+    ' /tmp/pm_cfg.yml)
+
+    PUBLIC=$(printf '%s\n' "$PORTMAP" | awk '$2 == "public" { print $1 }' | sort -u | tr '\n' ' ')
+    LOCAL=$(printf '%s\n' "$PORTMAP" | awk '$2 != "public" && NF { print $1 " (" $2 ")" }' | sort -u | tr '\n' ' ')
+
+    if [ "$PUBLIC" = "443 80 " ] || [ "$PUBLIC" = "80 443 " ]; then
+      ok "internetə yalnız 80 və 443 açıqdır"
     else
-      bad "gözlənilməz açıq portlar: ${PUBLISHED}— postgres/redis/n8n bağlı olmalıdır"
+      bad "gözlənilməz ictimai portlar: ${PUBLIC}— postgres/redis/n8n internetdən çatmamalıdır"
+    fi
+    if [ -n "$LOCAL" ]; then
+      ok "yalnız loopback-ə bağlı (SSH tuneli üçün): ${LOCAL}"
     fi
     grep -q 'PUBLIC_MODE: "true"' /tmp/pm_cfg.yml && ok "PUBLIC_MODE aktivdir" \
       || bad "PUBLIC_MODE aktiv deyil — yazma endpoint-ləri qorunmayacaq"

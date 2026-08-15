@@ -90,14 +90,20 @@ docker compose -f docker-compose.prod.yml exec backend \
 
 ### 7. n8n-i qur (SSH tuneli ilə)
 
-n8n paneli internetə açıq deyil — `docker-compose.prod.yml`-də portu qəsdən
-publish olunmur. Öz kompüterindən tunel aç:
+n8n paneli internetə açıq deyil — `docker-compose.prod.yml`-də yalnız serverin
+loopback interfeysinə bağlanır (`127.0.0.1:5678`). Öz kompüterindən tunel aç:
 
 ```bash
-ssh -L 5679:localhost:5678 root@SERVER_IP     # Oracle-da: ubuntu@
+ssh -L 15678:localhost:5678 root@SERVER_IP     # Oracle-da: ubuntu@
 ```
 
-Brauzerdə `http://localhost:5679` → **owner hesabı yarat** (bu, n8n-in öz
+Bu pəncərə açıq qalmalıdır — bağlananda panelə giriş də bağlanır.
+
+> **Lokal port niyə 15678?** Development compose-u n8n-i 5679-da işlədir; həmin
+> port kompüterində və ya Codespaces yönləndirməsində tutulu ola bilər və tunel
+> `bind: Permission denied` verər. 15678 toqquşmur.
+
+Brauzerdə `http://localhost:15678` → **owner hesabı yarat** (bu, n8n-in öz
 admin hesabıdır, serverin deyil).
 
 Sonra workflow-ları **import et**. `./n8n/workflows` qovluğu konteynerə mount
