@@ -9,27 +9,124 @@
 > dərc olunandan sonra adamlar ona güvənərək istifadə edir). Qərar verəndə `LICENSE` faylı
 > əlavə olunmalı və README-lərdəki sətir düzəldilməlidir.
 
+> 📊 **2026-08-15 — mövqe SORĞU İLƏ DƏYİŞDİRİLDİ (n=40).** Əvvəlki vəd
+> «öz dilində soruş, ingiliscə tap» idi. Data onu dəstəkləmədi: cavab
+> verənlərin yalnız **10%-i** ingilis dilini çətinlik sayır və yalnız **10%-i**
+> AZ/RU dil dəstəyini faydalı xüsusiyyət seçir — siyahıda sonuncu yer.
+> Ətraflı: [sorğu nəticələri](#sorğu-nəticələri-n40).
+
 ## Bir cümlə
 
-**AZ:** Rusca və ya azərbaycanca soruş — ingiliscə araşdırmaları tap.
-**EN:** Ask in your language, find research in English.
-**RU:** Спрашивайте на своём языке — находите исследования на английском.
+**AZ:** Cavab uydurmur — hər cümlə açıb oxuya biləcəyin məqaləyə bağlıdır.
+**EN:** Answers you can check — every claim links to a paper you can open.
+**RU:** Ответы, которые можно проверить — каждое утверждение ведёт к статье.
+
+*(Çoxdillilik silinmir — vəd olmaqdan çıxıb xüsusiyyət olur.)*
 
 ## Mövqe bəyanatı (formal)
 
-> Elmi ədəbiyyatı **ingilis dilində** oxumaq məcburiyyətində olan, amma rusca və ya azərbaycanca düşünən tələbə və gənc tədqiqatçılar üçün
-> **PaperMind** — dörd akademik mənbə üzərində məna ilə axtaran və cavabı **öz dilində, mənbə göstərərək** verən açıq mənbəli tədqiqat köməkçisidir.
-> Elicit və Consensus-dan fərqi: açıq mənbədir, öz serverində işləyir və **axtarış keyfiyyəti dərc olunub, təkrarlana bilir**.
+> Tədqiqat üçün **artıq ChatGPT işlədən** tələbə və gənc tədqiqatçılar üçün
+> **PaperMind** — eyni rahatlığı verən, amma hər iddianı **açıb oxuya biləcəyin
+> real məqaləyə bağlayan** açıq mənbəli axtarış köməkçisidir.
+> ChatGPT-dən fərqi: istinadlar yoxlanılır (ölçülmüş groundedness **91.4%**),
+> uydurulmuş istinad avtomatik silinir və nəticə hansı korpusa əsaslandığını
+> açıq göstərir.
+
+**Niyə ChatGPT ilə müqayisə:** sorğuda cavab verənlərin **67.5%-i** məqalə
+axtaranda məhz ümumi AI chat işlədir, **0%-i** isə Elicit/Consensus/Semantic
+Scholar kimi ixtisaslaşmış alət. Rəqib odur ki, insanlar faktiki olaraq
+işlədirlər — bazarın adı ilə çağırdığımız alət yox.
 
 ## Kimə (prioritet sırası ilə)
 
 | # | Seqment | Ağrı | Niyə biz |
 |---|---|---|---|
-| 1 | AZ/RU dilli bakalavr–magistr tələbə | İngiliscə açar söz seçə bilmir, ona görə axtarış boş qayıdır | Öz dilində soruşur, sistem tərcümə + məna ilə tapır |
+| 1 | Tədqiqat üçün AI chat işlədən tələbə | ChatGPT cavab verir, amma mənbəni yoxlamaq mümkün deyil; məqalə tapmaq və uzun mətni oxumaq vaxt aparır | Eyni rahatlıq + hər iddia açıla bilən məqaləyə bağlı |
 | 2 | Texniki işəgötürən / müsahib | CV-lərdə «AI layihəsi» çoxdur, ölçülmüş nəticə yoxdur | Benchmark, testlər, qərarların səbəbi yazılıb |
 | 3 | Self-host sevən developer | SaaS-a data verməkdən çəkinir | Lokal embedding, öz Postgres-i, Docker ilə bir əmr |
 
 Seqment 2 **indi** işə düşür (deploy tələb etmir). Seqment 1 deploydan sonra.
+
+## Sorğu nəticələri (n=40)
+
+**Nümunənin məhdudiyyəti əvvəlcə:** 40 cavab (hədəf 100+ idi) və **65%-i İT
+sahəsindən**. Yəni bu, tələbələrin deyil, İT-yə yaxın tələbələrin mənzərəsidir.
+Tibb və psixologiyadan **sıfır** cavab var. Xəta payı ~±15%.
+
+### Ağrı harada — və harada deyil
+
+| Problem | % |
+|---|---|
+| Məqalələr uzundur, vaxt aparır | **57.5%** |
+| Doğru məqaləni tapmaq çətindir | **47.5%** |
+| Giriş pulludur | 42.5% |
+| Terminlər ağırdır | 37.5% |
+| Hansının etibarlı olduğunu bilmirəm | 30% |
+| **İngilis dilində anlamaq çətindir** | **10%** |
+
+### Faktiki rəqib
+
+| Hardan axtarır | % |
+|---|---|
+| Google / Scholar | 77.5% |
+| **ChatGPT / Claude / Gemini** | **67.5%** |
+| **Elicit / Consensus / Semantic Scholar** | **0%** |
+
+42.5% birbaşa «ChatGPT-dən soruşuram» deyir — yəni AI chat artıq standart iş
+axınıdır, bizim əlavə etdiyimiz şey **yoxlana bilənlikdir**.
+
+### Ən çox istənilən xüsusiyyət
+
+| Xüsusiyyət | % |
+|---|---|
+| Doğru məqaləni daha tez tapmaq | **80%** |
+| Məqaləni AI ilə asan anlamaq | 57.5% |
+| Cavabın hansı məqalələrə əsaslandığını görmək | **47.5%** |
+| Müxtəlif məqalələrin nəticələrini tutuşdurmaq | 45% |
+| Trendlər / fənlərarası | 35% |
+| **AZ/RU dilində elm** | **10%** |
+
+### Ödəniş — qırmızı
+
+50% heç nə ödəməz (30% «pulsuz olmalıdır» + 20% «ödəməzdim»). Qalanı qiymət
+*adlandırır*, bu isə ödəmə vədi deyil. ÷3 qaydası ilə real konversiya ~13%.
+Üstəlik 30% yalnız imtahan/diplom dövründə işlədəcəyini deyir — mövsümi istifadə
+abunə üçün ən pis haldır.
+
+**Qeyd:** dizaynımdakı «Ayda 5 AZN olsaydı ödəyərdin?» konkret öhdəlik sualı və
+e-poçt xanası formada yoxdur. Ən güclü iki siqnalı ölçmədik.
+
+### Qərar
+
+Əvvəlcədən yazılmış budaq: **ödəmə sətirləri qırmızı → istehlakçı abunəsindən
+imtina.** Məhsul pulsuz buraxılır; ödənişli qat sonra, real istifadə görüləndən
+sonra sınanır.
+
+## Pulsuz / Pro sərhədi — QURULMUR, qeyd olunur
+
+Qərar: **indi hər şey pulsuzdur.** Ödənişli qat real istifadə görüləndən sonra
+sınanacaq. Amma sərhəd indidən aydındır, çünki **xərc onu özü çəkir**:
+
+| İmkan | Xərc | Qat |
+|---|---|---|
+| Semantik axtarış | Postgres + lokal embedding, ~66 ms, xarici xərc **yoxdur** | **Pulsuz** — və qalmalıdır: 80% məhz bunu istəyir |
+| Vərəqlənən dəst, trendlər, landşaft | yalnız SQL, LLM yox | **Pulsuz** |
+| Mənbəli AI cavabı | hər sorğu Groq çağırışıdır | Pulsuz, amma **limitli** (indi 20/saat) |
+| Müqayisə, ziddiyyət | hər çağırış ~1 500 token | Sonradan **Pro** |
+| Toplu çıxarış, öz korpusun | minlərlə LLM çağırışı | Sonradan **Pro** |
+
+Prinsip: **Postgres-də bitən hər şey pulsuz, Groq-a çıxan hər şey ölçülür.**
+Bu, süni məhdudiyyət deyil — real xərcin şəklidir və istifadəçiyə izah etmək
+asandır.
+
+Limit infrastrukturu **artıq var** (`security.py`: IP üzrə saatlıq limit +
+günlük qlobal tavan). Pro qatı üçün lazım olan şey yalnız istifadəçi hesabı və
+ödəniş — hər ikisi bu mərhələdə erkəndir.
+
+**Sorğu bunu dəstəkləyir:** 30% «yalnız imtahan/diplom dövründə» işlədəcəyini
+deyir. Mövsümi istifadəçidən aylıq abunə almaq mümkün deyil; ondan yalnız
+zirvə anında dəyər almaq mümkündür — yəni limitli pulsuz + lazım olanda
+genişlənmə düzgün formadır.
 
 ## Sübutlu iddialar — yalnız bunları yazırıq
 
