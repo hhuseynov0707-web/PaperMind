@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Oracle Cloud (Ubuntu 22.04 ARM) serverini PaperMind üçün hazırlayır.
+# Ubuntu serverini PaperMind üçün hazırlayır — Hetzner, Oracle Cloud və digər VPS.
 # Serverdə işlət:  bash scripts/server-setup.sh
 #
-# Nə edir: Docker qurur, firewall-un HƏR İKİ səviyyəsini açır, swap yaradır.
+# Nə edir: Docker qurur, 80/443 portlarını açır, swap yaradır.
 # İdempotentdir — təkrar işlətmək təhlükəsizdir.
 
 set -euo pipefail
@@ -25,14 +25,30 @@ else
   ok "Docker quruldu — qrup dəyişikliyi üçün sessiyanı yenidən aç"
 fi
 
-info "3/5 · Firewall (Oracle-da İKİ səviyyə var)"
-# (a) Serverin öz iptables-ı. Ubuntu image-də 80/443 default olaraq BAĞLIDIR.
+info "3/5 · Firewall"
+# Provayderlərin Ubuntu image-ləri fərqlidir və bu, skripti öldürə bilər:
+#   Oracle  — INPUT zənciri DOLU gəlir, sonunda REJECT var, 80/443 bağlıdır.
+#   Hetzner — INPUT zənciri BOŞDUR, heç nə bağlı deyil.
+# Sabit `-I INPUT 6` ikinci halda "index of insertion too big" verir və
+# `set -e` səbəbindən skript elə orada dayanır. Ona görə mövqe hesablanır:
+# qadağan edən İLK qaydadan əvvəl, belə qayda yoxdursa sadəcə sona.
+block_pos() {
+  $SUDO iptables -L INPUT --line-numbers -n 2>/dev/null \
+    | awk '$2 ~ /^(REJECT|DROP)$/ { print $1; exit }'
+}
+
 for port in 80 443; do
   if $SUDO iptables -C INPUT -m state --state NEW -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
     ok "port $port artıq açıqdır"
+    continue
+  fi
+  pos="$(block_pos)"
+  if [ -n "$pos" ]; then
+    $SUDO iptables -I INPUT "$pos" -m state --state NEW -p tcp --dport "$port" -j ACCEPT
+    ok "port $port açıldı (qadağa qaydasından əvvəl — mövqe $pos)"
   else
-    $SUDO iptables -I INPUT 6 -m state --state NEW -p tcp --dport "$port" -j ACCEPT
-    ok "port $port açıldı"
+    $SUDO iptables -A INPUT -m state --state NEW -p tcp --dport "$port" -j ACCEPT
+    ok "port $port açıldı (zəncirdə qadağa yox idi)"
   fi
 done
 $SUDO apt-get install -y -qq iptables-persistent > /dev/null 2>&1 || true
@@ -41,12 +57,15 @@ ok "qaydalar restartdan sonra da qalacaq"
 
 cat <<'REMINDER'
 
-  ⚠ DİQQƏT — bu skript yalnız (a) hissəsini etdi.
-    (b) Oracle KONSOLUNDA da açmalısan:
+  ⚠ ORACLE CLOUD-dasansa bu kifayət DEYİL — orada firewall İKİ səviyyəlidir.
+    Konsolda da aç:
         Networking → Virtual Cloud Networks → <VCN> → Security Lists
         → Default Security List → Add Ingress Rules
           Source: 0.0.0.0/0   IP Protocol: TCP   Destination Port: 80,443
     Yalnız birini etmək saytın açılmamasına səbəb olur və səbəb heç yerdə görünmür.
+
+    HETZNER-də bu addım lazım deyil — bulud firewall-u defolt olaraq sönülüdür,
+    portlar serverin öz iptables-ı ilə idarə olunur (yuxarıda edildi).
 
 REMINDER
 
@@ -72,8 +91,9 @@ cat <<'NEXT'
 
 Server hazırdır. Növbəti addımlar:
 
-  1. Faylları köçür (öz kompüterindən):
-       scp -r papermind ubuntu@<SERVER_IP>:~/
+  1. Faylları köçür (öz kompüterindən).
+     İstifadəçi adı provayderdən asılıdır — Hetzner `root`, Oracle `ubuntu`:
+       scp -r papermind root@<SERVER_IP>:~/
 
   2. Serverdə:
        cd ~/papermind
