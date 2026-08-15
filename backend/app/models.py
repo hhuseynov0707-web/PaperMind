@@ -7,6 +7,7 @@ from sqlalchemy import (
     Computed,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Table,
@@ -162,6 +163,39 @@ class PaperInsight(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     paper: Mapped[Paper] = relationship()
+
+
+class PaperRelation(Base):
+    """Məqalələr arası əlaqə — §15.
+
+    Ayrıca graph DB QURULMADI. §15 açıq deyir: *«Do not introduce a separate
+    graph database unless the existing architecture genuinely requires it»*.
+    Korpus ~1 600 məqalədir; belə ölçüdə iki indeksli cədvəl bütün keçid
+    sorğularını millisaniyələrlə cavablandırır.
+
+    `confidence` və `evidence` vacibdir, çünki əlaqələrin mənbəyi fərqlidir:
+    `cites` OpenAlex-in `referenced_works` sahəsindən gəlir və FAKTdır (1.0);
+    `contradicts` isə LLM qiymətləndirməsindən gəlir və şübhəlidir. Onları eyni
+    cədvəldə saxlayıb eyni etibarla göstərmək yanlış olardı.
+    """
+
+    __tablename__ = "paper_relations"
+    __table_args__ = (
+        UniqueConstraint("from_paper_id", "to_paper_id", "relation", name="uq_relation"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    from_paper_id: Mapped[int] = mapped_column(
+        ForeignKey("papers.id", ondelete="CASCADE"), index=True
+    )
+    to_paper_id: Mapped[int] = mapped_column(
+        ForeignKey("papers.id", ondelete="CASCADE"), index=True
+    )
+    relation: Mapped[str] = mapped_column(Text, index=True)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    evidence: Mapped[str | None] = mapped_column(Text)      # nəyə əsasən
+    source: Mapped[str | None] = mapped_column(Text)        # openalex | llm | derived
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class QaHistory(Base):

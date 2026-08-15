@@ -15,6 +15,7 @@ from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
 from ..landscape import build_landscape, find_gaps, insight_coverage
+from ..relations import RELATION_TYPES, summarize_relations
 from ..rag.compare import assess_conflict, compare_papers
 from ..rag.insights import evidence_summary
 from ..rag.retriever import retrieve
@@ -319,5 +320,78 @@ def cross_disciplinary(
         "note": (
             "Əlaqələr yalnız indekslənmiş məqalələrin öz sahə təsnifatından çıxarılır; "
             "sistem əlaqə uydurmur."
+        ),
+    }
+
+
+# ---------------------------------------------------------------- §15 relations
+
+@router.get("/papers/{paper_id}/relations")
+def paper_relations(
+    paper_id: int,
+    relation: str | None = Query(None),
+    limit: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Bir məqalənin digərləri ilə əlaqələri (§15).
+
+    Əlaqələr İKİ İSTİQAMƏTDƏ qaytarılır: məqalə həm istinad edən, həm istinad
+    olunan ola bilər və istifadəçi üçün hər ikisi maraqlıdır.
+
+    Cavabda `confidence` və `source` mütləq qalır — `cites` xarici reyestrdən
+    gələn FAKTdır (1.0), `related_to` isə ölçülmüş oxşarlıqdır (~0.6). Onları
+    eyni etibarla göstərmək sistemi inandırıcı görünən uydurmaya çevirərdi.
+    """
+    if db.get(models.Paper, paper_id) is None:
+        raise HTTPException(status_code=404, detail="Məqalə tapılmadı")
+    if relation and relation not in RELATION_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Naməlum əlaqə tipi: {relation}. Mövcud: {', '.join(RELATION_TYPES)}",
+        )
+
+    stmt = select(models.PaperRelation).where(
+        (models.PaperRelation.from_paper_id == paper_id)
+        | (models.PaperRelation.to_paper_id == paper_id)
+    )
+    if relation:
+        stmt = stmt.where(models.PaperRelation.relation == relation)
+    rows = db.scalars(
+        stmt.order_by(models.PaperRelation.confidence.desc()).limit(limit)
+    ).all()
+
+    other_ids = {r.to_paper_id if r.from_paper_id == paper_id else r.from_paper_id for r in rows}
+    others = {p.id: p for p in _papers_by_ids(db, list(other_ids))}
+
+    out = []
+    for r in rows:
+        other_id = r.to_paper_id if r.from_paper_id == paper_id else r.from_paper_id
+        other = others.get(other_id)
+        if other is None:
+            continue
+        out.append({
+            "relation": r.relation,
+            # İstiqamət göstərilir: «bu məqalə istinad edir» ilə «buna istinad
+            # edilir» tamam fərqli məlumatdır
+            "direction": "outgoing" if r.from_paper_id == paper_id else "incoming",
+            "confidence": round(r.confidence or 0, 3),
+            "source": r.source,
+            "evidence": r.evidence,
+            "paper": {
+                "id": other.id, "title": other.title,
+                "doi": other.doi, "arxiv_id": other.arxiv_id,
+                "published_at": other.published_at,
+            },
+        })
+
+    return {
+        "paper_id": paper_id,
+        "relations": out,
+        "summary": summarize_relations([
+            {"relation": r.relation, "confidence": r.confidence} for r in rows
+        ]),
+        "note": (
+            "confidence 1.0 = xarici reyestrdən gələn fakt (sitat); "
+            "aşağı dəyərlər hesablanmış və ya ölçülmüş əlaqədir."
         ),
     }

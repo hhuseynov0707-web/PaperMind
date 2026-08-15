@@ -49,6 +49,21 @@ DDL = [
        )""",
     "CREATE INDEX IF NOT EXISTS ix_insights_model ON paper_insights (model)",
     "CREATE INDEX IF NOT EXISTS ix_insights_data ON paper_insights USING gin (data)",
+    # Phase 6 (§15): məqalələr arası əlaqələr. Graph DB YOX — Postgres kifayətdir.
+    """CREATE TABLE IF NOT EXISTS paper_relations (
+           id serial PRIMARY KEY,
+           from_paper_id integer NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+           to_paper_id   integer NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+           relation text NOT NULL,
+           confidence double precision DEFAULT 1.0,
+           evidence text,
+           source text,
+           created_at timestamptz DEFAULT now(),
+           CONSTRAINT uq_relation UNIQUE (from_paper_id, to_paper_id, relation)
+       )""",
+    "CREATE INDEX IF NOT EXISTS ix_rel_from ON paper_relations (from_paper_id)",
+    "CREATE INDEX IF NOT EXISTS ix_rel_to ON paper_relations (to_paper_id)",
+    "CREATE INDEX IF NOT EXISTS ix_rel_type ON paper_relations (relation)",
 ]
 
 DOI_UNIQUE_INDEX = (

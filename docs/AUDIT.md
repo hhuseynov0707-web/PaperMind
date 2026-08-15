@@ -556,9 +556,37 @@ Dırnaqsız çoxsözlü formada adın harada bitdiyini bilmək mümkün deyil.
 ### Phase 6
 | # | İş | Vəziyyət |
 |---|---|---|
-| 6.1 | §15 məqalələr arası əlaqələr — OpenAlex `referenced_works` | ⏳ |
+| 6.1 | §15 məqalələr arası əlaqələr | ✅ 20 test |
 | 6.2 | §18 provider abstraksiyası | ✅ 8 test |
 | 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | ⏳ protokol hazır |
+
+#### §15 — əlaqələr
+
+**Graph DB qurulmadı.** §15 açıq deyir: *«Do not introduce a separate graph
+database unless the existing architecture genuinely requires it»*. 1 600
+məqaləlik korpusda iki indeksli Postgres cədvəli bütün keçidləri
+millisaniyələrlə verir.
+
+Əsas dizayn qərarı — **əlaqələr etibarlılıq baxımından bərabər deyil** və bu,
+sxemə yazılıb (`confidence`, `source`):
+
+| Əlaqə | Mənbə | Etibar | Növ |
+|---|---|---|---|
+| `cites` / `builds_on` | OpenAlex `referenced_works` | 1.0 | **fakt** |
+| `same_authors` | soyad kəsişməsi | 0.7 | hesablanmış |
+| `related_to` | vektor oxşarlığı | ~0.6 | ölçülmüş |
+| `contradicts` və s. | LLM (§10) | modelin öz qiyməti | mühakimə |
+
+Hamısını eyni etibarla göstərmək sistemi inandırıcı görünən uydurmaya
+çevirərdi — endpoint `verified` və `derived` saylarını ayrıca qaytarır.
+
+İki qoruma kodda tətbiq olunur: öz-özünə əlaqə rədd edilir (keçid sorğularında
+dövrə yaradır), və `builds_on` yalnız TARİX məlum olanda seçilir — naməlum
+halda daha zəif iddia (`cites`) qalır.
+
+**Gözlənilən məhdudiyyət:** sitat əlaqəsi yalnız hər iki tərəf korpusda olanda
+yaranır. 1 600 məqaləlik korpusda kəsişmə azdır; `related_to` və `same_authors`
+isə dərhal işləyir.
 
 #### §18 — provider abstraksiyası
 
