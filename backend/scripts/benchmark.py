@@ -152,13 +152,21 @@ def known_item(db, sample: int, mode: str, retrieval: str = "vector",
 
 # ------------------------------------------------------- 2/3. sahə + çarpaz dilli
 
-def field_precision(db, mode: str, retrieval: str = "vector", rerank: str | None = "") -> dict:
+def field_precision(db, mode: str, retrieval: str = "vector", rerank: str | None = "",
+                    limit: int = 0) -> dict:
     spec = json.loads(QUERIES.read_text(encoding="utf-8"))
+    queries = spec["field_queries"]
+    if limit:
+        # Bərabər seyrəkləşdirmə: hər sahədən və hər dildən nümunə qalsın.
+        # Sadəcə ilk N-i götürmək dəsti bir neçə sahəyə daraldardı, çünki
+        # queries.json sahə-sahə düzülüb.
+        step = max(1, len(queries) // limit)
+        queries = queries[::step][:limit]
     by_lang: dict[str, list[float]] = {}
     ru_share: list[float] = []
     per_field: dict[str, list[float]] = {}
 
-    for item in spec["field_queries"]:
+    for item in queries:
         q, lang, want = item["q"], item["lang"], item["field"]
         query, also = _prepare(q, mode)
         papers = top_papers(db, query, also=also, lang=lang,
@@ -180,10 +188,11 @@ def field_precision(db, mode: str, retrieval: str = "vector", rerank: str | None
 
 # ----------------------------------------------------------------- hesabat
 
-def run(db, sample: int, mode: str, retrieval: str = "vector", rerank: str | None = "") -> dict:
+def run(db, sample: int, mode: str, retrieval: str = "vector", rerank: str | None = "",
+        field_limit: int = 0) -> dict:
     return {
         "known": known_item(db, sample, mode, retrieval, rerank),
-        "field": field_precision(db, mode, retrieval, rerank),
+        "field": field_precision(db, mode, retrieval, rerank, field_limit),
     }
 
 
@@ -211,6 +220,10 @@ def main() -> int:
                     default=None, help="tək üsulu ölç (defolt: konfiqurasiyadakı)")
     ap.add_argument("--compare-retrieval", action="store_true",
                     help="vector / lexical / hybrid üsullarını müqayisə et (§5)")
+    ap.add_argument("--field-limit", type=int, default=0,
+                    help="sahə sorğularından neçəsi işlədilsin (0 = hamısı)")
+    ap.add_argument("--rerank-pool", type=int, default=0,
+                    help="rerank namizəd hovuzu (0 = konfiqurasiyadakı)")
     ap.add_argument("--compare-rerank", action="store_true",
                     help="rerank ilə və onsuz müqayisə et (§5: yalnız fayda varsa saxlanılır)")
     args = ap.parse_args()
@@ -267,7 +280,8 @@ def main() -> int:
         base = run(db, args.sample, "policy", retrieval, rerank="")
         show("RERANK YOXDUR", base)
         try:
-            reranked = run(db, args.sample, "policy", retrieval, rerank="fastembed")
+            reranked = run(db, args.sample, "policy", retrieval, rerank="fastembed",
+                           field_limit=args.field_limit)
         except Exception as exc:
             print(f"\n  Rerank işə salına bilmədi: {str(exc)[:120]}")
             return 1
