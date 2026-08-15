@@ -155,3 +155,34 @@ def test_relation_types_cover_the_spec():
     for required in ("cites", "builds_on", "extends", "supports",
                      "contradicts", "replicates", "uses_method", "related_to"):
         assert required in RELATION_TYPES
+
+
+# --------------------------------------------------------------------------
+# Müəllif açarı — canlı icrada tapılan səhv
+# --------------------------------------------------------------------------
+
+def test_author_key_includes_first_initial():
+    """REGRESSION: yalnız soyadla uyğunlaşdıranda 1 596 məqalədən 5 551
+    `same_authors` əlaqəsi yarandı — məqalə başına ~3.5.
+
+    Səbəb: «Wang», «Li», «Zhang» kimi soyadlar onlarla məqalədə təkrarlanır.
+    Əlaqə «eyni adam» yox, «eyni soyad» deməyə başlamışdı.
+    """
+    from app.relations import author_keys
+
+    assert author_keys(["Yann LeCun"]) == {"y.lecun"}
+    assert author_keys(["LeCun, Yann"]) == {"y.lecun"}
+
+
+def test_different_people_with_same_surname_do_not_match():
+    assert author_overlap(["Wei Wang"], ["Yan Wang"]) == set()
+    assert author_overlap(["Wei Wang"], ["Wei Wang"]) == {"wang"}
+
+
+def test_missing_initial_is_not_evidence_against():
+    """Yoxluq sübut deyil — dedup-dakı `has_conflicting_ids` ilə eyni prinsip."""
+    assert author_overlap(["Wang"], ["Wei Wang"]) == {"wang"}
+
+
+def test_abbreviated_first_name_still_matches():
+    assert author_overlap(["Y. LeCun"], ["Yann LeCun"]) == {"lecun"}

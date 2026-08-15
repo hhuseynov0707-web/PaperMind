@@ -29,19 +29,21 @@ from app.models import Paper, PaperRelation             # noqa: E402
 from app.relations import (                             # noqa: E402
     RELATED_MAX_PER_PAPER,
     RELATED_MIN_SCORE,
+    author_keys,
     author_overlap,
     build_relation,
     classify_citation_direction,
     normalize_openalex_refs,
 )
-from app.sources.common import _surnames, get_with_retry   # noqa: E402
+from app.sources.common import get_with_retry            # noqa: E402
 from app.sources.openalex import _headers                  # noqa: E402
 
 OPENALEX_API = "https://api.openalex.org/works"
 
-# Çox yayılmış soyad («Wang», «Li», «Zhang») yüzlərlə məqaləni bir-birinə
-# bağlayır və bu, əlaqə deyil, ad təsadüfüdür. Belə qruplar atılır.
-MAX_GROUP_PER_SURNAME = 40
+# Çox yayılmış ad yüzlərlə məqaləni bir-birinə bağlayır və bu, əlaqə deyil,
+# ad təsadüfüdür. Qruplaşdırma açarı «baş hərf + soyad»dır (yalnız soyad
+# deyil) — ilk icra 5 551 əlaqə verdi, çünki «wang» tək açar idi.
+MAX_GROUP_PER_KEY = 25
 
 
 def save(db, rows: list[dict]) -> int:
@@ -116,14 +118,14 @@ def build_author_links(db) -> int:
         select(Paper).options(selectinload(Paper.authors)).order_by(Paper.id)
     ).all()
 
-    by_surname: dict[str, list] = {}
+    by_key: dict[str, list] = {}
     for p in papers:
-        for s in _surnames([a.name for a in p.authors]):
-            by_surname.setdefault(s, []).append(p)
+        for k in author_keys([a.name for a in p.authors]):
+            by_key.setdefault(k, []).append(p)
 
     rows, seen = [], set()
-    for group in by_surname.values():
-        if len(group) < 2 or len(group) > MAX_GROUP_PER_SURNAME:
+    for group in by_key.values():
+        if len(group) < 2 or len(group) > MAX_GROUP_PER_KEY:
             continue
         for i, a in enumerate(group):
             for b in group[i + 1:]:
@@ -134,6 +136,11 @@ def build_author_links(db) -> int:
                 shared = author_overlap(
                     [x.name for x in a.authors], [x.name for x in b.authors]
                 )
+                # Kəsişmə boşdursa əlaqə YAZILMIR. İlk versiya bunu yoxlamırdı
+                # və qrupa düşən hər cüt üçün sətir yaradırdı — hətta baş hərf
+                # uyğun gəlməsə belə.
+                if not shared:
+                    continue
                 rows.append(build_relation(
                     key[0], key[1], "same_authors", source="authors",
                     evidence="ortaq müəllif: " + ", ".join(sorted(shared)[:5]),

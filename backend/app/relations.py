@@ -4,7 +4,7 @@
 bu fərq gizlədilməməlidir:
 
     cites          FAKT     — OpenAlex `referenced_works`, mənbədən gəlir
-    same_authors   FAKT     — müəllif kəsişməsi, bazadan hesablanır
+    same_authors   TÖRƏMƏ   — ad kəsişməsi; «eyni soyad» ≠ «eyni adam»
     related_to     TÖRƏMƏ   — vektor oxşarlığı, ölçülə bilən
     builds_on      TÖRƏMƏ   — sitat + zaman istiqaməti
     contradicts    MÜHAKİMƏ — LLM qiymətləndirməsi (§10)
@@ -81,11 +81,54 @@ def classify_citation_direction(from_year: int | None, to_year: int | None) -> s
     return "cites"
 
 
-def author_overlap(a: list[str], b: list[str]) -> set[str]:
-    """İki məqalənin ortaq müəllifləri (soyad üzrə, format fərqlərinə davamlı)."""
-    from .sources.common import _surnames
+def author_keys(names: list[str]) -> set[str]:
+    """Müəllif adlarını «ad-baş-hərfi + soyad» açarına çevirir.
 
-    return _surnames(a or []) & _surnames(b or [])
+    ÖLÇÜLDÜ: yalnız soyadla uyğunlaşdıranda 1 596 məqalədən 5 551 `same_authors`
+    əlaqəsi yarandı — məqalə başına ~3.5. Səbəb: «Wang», «Li», «Zhang» kimi
+    soyadlar onlarla məqalədə təkrarlanır və hər qrup yüzlərlə cüt verir.
+    Nəticədə əlaqə «eyni adam» yox, «eyni soyad» deməyə başlayır — sübutdan
+    güclü iddia.
+
+    Baş hərf əlavə edilməsi bunu kəskin azaldır: «Wei Wang» və «Yan Wang»
+    artıq ayrılır.
+
+    Məlumat çatışmazlığı SÜBUT SAYILMIR (dedup-dakı `has_conflicting_ids` ilə
+    eyni prinsip): baş hərfi bilinməyən ad `?` ilə işarələnir və o, hər hansı
+    baş hərflə uyğun gələ bilər.
+    """
+    import re as _re
+
+    out = set()
+    for name in names or []:
+        parts = [p.strip(" .,'\"") for p in _re.split(r"[\s,]+", (name or "").lower())]
+        parts = [p for p in parts if len(p) > 1 or (len(p) == 1 and p.isalpha())]
+        if not parts:
+            continue
+        surname = max(parts, key=len)
+        others = [p for p in parts if p is not surname]
+        initial = others[0][0] if others else "?"
+        out.add(f"{initial}.{surname}")
+    return out
+
+
+def author_overlap(a: list[str], b: list[str]) -> set[str]:
+    """İki məqalənin ortaq müəllifləri.
+
+    Baş hərfi bilinməyən tərəf üçün soyad uyğunluğu kifayətdir — yoxluq sübut
+    deyil. Hər ikisində baş hərf varsa, onlar da uyğun gəlməlidir.
+    """
+    ka, kb = author_keys(a), author_keys(b)
+    shared = set()
+    for key_a in ka:
+        ia, sa = key_a.split(".", 1)
+        for key_b in kb:
+            ib, sb = key_b.split(".", 1)
+            if sa != sb:
+                continue
+            if ia == "?" or ib == "?" or ia == ib:
+                shared.add(sa)
+    return shared
 
 
 def method_overlap(insight_a: dict, insight_b: dict) -> set[str]:

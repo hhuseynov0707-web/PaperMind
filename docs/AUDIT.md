@@ -585,8 +585,19 @@ dövrə yaradır), və `builds_on` yalnız TARİX məlum olanda seçilir — nam
 halda daha zəif iddia (`cites`) qalır.
 
 **Gözlənilən məhdudiyyət:** sitat əlaqəsi yalnız hər iki tərəf korpusda olanda
-yaranır. 1 600 məqaləlik korpusda kəsişmə azdır; `related_to` və `same_authors`
-isə dərhal işləyir.
+yaranır. Korpusda cəmi 33 məqalənin OpenAlex ID-si var, ona görə sitat qrafiki
+praktiki olaraq boşdur — bu, real ədəbiyyatın deyil, mənbə strategiyasının
+nəticəsidir.
+
+**İlk icrada tapılan səhv:** `same_authors` 5 551 əlaqə verdi — 1 596 məqalə
+üçün məqalə başına ~3.5. Səbəb: uyğunlaşdırma yalnız SOYAD üzrə idi, «Wang»,
+«Li», «Zhang» isə onlarla məqalədə təkrarlanır. Əlaqə «eyni adam» yox, «eyni
+soyad» deməyə başlamışdı — yəni sübutdan güclü iddia.
+
+Düzəliş: açar «baş hərf + soyad» oldu (`y.lecun`), qrup həddi 40 → 25, və boş
+kəsişmədə əlaqə ümumiyyətlə yazılmır (ilk versiya bunu yoxlamırdı). Baş hərfi
+bilinməyən ad hər hansı baş hərflə uyğun gələ bilir — yoxluq sübut deyil,
+`has_conflicting_ids` ilə eyni prinsip.
 
 #### §18 — provider abstraksiyası
 
