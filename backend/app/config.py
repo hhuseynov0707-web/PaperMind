@@ -132,7 +132,14 @@ class Settings(BaseSettings):
     # "paddle" | "" (sönülü). Stripe Azərbaycanda satıcı hesabı açmır, ona görə
     # Merchant of Record seçildi: ƏDV/vergi öhdəliyi provayderin üzərindədir.
     payment_provider: str = ""
+    # Server tərəfli, GİZLİ. Hazırda işlənmir (checkout brauzerdə açılır,
+    # webhook isə ayrı sirrlə yoxlanılır) — abunə idarəetməsi əlavə olunanda
+    # lazım olacaq.
     paddle_api_key: str = ""
+    # Brauzerə düşür və gizli DEYİL — Paddle.js checkout-u bununla açılır.
+    # API açarı ilə qarışdırılmamalıdır: onu frontend-ə vermək bütün hesaba
+    # giriş verməkdir.
+    paddle_client_token: str = ""
     paddle_webhook_secret: str = ""
     paddle_price_id_pro: str = ""
     paddle_environment: str = "sandbox"     # sandbox | production

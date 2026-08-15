@@ -319,10 +319,15 @@ class UsageOut(BaseModel):
 
 
 class CheckoutOut(BaseModel):
-    """Paddle checkout-u frontend-də açılır, ona görə URL yox, parametrlər."""
+    """Paddle checkout-u frontend-də açılır, ona görə URL yox, parametrlər.
+
+    Burada YALNIZ brauzerə düşməsi təhlükəsiz olan dəyərlər var. Server tərəfli
+    API açarı bu modelə heç vaxt əlavə edilməməlidir.
+    """
 
     provider: str
     environment: str
+    client_token: str
     price_id: str
     customer_email: str
     custom_data: dict[str, str]

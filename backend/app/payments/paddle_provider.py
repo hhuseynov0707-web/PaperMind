@@ -28,7 +28,8 @@ class PaddleProvider:
     name = "paddle"
 
     def __init__(self) -> None:
-        self.api_key = settings.paddle_api_key
+        self.api_key = settings.paddle_api_key            # gizli, server tərəfli
+        self.client_token = settings.paddle_client_token  # brauzerə düşür, gizli deyil
         self.webhook_secret = settings.paddle_webhook_secret
         self.price_id = settings.paddle_price_id_pro
         self.sandbox = settings.paddle_environment != "production"
@@ -52,6 +53,8 @@ class PaddleProvider:
         return {
             "provider": self.name,
             "environment": "sandbox" if self.sandbox else "production",
+            # Yalnız client token verilir — API açarı HEÇ VAXT frontend-ə düşmür.
+            "client_token": self.client_token,
             "price_id": self.price_id,
             "customer_email": email,
             # Webhook-da geri qayıdır. E-poçtla uyğunlaşdırmaq TƏHLÜKƏLİDİR:
