@@ -26,6 +26,8 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 - 🗺 **Tədqiqat landşaftı:** mövzu üzrə klasterlər, aktiv müəlliflər, fənlərarası əlaqələr — hamısı real indekslənmiş məqalələrdən sayılır, nümayəndə məqalələrlə birlikdə
 - 📊 **Trend təsnifatı:** hər fənn qrupu üçün *yeni yaranır / artır / sabit / azalır / data kifayət etmir* — və **səbəbi**. LLM yox, deterministik arifmetika
 - 🔍 **Tədqiqat boşluqları:** təkrarlanan məhdudiyyətlərdən çıxarılır və açıq şəkildə «AI nəticəsi» kimi etiketlənir. Sistem heç vaxt «bu mövzuda tədqiqat yoxdur» demir — yalnız «indeksdə məhdud sübut var»
+- 🎯 **Sorğunu anlayır (§6):** «transformer ilə RNN arasındakı fərq» → müqayisə, «hansı boşluqlar var» → boşluq analizi. `author:"Yann LeCun"` və «son 3 il» filtr kimi işlədilir, axtarış mətnindən isə çıxarılır. LLM işlədilmir — sabit ifadə nümunələri, 3 dildə, diakritikasız yazılış da tanınır
+- 🕸 **Məqalələr arası əlaqələr:** sitat, ortaq müəllif, oxşarlıq — hər biri **etibarlılıq dərəcəsi ilə**. Sitat xarici reyestrdən gələn faktdır (1.0), oxşarlıq isə ölçmədir (~0.6); interfeys onları qarışdırmır
 - 🔗 **Çoxmənbəli yığım + deduplikasiya:** arXiv (preprint), Crossref (nəşr olunmuş), DOAJ (açıq giriş), OpenAlex (çoxdilli). Eyni iş bir neçə mənbədə varsa **bir dəfə** göstərilir, mənbələrin hamısı isə qeyd olunur
 
 ## Arxitektura
@@ -62,6 +64,7 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 | Mənbələr | arXiv · Crossref · DOAJ · OpenAlex |
 | Avtomatlaşdırma | n8n — 5 workflow (arXiv, çoxmənbəli, rusdilli, həftəlik icmal, error handler) |
 | Frontend | Vanilla HTML/CSS/JS + Chart.js |
+| Provider-lər | LLM / embedding / rerank `.env`-dən seçilir (§18) — biznes məntiqi adı bilmir |
 
 ## Qurulum
 
@@ -166,6 +169,7 @@ curl -i "http://localhost:8000/api/analytics/trends?weeks=8"
 | GET | `/api/analytics/trend-classes` | Trend təsnifatı + səbəb (§12) |
 | GET | `/api/gaps?q=` | Potensial tədqiqat imkanları (§13) |
 | GET | `/api/cross-disciplinary?q=` | Sahələr arası əlaqələr (§14) |
+| GET | `/api/papers/{id}/relations` | Məqalənin əlaqələri, etibarlılıqla (§15) |
 | POST | `/api/digests` · GET `/api/digests/latest` | Həftəlik LLM icmalı |
 | POST | `/api/logs/error` · GET `/api/logs/*` | n8n xəta logları, ingest tarixçəsi, son suallar |
 
@@ -268,7 +272,7 @@ Sistemin ən kritik funksiyaları (dedup açarları, dil təyini, chunking) **he
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-**156 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
+**214 test:** DOI/arXiv/başlıq normallaşdırması və dedup ekvivalentlikləri, əlifbaya görə dil təyini (qarışıq mətn daxil), JATS abstrakt təmizlənməsi, chunk sərhədləri və üst-üstə düşmə, və uçdan-uca yoxlama — eyni iş üç mənbədən gələndə bir sətir, üç provenans qeydi.
 
 ### Retrieval benchmark
 
@@ -378,8 +382,12 @@ papermind/
 │   ├── scripts/
 │   │   ├── backfill.py         # yalnız arXiv (köhnə, sadə)
 │   │   ├── backfill_multi.py   # bütün mənbələr + dil seçimi (--lang ru)
-│   │   ├── benchmark.py        # axtarış keyfiyyəti: MRR@10, P@10, dil əhatəsi
-│   │   └── reembed.py          # model dəyişəndə vektorların bərpası
+│   │   ├── benchmark.py        # retrieval: MRR, NDCG, P@10 + üsul müqayisəsi
+│   │   ├── rag_eval.py         # §20: groundedness, istinad doğruluğu
+│   │   ├── extract_insights.py # §7 çıxarışı (bərpa olunan)
+│   │   ├── build_relations.py  # §15 əlaqələri (bərpa olunan)
+│   │   ├── verify_dedup.py     # dedup-un real data ilə yoxlanması
+│   │   └── reembed.py          # təmsil dəyişəndə vektorların bərpası
 │   └── app/
 │       ├── main.py             # FastAPI + lifespan + /health/services
 │       ├── config.py           # pydantic-settings (DB URL SQLAlchemy ilə qurulur)
@@ -391,10 +399,25 @@ papermind/
 │       ├── crud.py             # dedup upsert, analitika SQL (trendlər fənn qrupları üzrə)
 │       ├── cache.py            # Redis helper (get_or_set, invalidate, ping)
 │       ├── fields.py           # 19 sahə / 5 qrup → 76 arXiv kateqoriyası
+│       ├── trends.py           # trend təsnifatı (§12) — LLM yox, deterministik
+│       ├── landscape.py        # tədqiqat landşaftı + boşluqlar (§11, §13)
+│       ├── relations.py        # məqalələr arası əlaqələr (§15), etibarlılıqla
+│       ├── providers/          # §18: LLM / embedding / rerank dəyişdirilə bilən
+│       │   ├── base.py         #   protokollar (Protocol, ABC deyil)
+│       │   ├── groq_provider.py
+│       │   ├── fastembed_provider.py
+│       │   └── rerank_provider.py   # sönülü — bax .env.example
 │       ├── sources/            # arxiv, crossref, doaj, openalex + common (dedup açarları, dil, retry)
-│       ├── routers/            # ingest, papers, search, ask, analytics, logs, digests
-│       ├── rag/                # chunker, embedder, retriever, llm, translator
-│       └── static/             # frontend: 3 dilli konsol, vərəqlənən dəst, trend qrafiki
+│       ├── routers/            # ingest, papers, search, ask, analytics, logs, digests, intelligence
+│       ├── rag/
+│       │   ├── chunker.py      # chunk + embed olunan mətn (başlıq daxil)
+│       │   ├── retriever.py    # vektor / leksik / hibrid + filtrlər
+│       │   ├── understanding.py# §6: niyyət, müəllif, tarix — LLM yox
+│       │   ├── evidence.py     # §8: sübut seçimi, istinad doğrulaması
+│       │   ├── insights.py     # §7: çıxarış + sübut tipi
+│       │   ├── compare.py      # §9, §10: müqayisə və ziddiyyət
+│       │   ├── llm.py · embedder.py · translator.py
+│       └── static/             # frontend: 3 dilli konsol, vərəqlənən dəst, landşaft
 └── n8n/workflows/              # W1 arXiv · W2 digest · W3 error · W4 çoxmənbəli · W5 rusdilli
 ```
 

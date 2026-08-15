@@ -36,11 +36,15 @@ Seqment 2 **indi** işə düşür (deploy tələb etmir). Seqment 1 deploydan so
 | İddia | Sübut | Harada göstərilir |
 |---|---|---|
 | Rusca sorğu ingiliscə məqaləni tapır | RU↔EN oxşarlıq **0.79**; əlaqəsiz mətnlə −0.05 | README benchmark bölməsi |
-| Axtarış keyfiyyəti ölçülüb | MRR@10 **0.900** (en) / **0.800** (ru), P@10 61/72%, median **66 ms** | `scripts/benchmark.py --compare` |
-| Eyni məqalə təkrarlanmır | DOI → arXiv ID → başlıq SHA-1; **6 real birləşmə** canlı Crossref ilə yoxlanıb | `tests/test_dedup.py` |
-| Cavab uydurulmur | Yalnız kontekst, hər iddiada istinad, boşdursa etiraf | `rag/llm.py` system prompt |
+| Axtarış keyfiyyəti ölçülüb | known-item MRR@10 **1.000** (en) / **0.969** (ru), NDCG 1.000/0.977; P@10 az 56 · en 50 · ru 51 (95 sorğu, 19 sahə) | `scripts/benchmark.py` |
+| **Cavab istinadları uydurulmur** | groundedness **91.4%** (əvvəl 54.1%); kontekstdə olmayan istinad avtomatik silinir | `scripts/rag_eval.py` |
+| Eyni məqalə təkrarlanmır | 15 DOAJ DOI-su Crossref-dən çəkildi: Crossref-in tanıdığı **7-nin 7-si** tək sətir + iki provenans; dublikat yaranmadı | `scripts/verify_dedup.py` |
+| Fakt ilə AI nəticəsi ayrılır | hər çıxarış sahəsi `stated` / `synthesized` / `inferred`; sitat abstraktda yoxlanılır, tapılmasa etiket endirilir | `rag/insights.py` |
+| Ziddiyyət şəraitdən çıxarılır | fərqli populyasiya/metrik → şərti ziddiyyət; sistem hansının doğru olduğunu demir | `rag/compare.py` |
+| **Mürəkkəblik ölçmə ilə rədd edilir** | hibrid axtarış +0.3% → açılmadı; rerank 2.99 GB yaddaş → açılmadı | `.env.example`, `docs/AUDIT.md` |
 | 3 dilli interfeys | 128 açar × 3 dil, tam | `static/app.js` |
 | İctimai deploya hazırdır | API açarı + IP limitləri + HTTPS + preflight yoxlaması | `security.py`, `DEPLOY.md` |
+| Test əhatəsi | **214 test** — dedup, dil, chunking, sübut, ziddiyyət, endpoint, provider | `backend/tests/` |
 
 ## Yazmadığımız iddialar
 
@@ -52,6 +56,8 @@ Bunlar **doğru deyil** və ya **hələ doğru deyil** — heç bir materialda g
 - ❌ «Sitat şəbəkəsi / impact analizi» — yoxdur.
 - ❌ «Tibb üzrə etibarlı» — tibb korpusu nazikdir, arXiv-dən gəlmir.
 - ❌ «Real-time» — yığım gündə 3 dəfə cron ilə olur.
+- ❌ «Sitat qrafiki var» — cədvəl var, amma korpusda yalnız 33 məqalənin OpenAlex ID-si olduğu üçün sitat əlaqəsi praktiki olaraq boşdur.
+- ❌ «Rerank işləyir» — kod var, sönülüdür (yaddaş xərci hədəf serverə sığmır).
 
 **Korpus ölçüsü haqqında qayda:** heç vaxt gizlətmirik, amma heç vaxt da ön plana çıxarmırıq. Söhbət açılanda cavab hazırdır: *«Korpus kiçikdir və bilərəkdən belədir — hədəf geniş əhatə deyil, retrieval keyfiyyətinin ölçülə bilməsidir. Miqyas mühəndislik problemi deyil, hostinq problemidir.»*
 

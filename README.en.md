@@ -27,6 +27,8 @@ PaperMind removes the keyword step. You ask in Azerbaijani or Russian; a multili
 - **Automated ingestion** — three daily n8n workflows with retries and a dedicated error-handler workflow
 - **Paper intelligence** — problem, methodology, dataset, findings and limitations extracted per paper, each tagged with its *evidence type*: stated in the paper / synthesized / AI inference. Only abstracts are indexed, so that distinction is never hidden
 - **Comparison and conflicting evidence** — 2–5 papers compared across seven axes; conflicts classified from *conditions*, not from opposite wording (a different population or metric means conditional, not direct, conflict). The system never declares which paper is right
+- **Query understanding** — "difference between transformer and RNN" routes to comparison; `author:"Yann LeCun"` and "last 3 years" become filters and are stripped from the search text. No LLM: pattern rules in three languages, tolerant of Azerbaijani written without diacritics
+- **Knowledge relationships** — citations, shared authors and similarity, each stored with its *confidence and source*. A citation is a fact from an external registry (1.0); similarity is a measurement (~0.6). The interface never presents them as equal
 - **Research landscape, trends and gaps** — clusters, active authors and cross-field links counted from the indexed corpus; trends classified as emerging/growing/stable/declining *with the reason*; gaps labelled explicitly as AI-generated opportunities, never as "no research exists"
 
 ## Architecture
@@ -52,6 +54,7 @@ n8n ──(3 daily crons)──▶ /api/ingest/pull ──▶ arXiv · Crossref 
 | LLM | Groq — `llama-3.3-70b-versatile` |
 | Automation | n8n — 5 workflows |
 | Frontend | Vanilla HTML/CSS/JS + Chart.js |
+| Providers | LLM / embedding / rerank chosen from `.env` — business logic never names one |
 
 ## Four decisions worth explaining
 
@@ -114,7 +117,7 @@ Low-RAM machine? The repo ships a [devcontainer](.devcontainer/devcontainer.json
 docker compose exec backend python -m pytest tests/ -q
 ```
 
-156 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
+214 tests covering the functions that fail *silently* rather than loudly: dedup key normalisation and equivalence, alphabet-based language detection on mixed text, JATS abstract cleaning, chunk boundaries and overlap, plus an end-to-end check that one work arriving from three sources produces one row and three provenance records.
 
 ## Known limitations
 
@@ -122,7 +125,7 @@ Stated plainly, because they shape what this is useful for:
 
 - **The corpus is small — roughly 1,600 papers.** This is a self-hosted index built from daily ingestion, not a mirror of the literature. Scale here is a hosting question, not an engineering one.
 - **Hybrid search is built but off by default.** A lexical `tsvector` index and RRF fusion exist; `RETRIEVAL_MODE=vector` stays until benchmarking proves a gain (§5: complexity only when measured).
-- **No reranking.** The top 10 is raw cosine ordering.
+- **Reranking is implemented but off.** A multilingual cross-encoder is wired in; it stays disabled because the cost is measured and disqualifying: the model is 1.13 GB and pushes backend memory from ~700 MB to 2.99 GB, which does not fit the 4 GB deployment target. Measure it yourself with `benchmark.py --compare-rerank`.
 - **Abstracts only**, not full text.
 - **Endpoint coverage is thin.** It now exists (validation, auth, response models) but retrieval quality itself is proven by benchmark, not tests.
 - **Azerbaijani goes through translation**, since the model supports it less strongly than Russian or English.

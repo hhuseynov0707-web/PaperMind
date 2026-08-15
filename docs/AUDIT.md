@@ -558,7 +558,7 @@ Dırnaqsız çoxsözlü formada adın harada bitdiyini bilmək mümkün deyil.
 |---|---|---|
 | 6.1 | §15 məqalələr arası əlaqələr | ✅ 20 test |
 | 6.2 | §18 provider abstraksiyası | ✅ 8 test |
-| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | 🔬 ölçmə aparatı hazır, qərar gözlənilir |
+| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | ✅ **XƏRCƏ görə rədd edildi** |
 
 #### §15 — əlaqələr
 
@@ -621,6 +621,23 @@ Cross-encoder yalnız retrieval-ın TAPDIQLARINI yenidən sıralaya bilər,
 tapmadığını yox; kiçik hovuzda düzəldəcəyi bir şey qalmır.
 
 Xəta halında orijinal sıra qaytarılır — rerank təkmilləşdirmədir, tələb deyil.
+
+#### Rerank qərarı: xərc tərəfi ölçüldü, fayda ölçülmədi
+
+Adətən qərar üçün hər iki tərəf lazımdır. Burada **xərc tək başına kifayət etdi**:
+
+| Xərc | Ölçülmüş |
+|---|---|
+| Model faylı | 1.13 GB |
+| Backend yaddaşı | ~700 MB → **2.99 GB** |
+| CPU | 2 nüvə tam dolu, sorğu başına saniyələr |
+| Hədəf server (Hetzner CX22, 4 GB) | Postgres + Redis + n8n ilə birlikdə **sığmır** |
+
+`P@10`-da hətta 5 faizlik qazanc da hədəf serverə sığmamağı doğrultmaz, ona görə
+faydanı ölçməyi dayandırdıq — nəticə qərarı dəyişməyəcəkdi.
+
+Kod və ölçmə aparatı qalır (`--compare-rerank`): daha güclü serverə keçiləndə
+qərar bir əmrlə yenidən nəzərdən keçirilə bilər. `RERANK_PROVIDER` boşdur.
 
 #### §18 — provider abstraksiyası
 

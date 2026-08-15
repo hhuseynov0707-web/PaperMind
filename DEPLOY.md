@@ -23,6 +23,10 @@ Bunlar olmadan açıq deploy təhlükəlidir: `/api/ask` hər çağırışda Gro
 ## Minimum tələblər
 
 - **2 GB RAM** (embedding modeli + Postgres + Redis + n8n). 1 GB-da backend OOM olur.
+  Ölçülmüş rəqəmlər: backend tək başına ~700 MB, bütün stack ~1.4 GB.
+  **Rerank açsan bu, 2.99 GB-a qalxır** (`BAAI/bge-reranker-base` 1.13 GB-dır) —
+  yəni 4 GB-lıq serverdə stack ilə birlikdə sığmır. Ona görə `RERANK_PROVIDER`
+  defolt olaraq boşdur; açmazdan əvvəl `docker stats` ilə yoxla.
 - **10 GB disk** — Docker image-ləri ~3 GB, baza artdıqca böyüyür.
 - **Domen** — A qeydi serverin IP-sinə yönəlmiş olmalıdır (Let's Encrypt bunu tələb edir).
 - Docker və Docker Compose plugin.
