@@ -23,6 +23,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models
+from ..config import settings
+from ..providers import get_reranker
 
 # RRF sabiti. Standart dəyər 60-dır (Cormack et al. 2009); yüksək k ilk
 # yerlərin üstünlüyünü yumşaldır, aşağı k onları kəskinləşdirir.
@@ -204,6 +206,7 @@ def retrieve(
     lang: str = "en",
     mode: str = "hybrid",
     filters: dict | None = None,
+    rerank: str | None = None,
 ) -> list[dict]:
     """Sorğuya uyğun məqalələri qaytarır: [{chunk, paper, score}].
 
@@ -213,12 +216,17 @@ def retrieve(
 
     `categories` əslində sahə açarlarıdır — bütün mənbələr üçün işləyən filtr.
     """
-    pool = _candidate_count(top_k)
+    # Rerank açıqdırsa daha BÖYÜK hovuz çəkilir: cross-encoder yalnız
+    # retrieval-ın tapdıqlarını yenidən sıralaya bilər, tapmadığını yox.
+    # Kiçik hovuzda rerank-ın düzəldəcəyi bir şey qalmır.
+    reranker = get_reranker(rerank) if rerank != "" else None
+    fetch_k = max(top_k, settings.rerank_pool) if reranker else top_k
+    pool = _candidate_count(fetch_k)
 
     if mode == "vector":
-        hits = vector_search(db, question, top_k, categories, also, filters)
+        hits = vector_search(db, question, fetch_k, categories, also, filters)
     elif mode == "lexical":
-        hits = lexical_search(db, question, top_k, lang, categories, filters)
+        hits = lexical_search(db, question, fetch_k, lang, categories, filters)
     else:
         rankings = [
             vector_search(db, question, pool, categories, also, filters),
@@ -228,9 +236,40 @@ def retrieve(
         # termin rusdilli məqalələri, tərcümə isə ingiliscə korpusu tutur.
         if also and also.strip() != question.strip():
             rankings.append(lexical_search(db, also, pool, "en", categories, filters))
-        hits = rrf_fuse(rankings, top_k)
+        hits = rrf_fuse(rankings, fetch_k)
 
-    return _hydrate(db, hits)
+    blocks = _hydrate(db, hits)
+    if reranker and len(blocks) > 1:
+        blocks = _apply_rerank(reranker, question, blocks, top_k)
+    return blocks[:top_k]
+
+
+def _apply_rerank(reranker, question: str, blocks: list[dict], top_k: int) -> list[dict]:
+    """Cross-encoder ilə yenidən sıralama.
+
+    Xəta halında ORİJİNAL sıra qaytarılır: rerank təkmilləşdirmədir, tələb
+    deyil — model yüklənməsə axtarış işləməyə davam etməlidir.
+
+    Sənəd mətni kimi başlıq + chunk verilir, çünki vektor indeksi də məhz bu
+    təmsili işlədir (chunker.embedding_text) — iki fərqli təmsil müqayisəni
+    mənasız edərdi.
+    """
+    from .chunker import embedding_text
+
+    # embedding_text() işlədilir ki, rerank-a verilən mətn vektor indeksindəki
+    # təmsillə EYNİ olsun — iki fərqli təmsil müqayisəni mənasız edərdi.
+    docs = [embedding_text(b["paper"].title, b["chunk"].content) for b in blocks]
+    try:
+        ranked = reranker.rerank(question, docs, top_k)
+    except Exception:
+        return blocks
+    out = []
+    for idx, score in ranked:
+        if 0 <= idx < len(blocks):
+            block = dict(blocks[idx])
+            block["rerank_score"] = round(float(score), 4)
+            out.append(block)
+    return out or blocks
 
 
 def _hydrate(db: Session, hits: list[dict]) -> list[dict]:

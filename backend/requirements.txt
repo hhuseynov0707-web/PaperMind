@@ -6,7 +6,7 @@ pgvector>=0.2.5
 redis>=5.0
 pydantic>=2.6
 pydantic-settings>=2.2
-fastembed>=0.3
+fastembed>=0.4   # >=0.4: cross-encoder rerank dəstəyi (§5 ölçməsi üçün)
 groq>=0.9
 feedparser>=6.0
 requests>=2.31

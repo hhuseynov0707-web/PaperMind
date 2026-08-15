@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     # §18: provider seçimi konfiqurasiyadan gəlir, koddan yox.
     llm_provider: str = "groq"
     embedding_provider: str = "fastembed"
+    # Boş = rerank sönülüdür. §5: yalnız ölçmə fayda göstərəndən sonra açılır.
+    rerank_provider: str = ""
+    # Çoxdilli seçildi: ms-marco yalnız ingiliscədir və korpusun rusdilli
+    # hissəsində mənasız işləyərdi (embedding modelində eyni səhvi bir dəfə
+    # etmişdik və düzəltmək bütün korpusun yenidən hesablanmasına baş verdi).
+    rerank_model: str = "BAAI/bge-reranker-base"
+    # Rerank namizəd hovuzu: nə qədər böyükdürsə, o qədər çox şans, o qədər baha
+    rerank_pool: int = 30
 
     # Çıxarış (§7) üçün AYRICA model. Cavab keyfiyyəti kritikdir və 70B işlədilir,
     # amma struktur çıxarış minlərlə məqalə üçün təkrarlanan mexaniki işdir:

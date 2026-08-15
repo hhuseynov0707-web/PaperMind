@@ -558,7 +558,7 @@ Dırnaqsız çoxsözlü formada adın harada bitdiyini bilmək mümkün deyil.
 |---|---|---|
 | 6.1 | §15 məqalələr arası əlaqələr | ✅ 20 test |
 | 6.2 | §18 provider abstraksiyası | ✅ 8 test |
-| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | ⏳ protokol hazır |
+| 6.3 | Rerank — **yalnız** ölçmə fayda göstərsə | 🔬 ölçmə aparatı hazır, qərar gözlənilir |
 
 #### §15 — əlaqələr
 
@@ -598,6 +598,29 @@ Düzəliş: açar «baş hərf + soyad» oldu (`y.lecun`), qrup həddi 40 → 25
 kəsişmədə əlaqə ümumiyyətlə yazılmır (ilk versiya bunu yoxlamırdı). Baş hərfi
 bilinməyən ad hər hansı baş hərflə uyğun gələ bilir — yoxluq sübut deyil,
 `has_conflicting_ids` ilə eyni prinsip.
+
+#### §5 — rerank: ölçmə aparatı
+
+Rerank İMPLEMENTASİYA olundu, amma **sönülüdür** (`RERANK_PROVIDER=""`).
+Səbəb §5-dədir: *«Add reranking only if benchmarking demonstrates meaningful
+improvement»*. Ona görə əvvəlcə ölçmə mümkün olmalıdır:
+
+```bash
+docker compose exec backend python scripts/benchmark.py --compare-rerank
+```
+
+İki qərar burada verilib:
+
+**Model çoxdillidir** (`BAAI/bge-reranker-base`). Standart seçim
+(`ms-marco-MiniLM`) yalnız ingiliscədir və korpusun rusdilli hissəsində mənasız
+işləyərdi — eyni səhvi bir dəfə embedding modelində etmişdik və düzəltmək bütün
+korpusun yenidən hesablanmasına səbəb olmuşdu.
+
+**Rerank açıqdırsa hovuz genişlənir** (`top_k` → `RERANK_POOL=30`).
+Cross-encoder yalnız retrieval-ın TAPDIQLARINI yenidən sıralaya bilər,
+tapmadığını yox; kiçik hovuzda düzəldəcəyi bir şey qalmır.
+
+Xəta halında orijinal sıra qaytarılır — rerank təkmilləşdirmədir, tələb deyil.
 
 #### §18 — provider abstraksiyası
 

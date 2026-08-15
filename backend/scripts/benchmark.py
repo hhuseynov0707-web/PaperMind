@@ -52,7 +52,7 @@ K = 10
 
 def top_papers(db, query: str, k: int = K, also: str | None = None,
                field: str | None = None, lang: str = "en",
-               retrieval: str = "vector") -> list[Paper]:
+               retrieval: str = "vector", rerank: str | None = "") -> list[Paper]:
     """Retrieval nəticələrini məqalə səviyyəsində təkrarsız qaytarır.
 
     retrieve() Phase 2-dən sonra onsuz da məqalə səviyyəsində qaytarır, amma
@@ -62,7 +62,7 @@ def top_papers(db, query: str, k: int = K, also: str | None = None,
     blocks = retrieve(
         db, query, top_k=k,
         categories=[field] if field else None, also=also,
-        lang=lang, mode=retrieval,
+        lang=lang, mode=retrieval, rerank=rerank,
     )
     seen, out = set(), []
     for b in blocks:
@@ -102,7 +102,8 @@ def _prepare(text: str, mode: str) -> tuple[str, str | None]:
     return text, translated
 
 
-def known_item(db, sample: int, mode: str, retrieval: str = "vector", seed: int = 7) -> dict:
+def known_item(db, sample: int, mode: str, retrieval: str = "vector",
+               rerank: str | None = "", seed: int = 7) -> dict:
     rng = random.Random(seed)
     results: dict[str, list[float]] = {"en": [], "ru": []}
     # NDCG ayrica saxlanilir: known-item-de bir dene uygun sened var, ona gore
@@ -127,7 +128,8 @@ def known_item(db, sample: int, mode: str, retrieval: str = "vector", seed: int 
             query, also = _prepare(paper.title, mode)
 
             t0 = time.perf_counter()
-            found = top_papers(db, query, also=also, lang=lang, retrieval=retrieval)
+            found = top_papers(db, query, also=also, lang=lang,
+                               retrieval=retrieval, rerank=rerank)
             latencies.append((time.perf_counter() - t0) * 1000)
 
             rank = next((i + 1 for i, p in enumerate(found) if p.id == pid), 0)
@@ -150,7 +152,7 @@ def known_item(db, sample: int, mode: str, retrieval: str = "vector", seed: int 
 
 # ------------------------------------------------------- 2/3. sahə + çarpaz dilli
 
-def field_precision(db, mode: str, retrieval: str = "vector") -> dict:
+def field_precision(db, mode: str, retrieval: str = "vector", rerank: str | None = "") -> dict:
     spec = json.loads(QUERIES.read_text(encoding="utf-8"))
     by_lang: dict[str, list[float]] = {}
     ru_share: list[float] = []
@@ -159,7 +161,8 @@ def field_precision(db, mode: str, retrieval: str = "vector") -> dict:
     for item in spec["field_queries"]:
         q, lang, want = item["q"], item["lang"], item["field"]
         query, also = _prepare(q, mode)
-        papers = top_papers(db, query, also=also, lang=lang, retrieval=retrieval)
+        papers = top_papers(db, query, also=also, lang=lang,
+                            retrieval=retrieval, rerank=rerank)
         if not papers:
             continue
         hit = sum(1 for p in papers if want in (p.field_keys or [])) / len(papers)
@@ -177,10 +180,10 @@ def field_precision(db, mode: str, retrieval: str = "vector") -> dict:
 
 # ----------------------------------------------------------------- hesabat
 
-def run(db, sample: int, mode: str, retrieval: str = "vector") -> dict:
+def run(db, sample: int, mode: str, retrieval: str = "vector", rerank: str | None = "") -> dict:
     return {
-        "known": known_item(db, sample, mode, retrieval),
-        "field": field_precision(db, mode, retrieval),
+        "known": known_item(db, sample, mode, retrieval, rerank),
+        "field": field_precision(db, mode, retrieval, rerank),
     }
 
 
@@ -208,6 +211,8 @@ def main() -> int:
                     default=None, help="tək üsulu ölç (defolt: konfiqurasiyadakı)")
     ap.add_argument("--compare-retrieval", action="store_true",
                     help="vector / lexical / hybrid üsullarını müqayisə et (§5)")
+    ap.add_argument("--compare-rerank", action="store_true",
+                    help="rerank ilə və onsuz müqayisə et (§5: yalnız fayda varsa saxlanılır)")
     args = ap.parse_args()
 
     db = SessionLocal()
@@ -253,6 +258,38 @@ def main() -> int:
 
         print("\n  Qərar qaydası (§5): mürəkkəblik yalnız ÖLÇÜLƏN fayda")
         print("  verəndə saxlanılır. Fayda yoxdursa RETRIEVAL_MODE=vector qalır.\n")
+        return 0
+
+    # ------------------------------------------------ §5: rerank qərarı
+    if args.compare_rerank:
+        print("\n  Retrieval üsulu hər ikisində eynidir; yalnız RERANK dəyişir.")
+        print(f"  Rerank modeli: {settings.rerank_model}\n")
+        base = run(db, args.sample, "policy", retrieval, rerank="")
+        show("RERANK YOXDUR", base)
+        try:
+            reranked = run(db, args.sample, "policy", retrieval, rerank="fastembed")
+        except Exception as exc:
+            print(f"\n  Rerank işə salına bilmədi: {str(exc)[:120]}")
+            return 1
+        show("RERANK VAR", reranked)
+
+        print("\n  " + "=" * 52)
+        print("  RERANK-IN TƏSİRİ")
+        for lang in sorted(reranked["known"]["per_lang"]):
+            a = base["known"]["per_lang"].get(lang, {})
+            b = reranked["known"]["per_lang"][lang]
+            print(f"    MRR ({lang})    {a.get('mrr', 0):.3f} → {b['mrr']:.3f}"
+                  f"   ({b['mrr'] - a.get('mrr', 0):+.3f})")
+            print(f"    NDCG ({lang})   {a.get('ndcg', 0):.3f} → {b['ndcg']:.3f}"
+                  f"   ({b['ndcg'] - a.get('ndcg', 0):+.3f})")
+        for lang in sorted(reranked["field"]["by_lang"]):
+            a = base["field"]["by_lang"].get(lang, 0.0)
+            b = reranked["field"]["by_lang"][lang]
+            print(f"    P@10 ({lang})   {a:.0%} → {b:.0%}   ({b - a:+.0%})")
+        la, lb = base["known"]["latency_ms"], reranked["known"]["latency_ms"]
+        print(f"    gecikmə      {la:.0f} → {lb:.0f} ms   ({lb / la:.1f}x)" if la else "")
+        print("\n  Qərar qaydası (§5): rerank yalnız ÖLÇÜLƏN fayda verəndə")
+        print("  saxlanılır. Fayda gecikmə artımını doğrultmursa RERANK_PROVIDER boş qalır.\n")
         return 0
 
     current = run(db, args.sample, "policy", retrieval)
