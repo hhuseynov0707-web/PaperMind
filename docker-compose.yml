@@ -83,6 +83,9 @@ services:
       - N8N_PROXY_HOPS=1
       - GENERIC_TIMEZONE=Asia/Baku
       - TZ=Asia/Baku
+      # Workflow-lar `X-API-Key`-i {{ $env.ADMIN_API_KEY }}-dən oxuyur; n8n bu
+      # girişi defolt bloklayır və açar boş gedir. Bax: docker-compose.prod.yml.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     ports:
       - "5679:5678"        # 5678-i kursdan qalan kohne n8n tutub, ona gore 5679
     volumes:

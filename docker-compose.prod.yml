@@ -109,6 +109,13 @@ services:
       - GENERIC_TIMEZONE=Asia/Baku
       - TZ=Asia/Baku
       - N8N_DIAGNOSTICS_ENABLED=false
+      # Workflow-lar `X-API-Key`-i {{ $env.ADMIN_API_KEY }}-dən oxuyur. n8n bu
+      # girişi defolt olaraq bloklayır («access to env vars denied») və nəticədə
+      # açar BOŞ gedir — yığım 401 alır, korpus səssizcə donub qalır.
+      # Risk qəbul edilə bilər: panel internetə açıq deyil (yalnız 127.0.0.1 +
+      # SSH tuneli) və tək owner hesabı var. Alternativ n8n Credentials-dır,
+      # amma o, hər workflow-da əl ilə qurulmalıdır.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     # İnternetə QƏSDƏN açılmır — yalnız serverin loopback interfeysinə bağlanır.
     # `expose:` burada işləmirdi: o, portu yalnız digər KONTEYNERLƏRƏ açır, host-un
     # localhost-una yox, ona görə `ssh -L ... localhost:5678` tuneli
