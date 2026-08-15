@@ -68,6 +68,12 @@ services:
   n8n:
     image: n8nio/n8n:latest
     container_name: papermind-n8n
+    # Profil: `docker compose up -d` n8n-i BAŞLATMIR.
+    # Səbəb: n8n ~400 MB tutur və development üçün lazım deyil — o, yalnız
+    # cron orkestrasiyası edir, yığımı isə `backfill_multi.py` əl ilə də edir.
+    # 8 GB-lıq maşında bu fərq stack-in qalxıb-qalxmamasını həll edir.
+    # Lazım olanda:  docker compose --profile automation up -d
+    profiles: ["automation"]
     env_file: .env             # GROQ_API_KEY workflow-larda $env ile istifade olunur
     environment:
       - N8N_SECURE_COOKIE=false

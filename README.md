@@ -71,6 +71,12 @@ Məhsul dörd əsas imkan üzərində qurulub: **Discover** (kəşf), **Search**
 **Tələblər:** Docker Desktop + [Groq API açarı](https://console.groq.com/keys) (pulsuz).
 
 > **Kompüterin zəifdirsə** (8 GB RAM və ya az): layihədə [.devcontainer](.devcontainer/devcontainer.json) var — GitHub-da **Code → Codespaces → Create codespace** ilə brauzerdə 8 GB-lıq mühit açılır və bütün stack orada işləyir. Aylıq 60 saat pulsuzdur.
+>
+> Lokal işləmək istəyirsənsə: `docker compose up -d` **n8n-i başlatmır** (o, ~400 MB tutur və yalnız cron orkestrasiyası edir). Qalan üç servis birlikdə ~1.4 GB-dır. Avtomatlaşdırma lazım olanda:
+> ```bash
+> docker compose --profile automation up -d
+> ```
+> Windows-da WSL2 həddini `%USERPROFILE%\.wslconfig`-də təyin et (`memory=2600MB`), və Oracle/Postgres kimi lazımsız avtomatik xidmətləri `Manual`-a keçir — onlar 8 GB-lıq maşında Docker-ə yer qoymur.
 
 ```bash
 # 1. .env faylını doldur (GROQ_API_KEY sətrini)
