@@ -83,10 +83,24 @@ fi
 # ---------- DNS ----------
 echo; echo "Şəbəkə"
 if [ -n "${DOMAIN:-}" ] && [ "${DOMAIN}" != "papermind.example.com" ]; then
-  if command -v getent > /dev/null 2>&1 && getent hosts "$DOMAIN" > /dev/null 2>&1; then
-    ok "DOMAIN DNS-də həll olunur: $(getent hosts "$DOMAIN" | awk '{print $1}' | head -1)"
-  else
+  RESOLVED="$(getent hosts "$DOMAIN" 2>/dev/null | awk '{print $1; exit}')"
+  if [ -z "$RESOLVED" ]; then
     warn "DOMAIN həll olunmur — A qeydini yoxla (Let's Encrypt bunsuz sertifikat verməz)"
+  else
+    # «Həll olunur» kifayət deyil — BU serverə həll olunmalıdır. Domen başqa
+    # ünvana baxırsa Let's Encrypt doğrulaması keçmir və sayt HTTPS-siz qalır.
+    # Əvvəl xarici əks-sədadan soruşulur (Oracle kimi NAT-lı mühitlərdə lokal
+    # interfeys özəl IP göstərir), alınmasa marşrut cədvəlinə baxılır.
+    MYIP="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null \
+      || ip route get 1.1.1.1 2>/dev/null \
+         | awk '{ for (i = 1; i < NF; i++) if ($i == "src") { print $(i+1); exit } }')"
+    if [ -z "$MYIP" ]; then
+      warn "DOMAIN → ${RESOLVED} (serverin öz IP-si təyin edilmədi, tutuşdurma atlandı)"
+    elif [ "$RESOLVED" = "$MYIP" ]; then
+      ok "DOMAIN bu serverə yönəlib: ${RESOLVED}"
+    else
+      bad "DOMAIN BAŞQA ünvana yönəlib: ${RESOLVED} (bu server: ${MYIP}) — Let's Encrypt sertifikat verməyəcək"
+    fi
   fi
 fi
 
