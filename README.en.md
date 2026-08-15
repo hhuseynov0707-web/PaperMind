@@ -168,4 +168,4 @@ Planned next, in order: reranking (only if measured) → knowledge relationships
 
 ## License
 
-Not yet chosen — see the note at the top of [docs/POSITIONING.md](docs/POSITIONING.md). MIT is the intended default.
+[MIT](LICENSE). Use it, fork it, ship it — attribution is the only condition.

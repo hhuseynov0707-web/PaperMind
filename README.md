@@ -458,3 +458,7 @@ Sistemin nə **etmədiyini** bilmək, nə etdiyini bilmək qədər vacibdir:
 - **Korpus ~1 600 məqalədir.** Bu, gündəlik yığımdan qurulan öz indeksimizdir, ədəbiyyatın güzgüsü deyil. Miqyas mühəndislik problemi deyil, hostinq problemidir.
 
 Növbəti addımlar: OpenAlex-dən daha çox yığım (sitat qrafiki üçün), Europe PMC (tibb), və istifadəçi rəyindən gələn təkmilləşdirmələr.
+
+## Lisenziya
+
+[MIT](LICENSE) — istifadə et, fork et, öz layihəndə işlət. Yeganə şərt müəllif qeydinin saxlanmasıdır.

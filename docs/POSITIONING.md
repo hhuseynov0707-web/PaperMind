@@ -3,11 +3,15 @@
 > Daxili sənəd. Hər hansı mətn (post, landing, CV sətri, video) yazılmazdan əvvəl bura baxılır.
 > Qayda sadədir: **burada sübutu olmayan iddia heç bir yerdə yazılmır.**
 
-> ⚠️ **Həll olunmamış qərar — lisenziya.** Repo-da `LICENSE` faylı yoxdur. Lisenziyasız kod
-> texniki cəhətdən «bütün hüquqlar qorunur» sayılır — yəni «açıq mənbədir» deyə bilmərik.
-> MIT nəzərdə tutulur, amma bu, sənin qərarındır və geri qaytarılması çətindir (bir dəfə
-> dərc olunandan sonra adamlar ona güvənərək istifadə edir). Qərar verəndə `LICENSE` faylı
-> əlavə olunmalı və README-lərdəki sətir düzəldilməlidir.
+> ✅ **Lisenziya qərarı verildi (2026-08-15): MIT.** `LICENSE` faylı repo-dadır,
+> yəni «açıq mənbədir» ifadəsi artıq düzgündür.
+>
+> Qeyd: MIT icazəvericidir — istənilən adam kodu götürüb kommersiya xidməti qura
+> bilər. Pro qat planı üçün bunun praktiki riski azdır (dəyər kodda deyil, işləyən
+> korpusda və istifadəçilərdədir), amma ödənişli funksiyalar yazılanda onlar ayrıca
+> **private** repo-da saxlanmalıdır. SaaS-ı qorumaq prioritetə çevrilsə, AGPL-3.0
+> baxılmalıdır — lakin lisenziyanı geri daraltmaq mümkün deyil, artıq dərc olunmuş
+> versiyalar MIT qalır.
 
 > 📊 **2026-08-15 — mövqe SORĞU İLƏ DƏYİŞDİRİLDİ (n=40).** Əvvəlki vəd
 > «öz dilində soruş, ingiliscə tap» idi. Data onu dəstəkləmədi: cavab
