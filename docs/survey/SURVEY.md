@@ -1,5 +1,11 @@
 # Tələbə sorğusu — dizayn, qərar qaydaları, yayım planı
 
+> ✅ **Keçirildi: 2026-08-15, n=40.** Nəticələr və onların mövqeyə təsiri:
+> [docs/POSITIONING.md](../POSITIONING.md#sorğu-nəticələri-n40).
+> Aşağıdakı dizayn sənədi olduğu kimi saxlanılır, çünki qərar hədləri **datanı
+> görməzdən əvvəl** yazılıb və sonradan düzəldilməsi onların mənasını itirərdi.
+> Alətin özündən öyrəndiklərimiz sonda: [nə işlədi, nə işləmədi](#nə-işlədi-nə-işləmədi).
+
 **Məqsəd:** PaperMind-ın biznes ideyasının davam etməyə dəyər olub-olmadığını 100+ tələbənin **real davranışı** üzərindən yoxlamaq.
 
 **Nə yoxlanılır (3 sual):**
@@ -118,3 +124,46 @@ Google Forms-da 20 sualı əl ilə yığmaq ~40 dəqiqədir. [create-form.gs](cr
 5. **Execution log**-da iki link çıxacaq: redaktə linki və paylaşım linki
 
 Cavablar toplananda: forma → **Responses** → yaşıl Sheets ikonu → **File → Download → CSV**. Sonra mənə ver, analiz edim.
+
+
+---
+
+## Nə işlədi, nə işləmədi
+
+Sorğu keçirildi (n=40). Alətin özü haqqında öyrəndiklərimiz — növbəti dəfə üçün.
+
+### İşlədi
+
+**Məhsulu sonda təsvir etmək.** Ağrı sualları təmiz qaldı və nəticə gözlənilənin
+əksini göstərdi: dizayn zamanı «ingilis dili əsas ağrıdır» fərz edirdik, data
+isə 10% verdi. Məhsul əvvəldə açılsaydı, bu rəqəm çox güman şişərdi.
+
+**Keçmiş davranış sualları.** «Hardan axtarırsan» sualı rəqibin kim olduğunu
+göstərdi (ChatGPT 67.5%, ixtisaslaşmış alətlər 0%) — bunu heç bir «istərdinmi»
+sualı verə bilməzdi.
+
+**Əvvəlcədən yazılmış hədlər.** Ödəniş rəqəmləri gələndə şərh mübahisəsi
+olmadı; hansı budağa düşdüyümüz onsuz da yazılmışdı.
+
+### İşləmədi
+
+**Konkret öhdəlik sualı formada yoxdur.** Dizaynda «Ayda 5 AZN olsaydı
+ödəyərdin?» var idi; formada onun yerinə «məntiqli qiymət nədir» soruşulub.
+İkincisi hipotezdir, birincisi isə qərardır. Ən güclü ödəniş siqnalını itirdik.
+
+**E-poçt xanası yoxdur.** Dizayndakı ən etibarlı maraq göstəricisi idi —
+danışmaq ucuzdur, əlaqə vermək kiçik də olsa xərcdir. Onsuz «45% beta istəyir»
+rəqəmini yoxlamağın yolu qalmadı.
+
+**Yayım bir kanalla məhdud qaldı.** 40 cavabın 65%-i İT sahəsindəndir, tibb və
+psixologiyadan **sıfır** cavab var. Planda ən güclü kanal kimi göstərilən
+«müəllimdən xahiş» addımı işlədilməyib — o, məhz bu çəpliyi düzəldəcəkdi.
+
+### Növbəti dəfə
+
+1. Formanı **dizayn sənədindən dəyişmə** — hər dəyişiklik hansı siqnalı
+   itirdiyini bilməklə edilməlidir.
+2. Müəllim kanalını mütləq işlət: 2-3 müəllim = onlarla cavab və sahə balansı.
+3. Cari nəticələri **İT tələbələri üçün** oxu. Digər sahələr üçün ayrıca
+   ölçmə lazımdır — xüsusən «ingilis dili problem deyil» nəticəsi humanitar və
+   tibb auditoriyasında təkrarlanmaya bilər.

@@ -4,6 +4,11 @@ Bu sənəd sistemi ictimai serverdə işə salmaq üçündür. Lokal işləmə [
 
 ---
 
+> **n8n haqqında:** development compose-unda n8n `automation` profilindədir və
+> `docker compose up -d` onu başlatmır (zəif maşınlarda yer qazandırmaq üçün).
+> **Prod compose-da belə deyil** — orada n8n hər zaman qalxır, çünki gündəlik
+> yığım ondan asılıdır.
+
 ## Nə dəyişir ictimai rejimdə?
 
 | | Lokal | İctimai (`docker-compose.prod.yml`) |
@@ -186,7 +191,41 @@ docker compose -f docker-compose.prod.yml exec caddy cat /data/access.log | tail
 git pull && docker compose -f docker-compose.prod.yml up -d --build backend
 ```
 
-**Limitləri dəyişmək** — `.env`-də `ASK_RATE_LIMIT`, `ASK_DAILY_BUDGET`, `SEARCH_RATE_LIMIT`, sonra `docker compose -f docker-compose.prod.yml up -d backend`.
+**Limitləri dəyişmək** — `.env`-də `ASK_RATE_LIMIT`, `ASK_DAILY_BUDGET`, `SEARCH_RATE_LIMIT`, `TRANSLATE_DAILY_BUDGET`, sonra `docker compose -f docker-compose.prod.yml up -d backend`.
+
+**Data qatının yenilənməsi** — hər üçü bərpa olunandır (kəsilsə qaldığı yerdən davam edir):
+
+```bash
+P="docker compose -f docker-compose.prod.yml exec -d backend sh -c"
+
+# Yeni məqalələr (n8n onsuz da gündə 3 dəfə edir — bu, əl ilə təkan üçündür)
+$P "python scripts/backfill_multi.py --days 14 --limit 80 > /tmp/bf.log 2>&1"
+
+# Məqalə çıxarışları (§7) — landşaft və boşluq analizi bunun üzərində işləyir
+$P "python scripts/extract_insights.py > /tmp/ins.log 2>&1"
+
+# Məqalələr arası əlaqələr (§15)
+$P "python scripts/build_relations.py > /tmp/rel.log 2>&1"
+
+# Gedişat
+docker compose -f docker-compose.prod.yml exec backend tail -5 /tmp/ins.log
+```
+
+> Çıxarış Groq limitinə tabedir və `EXTRACT_MODEL` (kiçik model) işlədir.
+> 1 600 məqalə üçün ~2 saat çəkir; bir seansda bitməsə eyni əmri təkrarla.
+
+**Keyfiyyəti ölçmək** — dəyişiklikdən sonra rəqəmlər sürüşməyib?
+
+```bash
+docker compose -f docker-compose.prod.yml exec backend python scripts/benchmark.py
+docker compose -f docker-compose.prod.yml exec backend python scripts/rag_eval.py --sample 12
+```
+
+**Analitika keşini təmizləmək** (trend/landşaft köhnə qalıbsa):
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T backend   python -c "from app import cache; cache.invalidate('analytics:*')"
+```
 
 ---
 

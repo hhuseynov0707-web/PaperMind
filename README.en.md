@@ -72,17 +72,31 @@ The resulting policy lives in one function that both the API and the benchmark c
 | `ru` | original | translation | original lifts field precision 63%→72%; translation lifts MRR 0.70→0.80 |
 | `az` | translation | — | the Azerbaijani vector adds noise: 60% alone vs 52% when combined |
 
-Current baseline (n=60, corpus 1,596):
+Current baseline (n=60, corpus 1,596, 95 evaluation queries across 19 fields):
 
 | | English | Russian | Azerbaijani |
 |---|---|---|---|
-| known-item MRR@10 | 0.876 | 0.802 | — |
-| NDCG@10 | 0.898 | 0.830 | — |
-| Recall@10 | 97% | 92% | — |
-| Field precision P@10 | 59% | 75% | 60% |
+| known-item MRR@10 | 1.000 | 0.969 | — |
+| NDCG@10 | 1.000 | 0.977 | — |
+| Recall@10 | 100% | 100% | — |
+| Field precision P@10 | 50% | 51% | 56% |
+
+Field precision fell from ~61% when the evaluation set grew from 28 queries
+(8 technology fields only) to 95 queries (all 19 fields). That is not a
+regression — the old number measured the strongest part of the corpus, the new
+one includes thinly covered fields like medicine and economics.
+
+**Answer quality** (§20):
+
+| Metric | Value |
+|---|---|
+| groundedness | **91.4%** (was 54.1%) |
+| citation coverage | 56.0% |
+| answers containing an invented citation | 1/15 |
 
 ```bash
-docker compose exec backend python scripts/benchmark.py --compare
+docker compose exec backend python scripts/benchmark.py --compare-retrieval
+docker compose exec backend python scripts/rag_eval.py
 ```
 
 ### 2. Language is detected from the alphabet, not from metadata

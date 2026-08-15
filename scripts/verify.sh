@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# PaperMind — Phase 1 doğrulama. Codespace-də bir əmrlə işləyir.
+# PaperMind — sistem doğrulaması. Codespace-də və ya serverdə bir əmrlə işləyir.
 #
 #   bash scripts/verify.sh
 #
-# Nə edir: stack-i qaldırır, miqrasiyanı yoxlayır, BÜTÜN testləri işlədir,
-# dedup korrektliyini real bazada yoxlayır və retrieval baza xəttini ölçür.
-# Heç nəyi silmir, heç nəyi dəyişmir.
+# Nə edir: stack-i qaldırır, sxemi yoxlayır, BÜTÜN testləri işlədir, intellekt
+# qatının (çıxarış, əlaqələr, leksik indeks) hazır olub-olmadığına baxır, dedup
+# korrektliyini real data ilə yoxlayır və retrieval baza xəttini ölçür.
+#
+# Heç nəyi silmir, heç nəyi dəyişmir — yalnız oxuyur və ölçür.
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -68,6 +70,26 @@ else
   fail "test uğursuzluğu — yuxarıdakı çıxışa bax"
 fi
 
+# ------------------------------------------------ 4b. Phase 4-6 cədvəlləri
+step "4b/6 · İntellekt qatı (Phase 4-6)"
+for t in paper_insights paper_relations; do
+  got=$(psql_q "SELECT 1 FROM information_schema.tables WHERE table_name='$t'")
+  [ "$got" = "1" ] && ok "$t cədvəli var" || fail "$t cədvəli YOXDUR — miqrasiya işləməyib"
+done
+ins=$(psql_q "SELECT count(*) FROM paper_insights")
+rel=$(psql_q "SELECT count(*) FROM paper_relations")
+total_p=$(psql_q "SELECT count(*) FROM papers")
+printf '      çıxarış: %s / %s məqalə · əlaqə: %s\n' "${ins:-0}" "${total_p:-?}" "${rel:-0}"
+if [ "${ins:-0}" = "0" ]; then
+  warn "çıxarış yoxdur — landşaft və boşluq analizi boş qayıdacaq"
+  warn "→ docker compose exec -d backend sh -c \"python scripts/extract_insights.py > /tmp/ins.log 2>&1\""
+fi
+# Leksik indeks (Phase 2) — hibrid axtarış üçün
+for c in sv_en sv_ru; do
+  got=$(psql_q "SELECT 1 FROM information_schema.columns WHERE table_name='papers' AND column_name='$c'")
+  [ "$got" = "1" ] && ok "papers.$c (leksik indeks) var" || warn "papers.$c yoxdur — hibrid axtarış işləməz"
+done
+
 # ------------------------------------------------- 5. dedup real bazada
 step "5/6 · Dedup korrektliyi (D1 real data üzərində)"
 merged=$(psql_q "SELECT count(*) FROM (SELECT paper_id FROM paper_sources GROUP BY paper_id HAVING count(DISTINCT source)>1) t")
@@ -94,7 +116,7 @@ ru=$(psql_q "SELECT count(*) FROM papers WHERE language='ru'")
 printf '      korpus: %s məqalə · %s DOI-lu · %s rusdilli\n' "${total:-?}" "${withdoi:-?}" "${ru:-?}"
 
 # --------------------------------------------------------------- 6. benchmark
-step "6/6 · Retrieval baza xətti (Phase 2 üçün müqayisə nöqtəsi)"
+step "6/6 · Retrieval baza xətti"
 if [ "${total:-0}" -lt 100 ]; then
   warn "korpus çox kiçikdir (${total:-0}) — benchmark mənalı deyil"
   warn "əvvəlcə: docker compose exec backend python scripts/backfill_multi.py --days 14 --limit 80"
@@ -108,7 +130,7 @@ fi
 # ------------------------------------------------------------------ yekun
 printf '\n%s' "$BOLD"
 if [ "$FAILED" = "0" ]; then
-  printf '%s✓ Phase 1 doğrulandı%s\n' "$GREEN" "$OFF"
+  printf '%s✓ Sistem doğrulandı%s\n' "$GREEN" "$OFF"
 else
   printf '%s✗ Problemlər var — yuxarıya bax%s\n' "$RED" "$OFF"
 fi

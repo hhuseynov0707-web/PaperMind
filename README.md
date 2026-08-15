@@ -282,20 +282,37 @@ docker compose exec backend python -m pytest tests/ -q
 
 ### Retrieval benchmark
 
-«Axtarış yaxşı işləyir» gözlə təsdiqlənə bilməz. Ölçmə üç şeyi hesablayır: **known-item MRR** (məqalənin başlığı sorğu kimi verilir — başlıq chunk-lara daxil deyil), **sahə dəqiqliyi** (28 sorğu, gözlənilən sahə ilə) və **çarpaz dilli əhatə**.
+«Axtarış yaxşı işləyir» gözlə təsdiqlənə bilməz. Ölçmə dörd şeyi hesablayır: **known-item MRR və NDCG** (məqalənin başlığı sorğu kimi verilir), **sahə dəqiqliyi** (95 sorğu, 19 sahə, 3 dil) və **çarpaz dilli əhatə**.
 
 ```bash
-docker compose exec backend python scripts/benchmark.py --compare
+docker compose exec backend python scripts/benchmark.py                    # cari vəziyyət
+docker compose exec backend python scripts/benchmark.py --compare-retrieval # vector / lexical / hybrid
+docker compose exec backend python scripts/rag_eval.py                     # cavabın sübutla əlaqəsi
 ```
 
-Cari nəticələr (n=60, ölçmə anında korpus 1 047 məqalə idi):
+Cari nəticələr (n=60, korpus 1 596 məqalə, 95 eval sorğusu):
 
 | | İngiliscə | Rusca | Azərbaycanca |
 |---|---|---|---|
-| known-item MRR@10 | 0.900 | 0.800 | — |
-| Recall@10 | 98% | 95% | — |
-| Sahə dəqiqliyi P@10 | 61% | 72% | 60% |
-| Median gecikmə | | 66 ms | |
+| known-item MRR@10 | 1.000 | 0.969 | — |
+| NDCG@10 | 1.000 | 0.977 | — |
+| Recall@10 | 100% | 100% | — |
+| Sahə dəqiqliyi P@10 | 50% | 51% | 56% |
+| Median gecikmə | | 62 ms | |
+
+**RAG keyfiyyəti** (§20, `rag_eval.py`):
+
+| Metrik | Dəyər |
+|---|---|
+| groundedness (istinadların düzgünlüyü) | **91.4%** (əvvəl 54.1%) |
+| citation coverage | 56.0% |
+| uydurulmuş istinadı olan cavab | 1/15 |
+
+> **P@10 rəqəmi niyə 61%-dən 50%-ə düşdü?** Eval dəsti 28 sorğudan (yalnız 8
+> texnologiya sahəsi) 95 sorğuya (19 sahə) genişləndi. Köhnə rəqəm korpusun ən
+> güclü hissəsini ölçürdü; yeni rəqəm tibb, fizika, iqtisadiyyat kimi nazik
+> təmsil olunan sahələri də əhatə edir. Bu, pisləşmə deyil — əvvəllər
+> görünməyən reallıqdır.
 
 **Retrieval strategiyası ölçmə ilə seçilib**, fərziyyə ilə deyil ([translator.py](backend/app/rag/translator.py)):
 
@@ -384,7 +401,7 @@ papermind/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── eval/queries.json       # benchmark sorğu dəsti (28 sorğu, 3 dil)
-│   ├── tests/                  # 44 test: dedup, dil, chunking, uçdan-uca
+│   ├── tests/                  # 214 test: dedup, dil, sübut, ziddiyyət, endpoint, provider
 │   ├── scripts/
 │   │   ├── backfill.py         # yalnız arXiv (köhnə, sadə)
 │   │   ├── backfill_multi.py   # bütün mənbələr + dil seçimi (--lang ru)
@@ -431,11 +448,12 @@ papermind/
 
 Sistemin nə **etmədiyini** bilmək, nə etdiyini bilmək qədər vacibdir:
 
-- **Axtarış yalnız vektor əsaslıdır.** BM25 açar-söz axtarışı ilə hibrid birləşmə yoxdur, ona görə dəqiq termin (məsələn nadir bir metod adı və ya model nömrəsi) axtaranda semantik yaxınlıq bəzən daha ümumi məqaləni önə çıxarır.
-- **Reranking yoxdur.** İlk 10 nəticə birbaşa cosine sıralamasıdır; cross-encoder ilə yenidən sıralama sahə dəqiqliyini qaldırardı.
-- **Testlər saf funksiyaları örtür, endpoint-ləri yox.** Real nümunə: `SourceOut.arxiv_id` məcburi olduğu üçün arXiv-dən kənar məqaləyə istinad edən hər cavab `500` verirdi — 44 testin heç biri bunu tutmadı, çünki heç biri HTTP cavabını yoxlamır.
-- **Yalnız abstraktlar indekslənir**, tam mətn yox. Metod detalları çox vaxt abstraktda olmur.
+- **Hibrid axtarış qurulub, amma sönülüdür.** Leksik `tsvector` indeksi və RRF birləşdirmə var; `RETRIEVAL_MODE=vector` qalır, çünki ölçmə fayda göstərmədi (az −3%, en +2%, ru +2% → orta +0.3%). Açmaq üçün: `--compare-retrieval`.
+- **Rerank ölçüldü və rədd edildi.** Çoxdilli cross-encoder qoşulub; gecikməni 61 ms → 12 928 ms (212×) qaldırır və backend yaddaşını 2.99 GB-a çıxarır, yəni 4 GB-lıq serverə sığmır. Keyfiyyət qazancı isə xalis ~+0.7%.
+- **Yalnız abstraktlar indekslənir**, tam mətn yox. Metod detalları çox vaxt abstraktda olmur — çıxarışın bir hissəsi məhz buna görə «sintez» kimi etiketlənir.
 - **Azərbaycan dili tərcümə ilə işləyir.** Model azərbaycancanı rus/ingilis səviyyəsində dəstəkləmədiyi üçün az sorğularda orijinal vektor ölçmədə zərər verirdi (60% → 52%) və istifadə olunmur.
 - **Tibb və psixologiya arXiv-dən gəlmir** — yalnız Crossref/DOAJ mətn sorğusu ilə, ona görə bu sahələrdə korpus daha nazikdir.
+- **Sitat qrafiki praktiki olaraq boşdur.** `paper_relations` cədvəli var, amma sitat əlaqəsi yalnız hər iki tərəf korpusda olanda yaranır; korpusda isə cəmi 33 məqalənin OpenAlex ID-si var. `related_to` və `same_authors` işləyir.
+- **Korpus ~1 600 məqalədir.** Bu, gündəlik yığımdan qurulan öz indeksimizdir, ədəbiyyatın güzgüsü deyil. Miqyas mühəndislik problemi deyil, hostinq problemidir.
 
-Növbəti addımlar bu sıra ilə planlanıb: hibrid axtarış (BM25 + vektor) → reranking → endpoint testləri → müqayisə/ziddiyyət analitikası.
+Növbəti addımlar: OpenAlex-dən daha çox yığım (sitat qrafiki üçün), Europe PMC (tibb), və istifadəçi rəyindən gələn təkmilləşdirmələr.
