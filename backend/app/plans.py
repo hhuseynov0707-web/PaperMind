@@ -126,23 +126,33 @@ PLAN_FEATURES: dict[str, dict[str, list[str]]] = {
         "az": [
             f"Ayda {settings.pro_monthly_credits} tədqiqat krediti",
             f"Kitabxanada {settings.pro_library_limit} məqalə",
-            "Öz PDF sənədlərini yüklə və sual ver",
-            "Bütün kitabxanan üzrə sintez",
             "Ziddiyyət analizi və tədqiqat boşluqları",
+            "Tezliklə: öz PDF sənədlərini yüklə və sual ver",
+            "Tezliklə: bütün kitabxanan üzrə sintez",
         ],
         "en": [
             f"{settings.pro_monthly_credits} research credits per month",
             f"{settings.pro_library_limit} papers in your library",
-            "Upload your own PDFs and ask about them",
-            "Synthesis across your entire library",
             "Contradiction analysis and research gaps",
+            "Coming soon: upload your own PDFs and ask about them",
+            "Coming soon: synthesis across your entire library",
         ],
         "ru": [
             f"{settings.pro_monthly_credits} кредитов в месяц",
             f"{settings.pro_library_limit} статей в библиотеке",
-            "Загрузка собственных PDF и вопросы по ним",
-            "Синтез по всей библиотеке",
             "Анализ противоречий и исследовательских пробелов",
+            "Скоро: загрузка собственных PDF и вопросы по ним",
+            "Скоро: синтез по всей библиотеке",
         ],
     },
 }
+
+# Hələ qurulmayan imkanlar. `capabilities` içində QALIRLAR ki, endpoint
+# yazılanda gating hazır olsun — amma satış mətnində «tezliklə» kimi
+# işarələnirlər. Endpoint işə düşəndə ad buradan çıxarılır və eyni anda
+# PLAN_FEATURES-dəki «tezliklə» prefiksi silinir.
+COMING_SOON: frozenset[str] = frozenset({UPLOAD_PDF, ASK_LIBRARY})
+
+
+def is_available(action: str) -> bool:
+    return action not in COMING_SOON

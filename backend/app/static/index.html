@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
-  <link rel="stylesheet" href="/style.css?v=3.1.0">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css?v=3.2.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=3.1.0" defer></script>
+  <script src="/app.js?v=3.2.0" defer></script>
+  <!-- Hesab qatı ayrıca modul. Paddle.js BURADA yüklənmir — yalnız istifadəçi
+       yüksəltmə düyməsinə basanda çəkilir (auth.js: loadPaddle). -->
+  <script src="/auth.js?v=3.2.0" defer></script>
 </head>
 <body>
 
@@ -38,6 +42,8 @@
 
     <div class="hdr-right">
       <dl class="metrics" id="metrics" aria-live="polite"></dl>
+      <!-- auth.js doldurur: girişsiz «Daxil ol», girişli plan + qalan kredit -->
+      <div class="account" id="account-slot"></div>
       <div class="lang" id="lang-switch" role="group" aria-label="Language">
         <button type="button" data-lang="az">AZ</button>
         <button type="button" data-lang="ru">RU</button>

@@ -464,6 +464,15 @@ async function api(path, opts = {}) {
   if (!resp.ok) {
     let detail;
     try { detail = (await resp.json()).detail; } catch { detail = resp.statusText; }
+    /* Gating cavabları BİR yerdə tutulur. Hər çağırış yerində 401/402 yoxlamaq
+       lazım gəlsəydi, yeni endpoint əlavə edən adam onu unudardı və istifadəçi
+       «xəta baş verdi» görərdi — nə giriş təklifi, nə yüksəltmə.
+       auth.js bu hadisələri dinləyir və uyğun pəncərəni açır. */
+    if (resp.status === 401) {
+      document.dispatchEvent(new CustomEvent('pm:auth-required', { detail: { path } }));
+    } else if (resp.status === 402) {
+      document.dispatchEvent(new CustomEvent('pm:upgrade-required', { detail }));
+    }
     throw new ApiError(resp.status, typeof detail === 'string' ? detail : JSON.stringify(detail));
   }
   return { data: await resp.json(), took, cache: resp.headers.get('X-Cache') };
@@ -822,6 +831,15 @@ async function runAsk(q) {
   });
   CHAT.push({ role: 'user', content: q });
   CHAT.push({ role: 'assistant', content: (data.answer || '').slice(0, 2000) });
+
+  /* Başlıqdakı kredit rəqəmi cavabdan sonra köhnə qalmasın. Ayrıca /api/auth/me
+     sorğusu atmırıq — cavabın özü qalığı gətirir. */
+  if (typeof data.credits_left === 'number') {
+    document.dispatchEvent(new CustomEvent('pm:credits-changed', {
+      detail: { left: data.credits_left },
+    }));
+  }
+
   const r = $('#results');
   r.setAttribute('aria-busy', 'false');
 
