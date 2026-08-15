@@ -4,7 +4,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from .. import cache, crud
+from .. import auth, cache, crud, models, plans
 from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
@@ -30,7 +30,12 @@ EMPTY_DB_MSG = {
 
 
 @router.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
+def ask(
+    req: AskRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_capability(plans.ASK)),
+):
     """RAG sual-cavab: cache -> (tərcümə) -> retrieval -> Groq -> cavab + mənbələr.
 
     Retrieval ingiliscə tərcümə ilə gedir, LLM-ə isə orijinal sual verilir —
@@ -63,6 +68,7 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
             query_en=cached.get("query_en"),
             grounding=cached.get("grounding"),
             corpus=cached.get("corpus"),
+            credits_left=auth.credits_left(user),
         )
 
     # Davam edən söhbətdə sual tək başına mənasız ola bilər («bəs ikincisi?»).
@@ -108,6 +114,12 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
+
+    # Kredit yalnız BURADA yazılır — cavab uğurla alındıqdan sonra.
+    # Əvvəl yazsaydıq, Groq xətası istifadəçinin kreditini yandırardı.
+    # Keşdən qayıdan cavab isə yuxarıda erkən return edir və heç nə yazılmır:
+    # bizə xərci olmayan cavaba görə pul almaq düzgün deyil.
+    auth.charge(db, user, plans.ASK, {"lang": lang, "top_k": req.top_k})
 
     # §8: LLM-in yazdığı hər istinad kontekstlə tutuşdurulur. Kontekstdə
     # olmayan istinad uydurulmuşdur və mətndən çıxarılır — interfeys istinadları
@@ -166,4 +178,5 @@ def ask(req: AskRequest, request: Request, db: Session = Depends(get_db)):
         query_en=query_en_out,
         grounding=grounding,
         corpus=corpus,
+        credits_left=auth.credits_left(user),
     )

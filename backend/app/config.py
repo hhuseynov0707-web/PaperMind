@@ -104,5 +104,40 @@ class Settings(BaseSettings):
     ask_cache_ttl: int = 86400        # 24 saat
     analytics_cache_ttl: int = 21600  # 6 saat
 
+    # --- Hesab qatı ---
+    # Axtarış və məqalə səhifələri hesabsız görünür. Bu, qəsdəndir: qazanma
+    # kanalı və SEO buradan gəlir, rəqib (ChatGPT) isə qapı qoymur. Bağlanan
+    # şey qapı deyil, İMKANdır — sual, saxlama və PDF hesab tələb edir.
+    # False edilsə bütün /api yolları girişlə qorunur (tam bağlı platforma).
+    public_browse: bool = True
+    session_ttl_days: int = 30
+    # Cookie yalnız HTTPS üzərindən getsin. Lokal işdə (http://localhost)
+    # False olmalıdır, əks halda brauzer cookie-ni saxlamır və giriş "işləmir".
+    session_cookie_secure: bool = True
+    # Qeydiyyat/giriş sui-istifadəsi: IP üzrə saatlıq
+    signup_rate_limit: int = 5
+    login_rate_limit: int = 10
+    # Parol minimumu. NIST tövsiyəsi: uzunluq mürəkkəblikdən vacibdir.
+    min_password_length: int = 10
+
+    # --- Plan və kredit ---
+    # Kredit = bahalı əməliyyatların vahid ölçüsü. Xam token göstərmirik (§19):
+    # istifadəçi "500 tədqiqat krediti" görür, API paneli yox.
+    free_monthly_credits: int = 60
+    pro_monthly_credits: int = 1500
+    free_library_limit: int = 10
+    pro_library_limit: int = 5000
+
+    # --- Ödəniş ---
+    # "paddle" | "" (sönülü). Stripe Azərbaycanda satıcı hesabı açmır, ona görə
+    # Merchant of Record seçildi: ƏDV/vergi öhdəliyi provayderin üzərindədir.
+    payment_provider: str = ""
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    paddle_price_id_pro: str = ""
+    paddle_environment: str = "sandbox"     # sandbox | production
+    # Checkout-dan qayıdış üçün. Boş qalsa sorğunun öz host-u işlədilir.
+    public_base_url: str = ""
+
 
 settings = Settings()

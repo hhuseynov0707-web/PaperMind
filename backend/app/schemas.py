@@ -254,6 +254,79 @@ class AskResponse(BaseModel):
     query_en: str | None = None
     grounding: GroundingOut | None = None
     corpus: CorpusOut | None = None
+    # Cavabdan sonra qalan kredit — interfeys əlavə sorğu atmadan göstərsin.
+    credits_left: int | None = None
+
+
+# ---------- Hesab ----------
+
+class RegisterRequest(BaseModel):
+    # Parol uzunluğu burada YOXLANMIR — qayda `auth.password_problem()`-dədir
+    # ki, mesaj bir yerdən gəlsin və konfiqurasiya ilə dəyişə bilsin.
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=200)
+    display_name: str | None = Field(default=None, max_length=100)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=200)
+
+
+class PlanOut(BaseModel):
+    key: str
+    label: str
+    monthly_credits: int
+    library_limit: int
+    capabilities: list[str]
+    features: list[str] = []
+
+
+class UserOut(BaseModel):
+    """Cavabda `password_hash` və sessiya tokeni HEÇ VAXT olmur —
+    modeli birbaşa qaytarmaq əvəzinə açıq sahə siyahısı saxlanılır."""
+
+    id: int
+    email: str
+    display_name: str | None = None
+    plan: str
+    plan_label: str
+    credits_left: int
+    credits_total: int
+    library_used: int
+    library_limit: int
+    capabilities: list[str] = []
+    subscription_status: str | None = None
+    plan_expires_at: datetime | None = None
+    created_at: datetime
+
+
+class SavePaperRequest(BaseModel):
+    paper_id: int
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class SavedPaperOut(BaseModel):
+    paper: PaperOut
+    note: str | None = None
+    created_at: datetime
+
+
+class UsageOut(BaseModel):
+    action: str
+    credits: int
+    created_at: datetime
+
+
+class CheckoutOut(BaseModel):
+    """Paddle checkout-u frontend-də açılır, ona görə URL yox, parametrlər."""
+
+    provider: str
+    environment: str
+    price_id: str
+    customer_email: str
+    custom_data: dict[str, str]
+    return_url: str
 
 
 # ---------- Analytics ----------

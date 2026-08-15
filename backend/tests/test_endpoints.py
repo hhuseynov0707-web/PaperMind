@@ -58,8 +58,24 @@ def test_unknown_field_rejected_on_papers(client):
 
 
 def test_unknown_field_rejected_on_ask(client):
-    r = client.post("/api/ask", json={"question": "nədir bu?", "field": "yoxdur"})
-    assert r.status_code == 422
+    """Sahə validasiyası — girişdən SONRA.
+
+    `/api/ask` artıq hesab tələb edir və autentifikasiya validasiyadan əvvəl
+    işləyir (doğru sıralamadır: naməlum adama nəyin səhv olduğunu izah etmirik).
+    Ona görə burada istifadəçi əvəzlənir, əks halda test 422 yerinə 401 görər
+    və sahə yoxlamasını heç ölçməz.
+    """
+    from app import models
+    from app.auth import require_user
+
+    app.dependency_overrides[require_user] = lambda: models.User(
+        id=1, email="test@example.com", password_hash="x", plan="free"
+    )
+    try:
+        r = client.post("/api/ask", json={"question": "nədir bu?", "field": "yoxdur"})
+        assert r.status_code == 422
+    finally:
+        app.dependency_overrides.pop(require_user, None)
 
 
 def test_too_short_query_rejected(client):

@@ -10,4 +10,8 @@ fastembed>=0.4   # >=0.4: cross-encoder rerank dəstəyi (§5 ölçməsi üçün
 groq>=0.9
 feedparser>=6.0
 requests>=2.31
+# Parol həshi. OWASP-ın birinci seçimi argon2id-dir; öz sxemimizi qurmuruq və
+# parametr seçimini kitabxanaya buraxırıq.
+argon2-cffi>=23.1
 pytest>=8.0
+httpx>=0.27      # FastAPI TestClient üçün

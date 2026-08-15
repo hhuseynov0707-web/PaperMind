@@ -233,6 +233,125 @@ class ErrorLog(Base):
     happened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class User(Base):
+    """Platforma istifadəçisi.
+
+    `plan` burada saxlanılır, ayrıca `subscriptions` cədvəlində yox: sorğu başına
+    plan oxunur və bir JOIN-dən qaçmaq bu qədər tez-tez oxunan sahə üçün dəyər.
+    Abunənin tarixçəsi lazım olanda `usage_events` və provayderin öz paneli var.
+
+    Kreditlər `credits_period` (YYYYMM) ilə birlikdə saxlanılır — ay dəyişəndə
+    sayğac oxunuş anında sıfırlanır, yəni ayın əvvəlində cron işlətmək lazım
+    deyil. Cron olsaydı, işləməyəndə istifadəçi səssizcə bloklanardı.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Aşağı registrdə saxlanılır — «Ali@x.com» və «ali@x.com» eyni hesabdır
+    email: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(Text)
+    display_name: Mapped[str | None] = mapped_column(Text)
+    plan: Mapped[str] = mapped_column(Text, default="free", index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    credits_used: Mapped[int] = mapped_column(Integer, default=0)
+    credits_period: Mapped[str | None] = mapped_column(Text)      # YYYYMM
+
+    # Provayderdəki abunə (Paddle). Plan dəyişikliyi yalnız webhook-dan gəlir.
+    billing_customer_id: Mapped[str | None] = mapped_column(Text, index=True)
+    subscription_id: Mapped[str | None] = mapped_column(Text, index=True)
+    subscription_status: Mapped[str | None] = mapped_column(Text)
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    sessions: Mapped[list["UserSession"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class UserSession(Base):
+    """Sessiya — opak token, JWT yox.
+
+    Səbəb: JWT-ni vaxtından əvvəl ləğv etmək olmur. Bizdə çıxış, plan dəyişikliyi
+    və hesabın bloklanması DƏRHAL təsir etməlidir. Üstəlik hər sorğuda plan və
+    kredit onsuz da bazadan oxunur, yəni JWT-nin «bazaya getmə» üstünlüyü burada
+    yoxdur.
+
+    Tokenin ÖZÜ saxlanılmır, yalnız SHA-256 həshi: baza sızsa belə, oğurlanmış
+    sətirlərlə sessiya bərpa etmək mümkün olmasın (parol həshi ilə eyni məntiq).
+    """
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    user_agent: Mapped[str | None] = mapped_column(Text)
+    ip: Mapped[str | None] = mapped_column(Text)
+
+    user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class SavedPaper(Base):
+    """İstifadəçinin kitabxanası — «research memory»nin ilk daşı."""
+
+    __tablename__ = "saved_papers"
+    __table_args__ = (UniqueConstraint("user_id", "paper_id", name="uq_saved_user_paper"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    paper: Mapped[Paper] = relationship()
+
+
+class UsageEvent(Base):
+    """Kredit hərəkətlərinin dəftəri.
+
+    `users.credits_used` cari vəziyyəti saxlayır, bu cədvəl isə NİYƏ-ni: hansı
+    əməliyyat neçə kredit yandırdı. Mübahisə olanda («kreditim niyə bitdi?»)
+    cavab verə bilmək üçün lazımdır, həm də hansı əməliyyatın bahalı olduğunu
+    ölçmək bu dəftər olmadan mümkün deyil.
+    """
+
+    __tablename__ = "usage_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    action: Mapped[str] = mapped_column(Text, index=True)
+    credits: Mapped[int] = mapped_column(Integer, default=0)
+    meta = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class BillingEvent(Base):
+    """Provayderdən gələn webhook-ların qeydi — idempotentlik üçün.
+
+    Ödəniş provayderləri eyni hadisəni TƏKRAR göndərir (şəbəkə xətası, retry).
+    `event_id` unikal olduğu üçün ikinci dəfə gələn hadisə emal edilmir —
+    əks halda bir ödənişə görə plan iki dəfə uzadıla bilərdi.
+    """
+
+    __tablename__ = "billing_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(Text, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    payload = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Digest(Base):
     __tablename__ = "digests"
 

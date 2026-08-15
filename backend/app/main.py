@@ -9,7 +9,19 @@ from sqlalchemy.orm import Session
 from . import cache, crud, migrate, models  # noqa: F401 — models: Base.metadata qeydiyyatı üçün
 from .config import settings
 from .database import Base, engine, get_db
-from .routers import analytics, ask, digests, ingest, intelligence, logs, papers, search
+from .routers import (
+    accounts,
+    analytics,
+    ask,
+    billing,
+    digests,
+    ingest,
+    intelligence,
+    library,
+    logs,
+    papers,
+    search,
+)
 from .schemas import ServiceHealth
 
 
@@ -63,6 +75,9 @@ def health_services(db: Session = Depends(get_db)):
 
 
 for r in (
+    accounts.router,
+    billing.router,
+    library.router,
     ingest.router,
     papers.router,
     search.router,

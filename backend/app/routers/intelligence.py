@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import cache, crud, models
+from .. import auth, cache, crud, models, plans
 from ..config import settings
 from ..database import get_db
 from ..fields import FIELDS
@@ -87,6 +87,7 @@ def compare(
     request: Request,
     paper_ids: list[int],
     db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_capability(plans.COMPARE)),
 ):
     """İki-beş məqaləni oxlar üzrə müqayisə edir (§9).
 
@@ -107,6 +108,7 @@ def compare(
     key = "cmp:" + ",".join(str(p.id) for p in papers)
     cached = cache.get_json(key)
     if cached:
+        # Keşdən gələn nəticə bizə heç nəyə başa gəlmir — kredit yazılmır.
         return {**cached, "from_cache": True}
 
     payload = [{"title": p.title, "abstract": p.abstract} for p in papers]
@@ -114,6 +116,8 @@ def compare(
         result = compare_papers(payload)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
+
+    auth.charge(db, user, plans.COMPARE, {"papers": len(papers)})
 
     out = {
         "comparison": result,
@@ -136,6 +140,7 @@ def conflicts(
     paper_ids: list[int],
     question: str | None = Query(None, max_length=300),
     db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_capability(plans.CONFLICTS)),
 ):
     """Məqalələr arasında ziddiyyətin təsnifatı (§10).
 
@@ -158,6 +163,8 @@ def conflicts(
         result = assess_conflict(payload, question)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Groq xətası: {exc}") from exc
+
+    auth.charge(db, user, plans.CONFLICTS, {"papers": len(papers)})
 
     return {
         "assessment": result,
@@ -211,6 +218,7 @@ def gaps(
     limit: int = Query(LANDSCAPE_POOL, ge=10, le=120),
     lang: str = Query("az", pattern="^(az|ru|en)$"),
     db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_capability(plans.GAPS)),
 ):
     """Potensial tədqiqat boşluqları (§13) — AI nəticəsi kimi etiketlənir."""
     enforce_search_limits(request)
@@ -225,7 +233,9 @@ def gaps(
         "analytics:corpus:v1", settings.analytics_cache_ttl,
         lambda: crud.corpus_snapshot(db),
     )
-    return {"query": q, "gaps": find_gaps(papers, insights, lang), "corpus": corpus}
+    result = find_gaps(papers, insights, lang)
+    auth.charge(db, user, plans.GAPS, {"query": q[:100]})
+    return {"query": q, "gaps": result, "corpus": corpus}
 
 
 # ---------------------------------------------------------------- §12 trends
