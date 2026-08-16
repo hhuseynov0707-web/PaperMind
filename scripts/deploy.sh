@@ -34,8 +34,8 @@ fi
 
 # Dəyərlər EKRANA ÇIXARILMIR — yalnız var/yox və neçə dəfə. Konsol görüntüsü
 # ekran şəkli kimi paylaşıla bilər, sirrlər isə orada görünməməlidir.
-for k in GROQ_API_KEY ADMIN_API_KEY POSTGRES_PASSWORD DOMAIN \
-         PUBLIC_BROWSE SESSION_COOKIE_SECURE PRO_MONTHLY_CREDITS; do
+# MƏCBURİ: kodda defolt dəyəri yoxdur və ya defolt təhlükəlidir.
+for k in GROQ_API_KEY ADMIN_API_KEY POSTGRES_PASSWORD DOMAIN; do
   n=$(grep -c "^${k}=" .env)
   v=$(grep "^${k}=" .env | tail -1 | cut -d= -f2-)
   if [ -z "$v" ]; then
@@ -45,6 +45,14 @@ for k in GROQ_API_KEY ADMIN_API_KEY POSTGRES_PASSWORD DOMAIN \
   else
     ok "${k}"
   fi
+done
+
+# İSTƏYƏ GÖRƏ: config.py-da düzgün defoltları var (public_browse=true,
+# session_cookie_secure=true, pro_monthly_credits=700). Yazılmayıbsa deploy
+# DAYANMIR — sadəcə hansı dəyərin işlədiləcəyi bildirilir.
+for k in PUBLIC_BROWSE SESSION_COOKIE_SECURE PRO_MONTHLY_CREDITS PUBLIC_BASE_URL; do
+  v=$(grep "^${k}=" .env | tail -1 | cut -d= -f2-)
+  [ -n "$v" ] && ok "${k}=${v}" || warn "${k} yoxdur — koddakı defolt işlənəcək"
 done
 
 # Ödəniş İSTƏYƏ GÖRƏdir: qurulmayıbsa tətbiq tam işləyir, yalnız billing
