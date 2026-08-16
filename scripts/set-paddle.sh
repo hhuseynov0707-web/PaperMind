@@ -59,16 +59,24 @@ ask() {  # dəyişən adı, izah
   # «> live_...» sətri yazılıb faylı oxunmaz etdi.
   local key="$1" label="$2" cur val
   cur="$(current_token "$key")"
-  if [ -n "$cur" ]; then
-    printf '%s (hazırda: %s...%s)\n> ' "$label" "${cur:0:6}" "${cur: -4}" >&2
-  else
-    printf '%s\n> ' "$label" >&2
-  fi
-  IFS= read -r val
-  [ -z "$val" ] && val="$cur"
-  # Kənar boşluqlar kəsilir: kopyalayanda sona boşluq düşməsi adi haldır və
-  # `.env`-də görünməz səhvə çevrilir.
-  val="$(printf '%s' "$val" | tr -d '[:space:]')"
+  # BOŞ DƏYƏR YAZILMIR — sual təkrarlanır. Əvvəl belə deyildi: korlanmış cari
+  # dəyər «boş» sayılırdı, istifadəçi Enter basırdı və skript sakitcə BOŞ
+  # dəyər yazırdı. Nəticədə ödəniş işləmirdi, `.env` isə dolu görünürdü.
+  while : ; do
+    if [ -n "$cur" ]; then
+      printf '%s (hazırda: %s...%s — saxlamaq üçün Enter)\n> ' \
+        "$label" "${cur:0:6}" "${cur: -4}" >&2
+    else
+      printf '%s\n> ' "$label" >&2
+    fi
+    IFS= read -r val
+    [ -z "$val" ] && val="$cur"
+    # Kənar boşluqlar kəsilir: kopyalayanda sona boşluq düşməsi adi haldır və
+    # `.env`-də görünməz səhvə çevrilir.
+    val="$(printf '%s' "$val" | tr -d '[:space:]')"
+    [ -n "$val" ] && break
+    printf 'Dəyər boş ola bilməz — Paddle panelindən kopyala.\n\n' >&2
+  done
   printf '%s' "$val"
 }
 
