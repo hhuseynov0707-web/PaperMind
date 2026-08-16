@@ -46,12 +46,18 @@ if [ "$SOCKET_MODE" = yes ]; then
   # yalnız socket unit-i təyin edir. Bunu bilməyib sshd_config-i dəyişmək
   # ən çox vaxt itirilən yerdir.
   mkdir -p /etc/systemd/system/ssh.socket.d
+  # Ünvanlar AÇIQ yazılır. Yalnız `ListenStream=22` yazmaq TƏHLÜKƏLİDİR:
+  # systemd onu tək IPv6 soketi kimi yaradır və sistemdə `bindv6only`
+  # aktivdirsə IPv4 girişi TAMAMİLƏ ölür. Bir dəfə məhz belə oldu — server
+  # sağlam görünürdü, `ss` isə yalnız [::]:22 göstərirdi.
   cat > /etc/systemd/system/ssh.socket.d/10-alt-port.conf <<EOF
 [Socket]
-# Boş dəyər siyahını sıfırlayır — olmasa defolt 22 ilə yanaşı dublikat yaranır.
+# Boş dəyər siyahını sıfırlayır — olmasa defolt 22 ilə dublikat yaranır.
 ListenStream=
-ListenStream=22
-ListenStream=$PORT
+ListenStream=0.0.0.0:22
+ListenStream=[::]:22
+ListenStream=0.0.0.0:$PORT
+ListenStream=[::]:$PORT
 EOF
   systemctl daemon-reload
   systemctl restart ssh.socket
@@ -90,11 +96,16 @@ fi
 
 info "4/4 · Yoxlama"
 sleep 1
-if ss -tln | awk '{print $4}' | grep -qE "[:.]${PORT}\$"; then
-  ok "port $PORT dinlənilir"
-else
-  warn "port $PORT dinlənilmir — aşağıdakı siyahıya bax"
-fi
+# IPv4 AYRICA yoxlanılır: yalnız IPv6-da dinləmək «işləyir» kimi görünür,
+# amma IPv4 müştəri qoşula bilmir və səbəb heç bir logda görünmür.
+for p in 22 "$PORT"; do
+  if ss -tln4 | awk '{print $4}' | grep -qE "[:.]${p}\$"; then
+    ok "port $p — IPv4 dinlənilir"
+  else
+    warn "port $p — IPv4 DİNLƏNİLMİR (yalnız IPv6 varsa, IPv4 müştəri qoşula bilməz)"
+  fi
+done
+echo
 ss -tln | awk 'NR==1 || $4 ~ /:(22|'"$PORT"')$/'
 
 cat <<NEXT
