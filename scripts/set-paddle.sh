@@ -45,12 +45,29 @@ current() { grep "^$1=" .env | tail -1 | cut -d= -f2-; }
 # Səbəb: korlanmış dəyər «hazırda: ...» kimi təklif olunsa, istifadəçi Enter
 # basıb zibili saxlayır və nasazlıq təkrarlanır. Etibarlı Paddle dəyəri
 # yalnız hərf, rəqəm, alt xətt və defis saxlayır.
+valid_token() {
+  case "$1" in
+    ''|*[!A-Za-z0-9_-]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 current_token() {
   local v; v="$(current "$1")"
-  case "$v" in
-    ''|*[!A-Za-z0-9_-]*) printf '' ;;
-    *) printf '%s' "$v" ;;
-  esac
+  valid_token "$v" || v=""
+
+  # `.env`-də etibarlı dəyər yoxdursa, EHTİYAT NÜSXƏLƏRƏ bax — ən yenidən
+  # köhnəyə doğru. Səbəb: dəyəri bu skriptin öz səhvi silib və istifadəçini
+  # onu Paddle panelindən yenidən tapmağa məcbur etmək düzgün deyil.
+  if [ -z "$v" ]; then
+    local f c
+    for f in $(ls -1t .env.backup-* 2>/dev/null); do
+      c="$(grep "^$1=" "$f" | tail -1 | cut -d= -f2- | tr -d '[:space:]')"
+      if valid_token "$c"; then v="$c"; break; fi
+    done
+    [ -n "$v" ] && printf '  (nüsxədən bərpa olundu)\n' >&2
+  fi
+  printf '%s' "$v"
 }
 
 ask() {  # dəyişən adı, izah
