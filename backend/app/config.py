@@ -123,14 +123,16 @@ class Settings(BaseSettings):
     # --- Plan və kredit ---
     # Kredit = bahalı əməliyyatların vahid ölçüsü. Xam token göstərmirik (§19):
     # istifadəçi "500 tədqiqat krediti" görür, API paneli yox.
-    # Kredit sayı qiymətə görə seçilib, təsadüfi deyil. Pro $5/ay; Paddle
-    # komissiyası (~5% + $0.50 sabit) çıxandan sonra ~$4.25 qalır. Sualbaşına
-    # Groq xərci ~$0.002 olduğuna görə 1000 kredit tam işlənsə ~$2.30 tutur —
-    # yəni ən fəal istifadəçidə belə marja müsbətdir.
-    # Bu rəqəmi qaldırmazdan əvvəl `usage_events` cədvəlindən real orta xərci
-    # ölç; təxminlə deyil, dəftərlə dəyişdirilməlidir.
+    # Kredit sayı qiymətə görə seçilib, təsadüfi deyil. Pro $3/ay; Paddle
+    # komissiyası (~5% + $0.50 SABİT) çıxandan sonra ~$2.35 qalır. Sualbaşına
+    # Groq xərci ~$0.002 olduğuna görə 700 kredit TAM işlənsə ~$1.61 tutur —
+    # yəni ən fəal istifadəçidə də marja müsbət qalır (~31%).
+    #
+    # Sabit haqq kiçik məbləğlərdə ağır oturur: $3-də gəlirin 17%-i, $5-də 10%.
+    # Qiymət qaldırılsa kredit də qaldırıla bilər, amma rəqəmi TƏXMİNLƏ yox,
+    # `usage_events` dəftərindəki real orta xərclə dəyişdir.
     free_monthly_credits: int = 60
-    pro_monthly_credits: int = 1000
+    pro_monthly_credits: int = 700
     free_library_limit: int = 10
     pro_library_limit: int = 5000
 
