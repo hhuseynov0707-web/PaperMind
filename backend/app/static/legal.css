@@ -1,0 +1,83 @@
+/* Hüquqi səhifələr — sadə, oxunaqlı mətn.
+   style.css-in dəyişənlərini işlədir ki, tema ilə uyğun qalsın; tətbiqin
+   şəbəkə/panel qatını yükləməyə ehtiyac yoxdur. */
+
+body.legal {
+  background: var(--bg);
+  color: var(--text);
+  display: block;
+}
+
+.legal-wrap {
+  /* Sətir uzunluğu qəsdən dardır — hüquqi mətn geniş sütunda oxunmur */
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--sp-8, 32px) var(--sp-5, 20px) var(--sp-12, 64px);
+  line-height: 1.65;
+}
+
+.legal-back {
+  display: inline-block;
+  margin-bottom: var(--sp-6, 24px);
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: .88rem;
+}
+.legal-back:hover { color: var(--accent); }
+
+.legal-wrap h1 {
+  font-size: 1.6rem;
+  margin: 0 0 .3rem;
+}
+.legal-meta {
+  margin: 0 0 2rem;
+  color: var(--text-3);
+  font-size: .82rem;
+}
+.legal-wrap h2 {
+  font-size: 1.05rem;
+  margin: 2rem 0 .6rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--border);
+}
+.legal-wrap p { margin: 0 0 .9rem; }
+.legal-wrap ul { margin: 0 0 .9rem; padding-left: 1.2rem; }
+.legal-wrap li { margin-bottom: .4rem; }
+.legal-wrap a { color: var(--accent-2); }
+.legal-wrap code {
+  background: var(--surface-2);
+  padding: .1rem .3rem;
+  border-radius: var(--r-sm, 6px);
+  font-size: .88em;
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1.2rem;
+  font-size: .86rem;
+  /* Dar ekranda cədvəl səhifəni yana sürüşdürməsin */
+  display: block;
+  overflow-x: auto;
+}
+.legal-table th,
+.legal-table td {
+  border: 1px solid var(--border);
+  padding: .5rem .6rem;
+  text-align: left;
+  vertical-align: top;
+}
+.legal-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-top: 3rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+  font-size: .86rem;
+}
