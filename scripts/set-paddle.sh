@@ -91,6 +91,18 @@ ask() {  # dəyişən adı, izah
     # Kənar boşluqlar kəsilir: kopyalayanda sona boşluq düşməsi adi haldır və
     # `.env`-də görünməz səhvə çevrilir.
     val="$(printf '%s' "$val" | tr -d '[:space:]')"
+
+    # Konsol klaviaturasında `_` çox vaxt `-` kimi yazılır (düzüm uyğunsuzluğu;
+    # eyni səbəbdən `|` -> `\` və `%` -> `5` olur). Paddle dəyərlərində defis
+    # HEÇ VAXT olmur — hamısı `live_`, `test_`, `pri_`, `pdl_ntfset_`
+    # formasındadır. Ona görə defis korlanmış alt xəttdir və düzəldilir.
+    case "$val" in
+      *-*)
+        val="$(printf '%s' "$val" | tr '\-' '_')"
+        printf '  defis tapıldı, alt xəttə çevrildi: %s...\n' "${val:0:10}" >&2
+        ;;
+    esac
+
     [ -n "$val" ] && break
     printf 'Dəyər boş ola bilməz — Paddle panelindən kopyala.\n\n' >&2
   done
@@ -116,7 +128,9 @@ BASE="https://${DOMAIN}"
 echo
 # Dəyərlərin formasını yoxla. Səhv dəyər qəbul edilsə, nasazlıq yalnız
 # checkout anında üzə çıxır və səbəbi görünmür.
-for pair in "CLIENT_TOKEN:$CLIENT_TOKEN:live_,test_" "PRICE_ID:$PRICE_ID:pri_"; do
+for pair in "CLIENT_TOKEN:$CLIENT_TOKEN:live_,test_" \
+            "PRICE_ID:$PRICE_ID:pri_" \
+            "WEBHOOK_SECRET:$WEBHOOK_SECRET:pdl_,ntfset_"; do
   name="${pair%%:*}"; rest="${pair#*:}"; val="${rest%%:*}"; prefixes="${rest#*:}"
   matched=no
   IFS=, read -r -a plist <<< "$prefixes"
