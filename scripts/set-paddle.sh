@@ -41,16 +41,34 @@ INTRO
 
 current() { grep "^$1=" .env | tail -1 | cut -d= -f2-; }
 
+# Token/ID üçün cari dəyər — KORLANMIŞDIRSA boş sayılır.
+# Səbəb: korlanmış dəyər «hazırda: ...» kimi təklif olunsa, istifadəçi Enter
+# basıb zibili saxlayır və nasazlıq təkrarlanır. Etibarlı Paddle dəyəri
+# yalnız hərf, rəqəm, alt xətt və defis saxlayır.
+current_token() {
+  local v; v="$(current "$1")"
+  case "$v" in
+    ''|*[!A-Za-z0-9_-]*) printf '' ;;
+    *) printf '%s' "$v" ;;
+  esac
+}
+
 ask() {  # dəyişən adı, izah
+  # Sual mətni STDERR-ə gedir. stdout-a yazsaq, `$(...)` onu da tutur və
+  # prompt DƏYƏRİN İÇİNƏ düşür — bir dəfə məhz belə oldu və `.env`-ə
+  # «> live_...» sətri yazılıb faylı oxunmaz etdi.
   local key="$1" label="$2" cur val
-  cur="$(current "$key")"
+  cur="$(current_token "$key")"
   if [ -n "$cur" ]; then
-    printf '%s (hazırda: %s...%s)\n> ' "$label" "${cur:0:6}" "${cur: -4}"
+    printf '%s (hazırda: %s...%s)\n> ' "$label" "${cur:0:6}" "${cur: -4}" >&2
   else
-    printf '%s\n> ' "$label"
+    printf '%s\n> ' "$label" >&2
   fi
   IFS= read -r val
   [ -z "$val" ] && val="$cur"
+  # Kənar boşluqlar kəsilir: kopyalayanda sona boşluq düşməsi adi haldır və
+  # `.env`-də görünməz səhvə çevrilir.
+  val="$(printf '%s' "$val" | tr -d '[:space:]')"
   printf '%s' "$val"
 }
 
@@ -71,6 +89,18 @@ DOMAIN="$(current DOMAIN)"
 BASE="https://${DOMAIN}"
 
 echo
+# Dəyərlərin formasını yoxla. Səhv dəyər qəbul edilsə, nasazlıq yalnız
+# checkout anında üzə çıxır və səbəbi görünmür.
+for pair in "CLIENT_TOKEN:$CLIENT_TOKEN:live_,test_" "PRICE_ID:$PRICE_ID:pri_"; do
+  name="${pair%%:*}"; rest="${pair#*:}"; val="${rest%%:*}"; prefixes="${rest#*:}"
+  matched=no
+  IFS=, read -r -a plist <<< "$prefixes"
+  for p in "${plist[@]}"; do
+    case "$val" in "$p"*) matched=yes ;; esac
+  done
+  [ "$matched" = yes ] || warn "$name gözlənilən prefikslə başlamır ($prefixes) — dəyəri yoxla: ${val:0:10}..."
+done
+
 echo "Yazılır..."
 
 # Köhnə sətirlər tamamilə silinir, sonra yenidən yazılır — dublikatın qarşısı
@@ -79,6 +109,16 @@ KEYS="PAYMENT_PROVIDER PADDLE_CLIENT_TOKEN PADDLE_WEBHOOK_SECRET PADDLE_PRICE_ID
 cp .env ".env.backup-$(date +%s)"
 TMP="$(mktemp)"
 grep -vE "^($(echo $KEYS | tr ' ' '|'))=" .env > "$TMP"
+
+# Korlanmış sətirləri təmizlə. Etibarlı `.env` sətri ya boşdur, ya şərhdir,
+# ya da AD=dəyər formasındadır. Başqa hər şey Docker-in faylı oxumasını
+# tamamilə dayandırır: «unexpected character in variable name».
+JUNK=$(grep -cvE '^[[:space:]]*($|#|[A-Za-z_][A-Za-z0-9_]*=)' "$TMP")
+if [ "$JUNK" -gt 0 ]; then
+  grep -E '^[[:space:]]*($|#|[A-Za-z_][A-Za-z0-9_]*=)' "$TMP" > "${TMP}.clean"
+  mv "${TMP}.clean" "$TMP"
+  warn "${JUNK} korlanmış sətir silindi"
+fi
 {
   echo ""
   echo "# --- Paddle (scripts/set-paddle.sh tərəfindən yazılıb) ---"
