@@ -112,14 +112,27 @@ sleep 8
 
 echo
 echo "Yoxlama:"
-# Girişsiz sorğu 401 verməlidir — bu, ÖDƏNİŞİN AKTİV olduğunu göstərir.
-# Ödəniş sönülü qalsaydı 503 gələrdi (adapter ümumiyyətlə qurulmur).
-code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${BASE}/api/billing/checkout")
-case "$code" in
-  401) ok "ödəniş aktivdir (girişsiz sorğu 401 — gözlənilən)" ;;
-  503) warn "hələ sönülüdür (503) — dəyərlərdən biri boş qalıb" ;;
-  *)   warn "gözlənilməz cavab: $code" ;;
-esac
+# HTTP kodu ilə yoxlamaq İŞLƏMİR: /api/billing/checkout-da `require_user`
+# ən əvvəl işləyir, ona görə girişsiz sorğu ödəniş konfiqurasiyasına
+# BAXMADAN 401 qaytarır. O 401-i «aktivdir» kimi yozmaq yanlış yaşıl verir —
+# bir dəfə məhz belə oldu. Ona görə konteynerin öz mühitinə baxılır.
+MISSING=0
+for k in PAYMENT_PROVIDER PADDLE_CLIENT_TOKEN PADDLE_WEBHOOK_SECRET PADDLE_PRICE_ID_PRO; do
+  v=$(docker compose -f docker-compose.prod.yml exec -T backend printenv "$k" 2>/dev/null | tr -d '\r\n')
+  if [ -n "$v" ]; then
+    ok "konteynerdə ${k} var"
+  else
+    warn "konteynerdə ${k} YOXDUR"
+    MISSING=$((MISSING+1))
+  fi
+done
+
+if [ "$MISSING" -eq 0 ]; then
+  ok "ödəniş aktivdir"
+else
+  warn "${MISSING} dəyər konteynerə çatmayıb — konteyner köhnə mühitlə işləyə bilər:"
+  echo "      docker compose -f docker-compose.prod.yml up -d --force-recreate backend"
+fi
 
 cat <<NEXT
 

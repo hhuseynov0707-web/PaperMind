@@ -258,7 +258,9 @@
     `);
 
     const up = $('#acct-upgrade');
-    if (up) up.addEventListener('click', openPricing);
+    // Ox funksiyası VACİBDİR: `openPricing`-i birbaşa bağlasaq, o, ilk arqument
+    // kimi hadisə obyektini alır və pəncərədə «[object PointerEvent]» görünür.
+    if (up) up.addEventListener('click', () => openPricing());
     $('#acct-signout').addEventListener('click', async () => {
       await call('/api/auth/logout', { method: 'POST' }).catch(() => {});
       USER = null;
@@ -331,7 +333,10 @@
       });
       closeModal();
     } catch (ex) {
-      err.textContent = ex.status === 503 ? t('pay_unavailable') : ex.message;
+      // Serverin öz mesajı DAHA DƏQİQdir — hansı konfiqurasiyanın çatmadığını
+      // adı ilə deyir. Hamısını «ödəniş aktiv deyil»ə çevirmək səbəbi gizlədir
+      // və nasazlığı tapmağı çətinləşdirir.
+      err.textContent = ex.message || t('pay_unavailable');
       err.hidden = false;
       btn.disabled = false;
       btn.textContent = t('upgrade');
