@@ -113,14 +113,21 @@ info "3.5/5 · LLM cavab verirmi"
 SMOKE=$($C exec -T backend python -c "
 from app.providers import get_llm
 try:
-    out = get_llm().complete('Cavabı bir sözlə ver.', 'De: OK', max_tokens=8)
-    print('CAVAB:' + (out or '').strip()[:40])
+    # max_tokens bol verilir: gpt-oss ailəsi düşüncə kanalı işlədir və dar
+    # limitdə bütün büdcəni ora xərcləyib BOŞ məzmun qaytarır.
+    out = get_llm().complete('Cavabı bir sözlə ver.', 'De: OK', max_tokens=64)
+    out = (out or '').strip()
+    print(('CAVAB:' + out[:40]) if out else 'BOS:')
 except Exception as e:
     print('XETA:' + str(e)[:160])
-" 2>/dev/null | tr -d '')
+" 2>/dev/null | tr -d '
+')
 
 case "$SMOKE" in
   CAVAB:*) ok "LLM cavab verdi (${SMOKE#CAVAB:})" ;;
+  # BOŞ cavab uğur DEYİL. Əvvəl belə deyildi: yoxlama yalnız istisna
+  # atılmadığına baxırdı və model heç nə qaytarmayanda da «OK» verirdi.
+  BOS:*)   bad "LLM boş cavab qaytardı — model məzmun istehsal etmir" ;;
   XETA:*)  bad "LLM cavab vermir — ${SMOKE#XETA:}" ;;
   *)       bad "LLM sınağı nəticəsiz qaldı: ${SMOKE:-bos}" ;;
 esac
