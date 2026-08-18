@@ -6,12 +6,15 @@
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=3.2.1">
+  <link rel="stylesheet" href="/style.css?v=3.3.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=3.2.1" defer></script>
+  <script src="/app.js?v=3.3.0" defer></script>
   <!-- Hesab qatı ayrıca modul. Paddle.js BURADA yüklənmir — yalnız istifadəçi
        yüksəltmə düyməsinə basanda çəkilir (auth.js: loadPaddle). -->
-  <script src="/auth.js?v=3.2.1" defer></script>
+  <script src="/auth.js?v=3.3.0" defer></script>
+  <!-- Şəxsi PDF sənədləri. app.js korpus üçündür, bu isə istifadəçinin
+       öz faylları — aralarında ortaq vəziyyət yoxdur. -->
+  <script src="/documents.js?v=3.3.0" defer></script>
 </head>
 <body>
 
@@ -36,6 +39,7 @@
       <a href="#results" data-nav="results" data-i18n="nav_search">Search</a>
       <a href="#browse" data-nav="browse" data-i18n="nav_browse">Browse</a>
       <a href="#landscape" data-nav="landscape" data-i18n="nav_landscape">Landscape</a>
+      <a href="#documents" data-nav="documents">PDF</a>
       <a href="#trends" data-nav="trends" data-i18n="nav_trends">Trends</a>
       <a href="#digest" data-nav="digest" data-i18n="nav_digest">Digest</a>
     </nav>
@@ -112,6 +116,31 @@
       </div>
       <div class="deck" id="deck" tabindex="0" aria-live="polite" aria-label="Paper browser"></div>
       <div class="deck-dots" id="deck-dots"></div>
+    </section>
+
+    <section class="panel" id="documents">
+      <div class="panel-head">
+        <div>
+          <h2 id="doc-title">Sənədlərim</h2>
+          <p class="panel-sub" id="doc-sub">Öz PDF məqalələrini yüklə və onlar haqqında sual ver</p>
+        </div>
+      </div>
+
+      <!-- Yükləmə Pro tələb edir, amma bunu SERVER deyir (402). Burada
+           plan yoxlanılmır: iki yerdə yoxlamaq iki həqiqət mənbəyi yaradır. -->
+      <label class="doc-drop" id="doc-drop">
+        <input type="file" id="doc-file" accept="application/pdf,.pdf" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="26" height="26">
+          <path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none"
+                stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        <span id="doc-drop-text">PDF faylını bura sürüklə və ya seç</span>
+      </label>
+      <p class="doc-note" id="doc-note" hidden></p>
+
+      <div id="doc-list"></div>
     </section>
 
     <section class="panel" id="landscape" hidden>

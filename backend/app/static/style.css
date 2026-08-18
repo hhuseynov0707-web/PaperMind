@@ -884,3 +884,104 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   font-size: .78rem; color: var(--text-2);
   border: 1px dashed var(--border); border-radius: 8px;
 }
+
+/* ========================================================== şəxsi sənədlər
+   documents.js işlədir. Mövcud dəyişənlərdən istifadə edir ki, tema
+   dəyişəndə bu blok da uyğunlaşsın. */
+
+.doc-drop {
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-3, 12px);
+  padding: var(--sp-8, 32px) var(--sp-5, 20px);
+  border: 1.5px dashed var(--border-2);
+  border-radius: var(--r-lg, 14px);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  text-align: center;
+}
+.doc-drop:hover { border-color: var(--accent); color: var(--text); }
+/* Sürükləyərkən hədəfin aydın görünməsi vacibdir — əks halda istifadəçi
+   faylı buraxacağı yeri təxmin edir. */
+.doc-drop.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.doc-note {
+  margin: var(--sp-3, 12px) 0 0;
+  font-size: .85rem;
+  color: var(--text-2);
+}
+.doc-note.bad { color: var(--err); }
+
+.doc {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  padding: var(--sp-4, 16px);
+  margin-top: var(--sp-4, 16px);
+}
+.doc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4, 16px); }
+.doc-name b { display: block; font-size: .95rem; }
+.doc-name small { color: var(--text-3); font-size: .78rem; }
+
+.doc-status {
+  flex-shrink: 0;
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .04em;
+  padding: .15rem .45rem; border-radius: var(--r-sm, 6px);
+  background: var(--surface-2); color: var(--text-2);
+}
+.doc-status.ok  { background: var(--ok-soft);  color: var(--ok); }
+.doc-status.bad { background: var(--err-soft); color: var(--err); }
+/* «hazırlanır» yanıb-sönür: emal fonda gedir və statik etiket donmuş görünür */
+.doc-status.wait { animation: docPulse 1.6s ease-in-out infinite; }
+@keyframes docPulse { 50% { opacity: .45; } }
+
+.doc-error { margin: var(--sp-3, 12px) 0 0; color: var(--err); font-size: .84rem; }
+
+.doc-ask { display: flex; gap: var(--sp-2, 8px); margin-top: var(--sp-4, 16px); }
+.doc-ask input {
+  flex: 1; min-width: 0;
+  padding: .5rem .65rem;
+  border: 1px solid var(--border); border-radius: var(--r-sm, 6px);
+  background: var(--bg); color: var(--text); font: inherit; font-size: .9rem;
+}
+.doc-ask input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.doc-ask button {
+  padding: .5rem .9rem; border: 0; border-radius: var(--r-sm, 6px);
+  background: var(--accent); color: #fff; font: inherit; cursor: pointer;
+}
+.doc-ask button:disabled { opacity: .6; cursor: default; }
+
+.doc-answer:empty { display: none; }
+.doc-answer-body { margin-top: var(--sp-4, 16px); line-height: 1.65; }
+
+/* İstinad nişanı — cavabdakı [1] ilə mənbə siyahısındakı 1 eyni görünməlidir,
+   yoxsa oxucu əlaqəni qurmur. */
+.cite {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.15em; height: 1.15em; padding: 0 .25em;
+  border-radius: var(--r-sm, 6px);
+  background: var(--accent-soft); color: var(--accent-2);
+  font-size: .72em; font-weight: 600; vertical-align: super;
+}
+
+.doc-sources { margin: var(--sp-4, 16px) 0 0; padding: 0; list-style: none; display: grid; gap: var(--sp-2, 8px); }
+.doc-sources li {
+  display: grid; grid-template-columns: auto auto 1fr; gap: .5rem .6rem;
+  align-items: baseline;
+  padding: var(--sp-3, 12px);
+  background: var(--surface-2); border-radius: var(--r-sm, 6px);
+  font-size: .84rem;
+}
+.doc-sources li .cite { vertical-align: baseline; }
+.doc-sources li p { grid-column: 1 / -1; margin: 0; color: var(--text-2); line-height: 1.5; }
+.doc-score { color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+.doc-del {
+  margin-top: var(--sp-4, 16px);
+  border: 0; background: transparent;
+  color: var(--text-3); font: inherit; font-size: .8rem;
+  cursor: pointer; padding: 0;
+}
+.doc-del:hover { color: var(--err); }
