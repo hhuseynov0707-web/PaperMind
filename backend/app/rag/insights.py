@@ -45,6 +45,9 @@ MAX_LIST_ITEMS = 8
 INSIGHT_MODEL_TAG = "insights-v1"
 
 
+# Provayderin JSON rejimi işləyirmi — ilk uğursuzluqdan sonra söndürülür.
+_JSON_MODE_OK = True
+
 SYSTEM_PROMPT = """You extract structured information from a scientific abstract.
 
 Return ONLY a JSON object. No prose, no markdown fences.
@@ -142,6 +145,43 @@ def verify_quotes(data: dict, abstract: str) -> dict:
     return data
 
 
+def _first_json_object(text: str) -> dict | None:
+    """Mətnin içindəki ilk BALANSLI {...} blokunu tapıb parse edir.
+
+    Sətir daxilindəki mötərizələr sayılmır, əks halda abstraktın içindəki
+    `{` işarəsi balansı pozardı.
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_str = False
+    esc = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[start:i + 1])
+                except json.JSONDecodeError:
+                    return None
+                return obj if isinstance(obj, dict) else None
+    return None
+
+
 def parse_insight_response(raw: str, abstract: str = "") -> dict:
     """LLM cavabını təhlükəsiz strukturlu formaya çevirir.
 
@@ -157,7 +197,13 @@ def parse_insight_response(raw: str, abstract: str = "") -> dict:
     try:
         payload = json.loads(text)
     except (json.JSONDecodeError, TypeError):
-        return {}
+        # Bəzi modellər (gpt-oss ailəsi) JSON-dan əvvəl və ya sonra izah
+        # mətni yazır. Provayderin «json mode» dəstəyinə arxalanmaq
+        # ETİBARSIZDIR: model dəyişəndə davranış da dəyişir və çıxarış
+        # səssizcə sıfıra düşür — bir dəfə məhz belə oldu.
+        payload = _first_json_object(text)
+        if payload is None:
+            return {}
     if not isinstance(payload, dict):
         return {}
 
@@ -214,12 +260,28 @@ def extract_insight(title: str, abstract: str) -> dict:
     from ..providers import get_llm
     from .llm import _sanitize
 
-    raw = get_llm().complete(
-        SYSTEM_PROMPT,
-        build_user_prompt(title, abstract, _sanitize),
-        temperature=0.0,                 # çıxarış yaradıcılıq deyil
-        max_tokens=900,
-        json_mode=True,
-        model=settings.extract_model,    # çıxarış üçün kiçik model
-    )
+    def _call(json_mode: bool) -> str:
+        return get_llm().complete(
+            SYSTEM_PROMPT,
+            build_user_prompt(title, abstract, _sanitize),
+            temperature=0.0,                 # çıxarış yaradıcılıq deyil
+            max_tokens=900,
+            json_mode=json_mode,
+            model=settings.extract_model,    # çıxarış üçün kiçik model
+        )
+
+    # Provayderin JSON rejimi hər modeldə işləmir: `gpt-oss` ailəsində Groq
+    # «Failed to validate JSON» (400) qaytarır, çünki model cavabı düşüncə
+    # kanalı ilə verir. Rejim bir dəfə uğursuz olarsa BÜTÜN prosesə söndürülür
+    # — əks halda 3 700 məqalənin hər biri üçün iki çağırış edilərdi.
+    global _JSON_MODE_OK
+    if _JSON_MODE_OK:
+        try:
+            raw = _call(True)
+        except Exception:
+            _JSON_MODE_OK = False
+            raw = _call(False)
+    else:
+        raw = _call(False)
+
     return parse_insight_response(raw, abstract)

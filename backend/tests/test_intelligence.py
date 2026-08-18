@@ -339,3 +339,37 @@ def test_series_derives_coverage_from_topics():
     }
     for row in classify_series(series):
         assert row["classification"] == "INSUFFICIENT_DATA"
+
+
+# --- Provayderdən asılı olmayan JSON çıxarışı ---------------------------------
+# Real nasazlıqdan doğdu: model dəyişəndə (llama -> gpt-oss) provayder JSON
+# rejimini rədd etdi və çıxarış 3 704 məqalənin hamısında sıfır nəticə verdi.
+# Dərs: provayderin «json mode» dəstəyinə arxalanmaq olmaz.
+
+def test_parses_json_wrapped_in_prose():
+    """Bəzi modellər JSON-dan əvvəl izah yazır — bu, boş nəticə deməməlidir."""
+    raw = (
+        "Analysis: the abstract describes a new method.\n"
+        '{"problem": {"value": "slow retrieval", "evidence_type": "stated"}}\n'
+        "That is my answer."
+    )
+    out = parse_insight_response(raw, "abstract")
+    assert out.get("problem", {}).get("value") == "slow retrieval"
+
+
+def test_parses_json_in_code_fence():
+    raw = '```json\n{"problem": {"value": "x", "evidence_type": "stated"}}\n```'
+    assert parse_insight_response(raw, "abstract").get("problem")
+
+
+def test_braces_inside_strings_do_not_break_parsing():
+    """Abstraktın içindəki `{` balansı pozmamalıdır."""
+    raw = 'Result:\n{"problem": {"value": "set {a, b} notation", "evidence_type": "stated"}}'
+    assert parse_insight_response(raw, "abstract").get("problem", {}).get("value") \
+        == "set {a, b} notation"
+
+
+def test_garbage_yields_empty_not_crash():
+    """Pis cavab boş çıxarış deməkdir, çökmə yox — partiya dayanmamalıdır."""
+    for raw in ("", "no json here", "{broken", None):
+        assert parse_insight_response(raw, "abstract") == {}
