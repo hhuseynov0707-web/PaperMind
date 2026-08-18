@@ -106,6 +106,25 @@ else
   exit 1
 fi
 
+# Modelin adı düzgün olsa da cavab verməyə bilər (kvota, rejim dəyişikliyi,
+# provayder nasazlığı). Ona görə burada REAL çağırış edilir — 401 ölçmək
+# qorumanı ölçməkdir, işlədiyini yox. Bu, ödənişli məhsulun nüvə funksiyasıdır.
+info "3.5/5 · LLM cavab verirmi"
+SMOKE=$($C exec -T backend python -c "
+from app.providers import get_llm
+try:
+    out = get_llm().complete('Cavabı bir sözlə ver.', 'De: OK', max_tokens=8)
+    print('CAVAB:' + (out or '').strip()[:40])
+except Exception as e:
+    print('XETA:' + str(e)[:160])
+" 2>/dev/null | tr -d '')
+
+case "$SMOKE" in
+  CAVAB:*) ok "LLM cavab verdi (${SMOKE#CAVAB:})" ;;
+  XETA:*)  bad "LLM cavab vermir — ${SMOKE#XETA:}" ;;
+  *)       bad "LLM sınağı nəticəsiz qaldı: ${SMOKE:-bos}" ;;
+esac
+
 # ------------------------------------------------------------- 4. cədvəllər
 
 info "4/5 · Baza"
