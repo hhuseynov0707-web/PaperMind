@@ -352,6 +352,64 @@ class BillingEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Document(Base):
+    """İstifadəçinin yüklədiyi PDF.
+
+    `digest` (SHA-256) unikaldır İSTİFADƏÇİ ÜZRƏ: eyni faylı təkrar yükləmək
+    yeni sənəd yaratmır, mövcudu qaytarır. Qlobal unikal olsaydı, iki fərqli
+    istifadəçi eyni məqaləni yükləyəndə biri digərinin sənədini görərdi.
+
+    `status` lazımdır, çünki emal (mətn çıxarma + embedding) yükləmə sorğusundan
+    uzun çəkir və fonda gedir. İstifadəçi «hazırlanır» vəziyyətini görməlidir,
+    boş siyahı yox.
+    """
+
+    __tablename__ = "documents"
+    __table_args__ = (UniqueConstraint("user_id", "digest", name="uq_user_document"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    filename: Mapped[str] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    digest: Mapped[str] = mapped_column(Text, index=True)
+    pages: Mapped[int] = mapped_column(Integer, default=0)
+    chars: Mapped[int] = mapped_column(Integer, default=0)
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(Text, default="processing", index=True)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+
+
+class DocumentChunk(Base):
+    """Sənədin bir parçası — səhifə nömrəsi ilə.
+
+    HNSW indeksi QURULMUR, `chunks` cədvəlindən fərqli olaraq. Səbəb: axtarış
+    həmişə BİR sənədin içindədir (`document_id` filtri), orada isə bir neçə yüz
+    sətir olur. Belə ölçüdə ardıcıl oxuma HNSW-dən sürətlidir və indeks yalnız
+    yazma xərci və yaddaş əlavə edərdi. Bütün sənədlər üzrə axtarış (Pro-nun
+    «kitabxana üzrə sintez» funksiyası) əlavə olunanda bu qərar yenidən
+    ölçülməlidir.
+    """
+
+    __tablename__ = "document_chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    page: Mapped[int] = mapped_column(Integer)
+    chunk_index: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    embedding = mapped_column(Vector(settings.embedding_dim))
+    embedding_model: Mapped[str | None] = mapped_column(Text)
+
+    document: Mapped[Document] = relationship(back_populates="chunks")
+
+
 class Digest(Base):
     __tablename__ = "digests"
 

@@ -334,6 +334,48 @@ class CheckoutOut(BaseModel):
     return_url: str
 
 
+# ---------- Şəxsi sənədlər (PDF) ----------
+
+class DocumentOut(BaseModel):
+    """`status` interfeys üçün vacibdir: emal fonda gedir və istifadəçi
+    «hazırlanır» / «hazır» / «alınmadı» fərqini görməlidir."""
+
+    id: int
+    filename: str
+    title: str | None = None
+    pages: int = 0
+    chunk_count: int = 0
+    status: str = "processing"
+    error: str | None = None
+    created_at: datetime
+
+
+class DocumentAskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    top_k: int = Field(6, ge=1, le=12)
+    history: list[ChatTurn] = Field(default=[], max_length=20)
+
+
+class DocumentSourceOut(BaseModel):
+    """İstinad SƏHİFƏ ilə verilir — «Sənəd → Səhifə → Parça».
+
+    Sübutun yoxlanıla bilməsi məhz buradan gəlir: istifadəçi PDF-i açıb həmin
+    səhifəyə baxa bilir.
+    """
+    page: int
+    score: float
+    excerpt: str
+
+
+class DocumentAskResponse(BaseModel):
+    answer: str
+    document: dict
+    sources: list[DocumentSourceOut] = []
+    grounding: GroundingOut | None = None
+    latency_ms: int
+    credits_left: int | None = None
+
+
 # ---------- Analytics ----------
 # Qeyd: bu modellər Redis-dən JSON kimi qayıdır, ona görə tarixlər str saxlanılır.
 
