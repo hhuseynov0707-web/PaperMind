@@ -265,7 +265,7 @@ def extract_insight(title: str, abstract: str) -> dict:
             SYSTEM_PROMPT,
             build_user_prompt(title, abstract, _sanitize),
             temperature=0.0,                 # çıxarış yaradıcılıq deyil
-            max_tokens=900,
+            max_tokens=1800,
             json_mode=json_mode,
             model=settings.extract_model,    # çıxarış üçün kiçik model
         )

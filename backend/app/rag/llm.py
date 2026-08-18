@@ -72,7 +72,11 @@ def translate_to_english(text: str) -> str:
         "Return ONLY the English translation, nothing else.",
         text,
         temperature=0.0,
-        max_tokens=300,
+        # DÜŞÜNƏN MODEL: `gpt-oss` cavabdan əvvəl düşüncə tokenləri xərcləyir və
+        # onlar da bu büdcədən çıxır. Ölçüldü: 64 token limitində məzmun BOŞ
+        # qayıdır (finish=length), 300-də normal cavab gəlir. Limiti endirmə —
+        # nəticə xəta yox, səssiz boş cavab olur.
+        max_tokens=700,
     )
     return (out or text).strip()
 
@@ -120,7 +124,11 @@ def ask_llm(question: str, blocks: list[dict], lang: str = "az",
         # 0.3 → 0.5: cavablar quru və şablon çıxırdı. Sübut intizamı prompt və
         # istinad doğrulaması ilə qorunur, temperatura ilə yox.
         temperature=0.5,
-        max_tokens=900,
+        # DÜŞÜNƏN MODEL: `gpt-oss` cavabdan əvvəl düşüncə tokenləri xərcləyir və
+        # onlar da bu büdcədən çıxır. Ölçüldü: 64 token limitində məzmun BOŞ
+        # qayıdır (finish=length), 300-də normal cavab gəlir. Limiti endirmə —
+        # nəticə xəta yox, səssiz boş cavab olur.
+        max_tokens=1600,
         history=_clean_history(history),
     )
 

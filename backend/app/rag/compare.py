@@ -224,7 +224,7 @@ def _call(system_prompt: str, papers: list[dict], question: str | None = None) -
         user += f"\n\nFocus on this question: {_sanitize(question)}"
 
     return get_llm().complete(
-        system_prompt, user, temperature=0.0, max_tokens=1500, json_mode=True
+        system_prompt, user, temperature=0.0, max_tokens=2500, json_mode=True
     )
 
 

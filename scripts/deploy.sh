@@ -115,7 +115,7 @@ from app.providers import get_llm
 try:
     # max_tokens bol verilir: gpt-oss ailəsi düşüncə kanalı işlədir və dar
     # limitdə bütün büdcəni ora xərcləyib BOŞ məzmun qaytarır.
-    out = get_llm().complete('Cavabı bir sözlə ver.', 'De: OK', max_tokens=64)
+    out = get_llm().complete('Cavabı bir sözlə ver.', 'De: OK', max_tokens=300)
     out = (out or '').strip()
     print(('CAVAB:' + out[:40]) if out else 'BOS:')
 except Exception as e:
