@@ -37,7 +37,7 @@ class Settings(BaseSettings):
         ).render_as_string(hide_password=False)
 
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
 
     # Çoxdilli model: rus/Azərbaycan sorğusu ilə ingiliscə mətn arasında da
     # uyğunluq tapır (RU↔EN oxşarlıq testdə 0.79). Ölçü əvvəlki ilə eynidir (384),
@@ -73,11 +73,15 @@ class Settings(BaseSettings):
     # Rerank namizəd hovuzu: nə qədər böyükdürsə, o qədər çox şans, o qədər baha
     rerank_pool: int = 30
 
-    # Çıxarış (§7) üçün AYRICA model. Cavab keyfiyyəti kritikdir və 70B işlədilir,
-    # amma struktur çıxarış minlərlə məqalə üçün təkrarlanan mexaniki işdir:
-    # ölçüldü — 70B ilə 300 məqalədən yalnız 11-i alındı, qalanı rate limit-ə
-    # dirəndi. Kiçik model bu işi görür və limiti qat-qat gec doldurur.
-    extract_model: str = "llama-3.1-8b-instant"
+    # Çıxarış (§7) üçün AYRICA, kiçik model. Cavab keyfiyyəti kritikdir və orada
+    # böyük model işlədilir, amma struktur çıxarış minlərlə məqalə üçün
+    # təkrarlanan mexaniki işdir: ölçüldü — böyük model ilə 300 məqalədən
+    # yalnız 11-i alındı, qalanı rate limit-ə dirəndi.
+    #
+    # DİQQƏT: model adları provayderdə silinir. `llama-3.1-8b-instant` və
+    # `llama-3.3-70b-versatile` bir gün yoxa çıxdı və hər çağırış 404 aldı —
+    # səssiz nasazlıq idi. `scripts/check-models.sh` bunu deploy-da tutur.
+    extract_model: str = "openai/gpt-oss-20b"
 
     # Retrieval üsulu: "vector" | "lexical" | "hybrid".
     #

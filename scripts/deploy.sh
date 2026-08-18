@@ -67,6 +67,14 @@ else
   warn "PAYMENT_PROVIDER boşdur — abunə sönülüdür, qalan hər şey işləyir"
 fi
 
+# Model adları provayderdə dəyişir və silinir. Bunu build-dən ƏVVƏL tutmaq
+# lazımdır: əks halda 5 dəqiqə build gözləyib sonra hər LLM çağırışının
+# 404 aldığını görürsən — özü də yalnız loga baxsan.
+echo
+if ! bash scripts/check-models.sh; then
+  FAIL=$((FAIL+1))
+fi
+
 [ "$FAIL" -gt 0 ] && { echo; echo "Xətaları düzəlt, sonra təkrar işlət."; exit 1; }
 
 # ------------------------------------------------------------- 2. qaldırma
