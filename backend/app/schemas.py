@@ -306,10 +306,48 @@ class SavePaperRequest(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class PaperStateIn(BaseModel):
+    """Vəziyyət yaması: yalnız GÖNDƏRİLƏN sahələr dəyişir.
+
+    `None` «dəymə» deməkdir, `False` isə «sil». Bu fərq vacibdir — əks
+    halda ulduzu dəyişmək istəyən sorğu, göndərmədiyi `saved` sahəsini
+    də təsadüfən sıfırlayardı.
+    """
+
+    saved: bool | None = None
+    starred: bool | None = None
+    read: bool | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class PaperStateOut(BaseModel):
+    paper_id: int
+    saved: bool = False
+    starred: bool = False
+    read: bool = False
+    read_at: datetime | None = None
+
+
+class LibraryStateOut(BaseModel):
+    """Bütün kitabxananın vəziyyəti — yalnız ID-lər.
+
+    İnterfeys axtarış nəticələrindəki hər kartın ulduzlu/saxlanmış/oxunmuş
+    olduğunu bilməlidir. Hər kart üçün ayrıca sorğu atmaq onlarla sorğu
+    demək idi; tam məqalə obyektlərini qaytarmaq isə lazımsız yükdür.
+    Ona görə yalnız ID çoxluqları gedir və interfeys onları yerli saxlayır.
+    """
+
+    saved: list[int] = []
+    starred: list[int] = []
+    read: list[int] = []
+
+
 class SavedPaperOut(BaseModel):
     paper: PaperOut
     note: str | None = None
     created_at: datetime
+    starred: bool = False
+    read_at: datetime | None = None
 
 
 class UsageOut(BaseModel):

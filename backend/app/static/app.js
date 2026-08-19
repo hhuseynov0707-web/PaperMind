@@ -43,7 +43,7 @@ const I18N = {
     f_years: 'il',
     nav_landscape: 'Landşaft',
     landscape_title: 'Tədqiqat landşaftı',
-    landscape_sub: 'Klasterlər, aktiv müəlliflər və fənlərarası əlaqələr — yalnız indekslənmiş korpusdan.',
+    landscape_sub: 'Mövzu qrupları, aktiv müəlliflər və sahələr arasındakı əlaqələr — kitabxanadakı məqalələr üzərində qurulub.',
     landscape_empty: 'Landşaft üçün əvvəlcə axtarış et.',
     lx_clusters: 'Klasterlər',
     lx_authors: 'Ən aktiv müəlliflər',
@@ -62,8 +62,8 @@ const I18N = {
     hero_title: 'Az axtar. Çox anla.',
     hero_sub: 'Elmi ədəbiyyatı məna üzrə axtar və ya süni intellektdən araşdırmaların nə dediyini ümumiləşdirməsini istə — hər cavab dörd akademik mənbədən gələn real məqalələrə əsaslanır.',
     mode_search: 'Axtar', mode_ask: 'AI-dan soruş',
-    mode_hint_search: 'Açar söz yox — məna üzrə vektor axtarışı',
-    mode_hint_ask: 'Mənbəli cavab: retrieval + Groq LLM',
+    mode_hint_search: 'Dəqiq sözü tapmaq lazım deyil — mənaya görə axtarır',
+    mode_hint_ask: 'AI cavab verir, hər fikrin altında məqaləni göstərir',
     query_label: 'Araşdırma sorğusu',
     ph_search: 'Nəyi araşdırırsan? Məs.: dil modellərində hallüsinasiyaların aşkarlanması',
     ph_ask: 'Sual ver. Məs.: RAG sistemlərində retrieval-ı necə yaxşılaşdırırlar?',
@@ -71,9 +71,7 @@ const I18N = {
     scope_prefix: 'Sahə:',
     res_search: 'Axtarış nəticələri', res_ask: 'AI cavabı',
     sources_head: 'Mənbələr', relevance: 'uyğunluq', rel_short: 'uyğun',
-    grounded: 'papers', grounded_pre: 'Əsaslanır:', grounded_post: 'məqalə',
-    cached: 'Optimallaşdırılıb', cached_hint: 'Cavab Redis keşindən verildi',
-    processing: 'Hesablandı', live_hint: 'Cavab yenidən hesablandı və keşə yazıldı',
+    grounded_pre: 'Əsaslanır:', grounded_post: 'məqalə',
     translated_as: 'İngiliscə axtarıldı:',
     act_read: 'Oxu', act_ask: 'Bu barədə soruş',
     ask_about: '«{t}» məqaləsi nə təklif edir?',
@@ -107,25 +105,32 @@ const I18N = {
     note_delta: 'Keçən həftə ilə müqayisə.',
     share_of_week: 'pay',
     digest_title: 'Həftəlik icmal',
-    digest_sub: 'n8n avtomatlaşdırması hər bazar günü Groq ilə yaradır.',
-    digest_empty: 'Hələ icmal yaradılmayıb. n8n-dəki weekly_digest workflow-u bazar günü 20:00-da işə düşür.',
+    digest_sub: 'Hər bazar günü avtomatik hazırlanır.',
+    // §16 kitabxana
+    nav_library: 'Kitabxanam',
+    library_title: 'Kitabxanam',
+    library_sub: 'Saxladığın, ulduzladığın və oxuduğun məqalələr.',
+    lib_saved: 'Oxu siyahısına əlavə et',
+    lib_starred: 'Ulduzla',
+    lib_read: 'Oxundu işarələ',
+    lib_tab_saved: 'Oxu siyahısı',
+    lib_tab_starred: 'Ulduzlular',
+    lib_tab_read: 'Oxunanlar',
+    lib_added: 'Kitabxanana əlavə olundu',
+    lib_login: 'Kitabxana şəxsidir — görmək üçün hesabına daxil ol.',
+    lib_empty_saved: 'Oxu siyahın boşdur. Məqalə kartındakı əlfəcin düyməsi ilə sonraya saxla.',
+    lib_empty_starred: 'Hələ ulduzladığın məqalə yoxdur. Ulduz — geri qayıtmaq istədiklərin üçündür.',
+    lib_empty_read: 'Oxuduğun məqalə hələ qeyd olunmayıb. Bitirdiyin məqaləni işarələ, burada tarixçə yığılsın.',
+    digest_empty: 'Hələlik icmal yoxdur. Növbəti icmal bazar günü axşam hazır olur.',
     panel_title: 'Araşdırma paneli',
     areas_title: 'Araşdırma sahələri', area_all: 'Bütün araşdırmalar',
     spot_title: 'Kəşf et', spot_sub: 'Oxumağa dəyər bir şey',
     authors_title: 'Ən aktiv müəlliflər', papers_word: 'məqalə',
-    status_title: 'Sistem statusu',
-    st_ingest: 'arXiv yığımı', st_search: 'Semantik axtarış', st_vector: 'Vektor bazası',
-    st_cache: 'Redis keşi', st_ai: 'AI mühərriki', st_workflow: 'Workflow xətaları',
-    st_ok: 'İşləyir', st_bad: 'Əlçatmaz', st_configured: 'Qoşulub', st_missing: 'Açar yoxdur',
-    st_none: 'Yoxdur', st_errors: 'xəta',
     open_panel: 'Paneli aç', close_panel: 'Paneli bağla', refresh: 'Yenilə',
-    api_docs: 'API sənədləri',
     no_data: 'Data yoxdur',
     lang_of_paper: 'Məqalənin dili', lang_match: 'Sənin interfeys dilində',
     sources_title: 'Mənbələr', sources_word: 'mənbə',
     merged_hint: 'Eyni iş bir neçə mənbədə tapılıb — bir dəfə göstərilir',
-    dedup_found: 'Birdən çox mənbədə tapılıb birləşdirilmiş: {n} məqalə. Təkrar nəticə göstərilmir.',
-    dedup_none: 'Mənbələr arasında hələ üst-üstə düşən məqalə tapılmayıb.',
     months: ['yan','fev','mar','apr','may','iyn','iyl','avq','sen','okt','noy','dek'],
     groups: { tech: 'Texnologiya', natural: 'Təbiət elmləri', formal: 'Formal elmlər',
       health: 'Tibb və sağlamlıq', social: 'Sosial elmlər' },
@@ -150,7 +155,6 @@ const I18N = {
     chat_new: 'Новый чат',
     intent_hint: 'Похоже на вопрос типа «{i}».',
     intent_go: 'Открыть',
-    intent_pick_papers: 'Pick papers from the results to compare.',
     intent_pick_papers: 'Выберите статьи из результатов для сравнения.',
     i_COMPARE: 'сравнение',
     i_CONTRADICTION: 'противоречивые данные',
@@ -164,7 +168,7 @@ const I18N = {
     f_years: 'годы',
     nav_landscape: 'Ландшафт',
     landscape_title: 'Ландшафт исследований',
-    landscape_sub: 'Кластеры, активные авторы и междисциплинарные связи — только из индексированного корпуса.',
+    landscape_sub: 'Тематические группы, активные авторы и связи между областями — по статьям из библиотеки.',
     landscape_empty: 'Сначала выполните поиск.',
     lx_clusters: 'Кластеры',
     lx_authors: 'Самые активные авторы',
@@ -183,8 +187,8 @@ const I18N = {
     hero_title: 'Меньше искать. Больше понимать.',
     hero_sub: 'Ищите научную литературу по смыслу или попросите ИИ обобщить, что говорят исследования — каждый ответ опирается на реальные статьи из четырёх академических источников.',
     mode_search: 'Поиск', mode_ask: 'Спросить ИИ',
-    mode_hint_search: 'Не по ключевым словам — векторный поиск по смыслу',
-    mode_hint_ask: 'Ответ с источниками: retrieval + Groq LLM',
+    mode_hint_search: 'Точные слова не нужны — ищет по смыслу',
+    mode_hint_ask: 'ИИ отвечает и под каждым утверждением показывает статью',
     query_label: 'Исследовательский запрос',
     ph_search: 'Что вы исследуете? Напр.: обнаружение галлюцинаций в языковых моделях',
     ph_ask: 'Задайте вопрос. Напр.: как улучшают retrieval в RAG-системах?',
@@ -193,8 +197,6 @@ const I18N = {
     res_search: 'Результаты поиска', res_ask: 'Ответ ИИ',
     sources_head: 'Источники', relevance: 'релевантность', rel_short: 'сходство',
     grounded_pre: 'На основе', grounded_post: 'статей',
-    cached: 'Оптимизировано', cached_hint: 'Ответ выдан из кэша Redis',
-    processing: 'Вычислено', live_hint: 'Ответ вычислен заново и записан в кэш',
     translated_as: 'Поиск выполнен на английском:',
     act_read: 'Читать', act_ask: 'Спросить об этом',
     ask_about: 'О чём статья «{t}»?',
@@ -228,25 +230,32 @@ const I18N = {
     note_delta: 'Сравнение с предыдущей неделей.',
     share_of_week: 'доля',
     digest_title: 'Еженедельный дайджест',
-    digest_sub: 'Создаётся автоматизацией n8n каждое воскресенье.',
-    digest_empty: 'Дайджест ещё не создан. Workflow weekly_digest запускается в воскресенье в 20:00.',
+    digest_sub: 'Готовится автоматически каждое воскресенье.',
+    // §16 kitabxana
+    nav_library: 'Библиотека',
+    library_title: 'Моя библиотека',
+    library_sub: 'Сохранённые, отмеченные звездой и прочитанные статьи.',
+    lib_saved: 'В список чтения',
+    lib_starred: 'В избранное',
+    lib_read: 'Отметить прочитанным',
+    lib_tab_saved: 'Список чтения',
+    lib_tab_starred: 'Избранное',
+    lib_tab_read: 'Прочитанные',
+    lib_added: 'Добавлено в библиотеку',
+    lib_login: 'Библиотека личная — войдите в аккаунт, чтобы её увидеть.',
+    lib_empty_saved: 'Список чтения пуст. Сохраните статью закладкой на карточке.',
+    lib_empty_starred: 'Пока нет избранных статей. Звезда — для тех, к которым вы вернётесь.',
+    lib_empty_read: 'Прочитанные статьи ещё не отмечены. Отмечайте — здесь соберётся история.',
+    digest_empty: 'Дайджеста пока нет. Следующий появится в воскресенье вечером.',
     panel_title: 'Панель исследований',
     areas_title: 'Области исследований', area_all: 'Все области',
     spot_title: 'Обзор', spot_sub: 'Стоит прочитать',
     authors_title: 'Самые активные авторы', papers_word: 'статей',
-    status_title: 'Статус системы',
-    st_ingest: 'Сбор с arXiv', st_search: 'Семантический поиск', st_vector: 'Векторная база',
-    st_cache: 'Кэш Redis', st_ai: 'Движок ИИ', st_workflow: 'Ошибки workflow',
-    st_ok: 'Работает', st_bad: 'Недоступно', st_configured: 'Подключён', st_missing: 'Нет ключа',
-    st_none: 'Нет', st_errors: 'ошибок',
     open_panel: 'Открыть панель', close_panel: 'Закрыть панель', refresh: 'Обновить',
-    api_docs: 'Документация API',
     no_data: 'Нет данных',
     lang_of_paper: 'Язык статьи', lang_match: 'На языке вашего интерфейса',
     sources_title: 'Источники', sources_word: 'источн.',
     merged_hint: 'Одна и та же работа найдена в нескольких источниках — показана один раз',
-    dedup_found: 'Объединено из нескольких источников: {n} статей. Дубликаты не показываются.',
-    dedup_none: 'Пересечений между источниками пока не найдено.',
     months: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
     groups: { tech: 'Технологии', natural: 'Естественные науки', formal: 'Формальные науки',
       health: 'Медицина и здоровье', social: 'Социальные науки' },
@@ -283,7 +292,7 @@ const I18N = {
     f_years: 'years',
     nav_landscape: 'Landscape',
     landscape_title: 'Research landscape',
-    landscape_sub: 'Clusters, active authors and cross-field links — built from the indexed corpus only.',
+    landscape_sub: 'Topic groups, active authors and links between fields — drawn from the papers in the library.',
     landscape_empty: 'Run a search first to build the landscape.',
     lx_clusters: 'Clusters',
     lx_authors: 'Most active authors',
@@ -302,8 +311,8 @@ const I18N = {
     hero_title: 'Search less. Understand more.',
     hero_sub: 'Search scientific literature by meaning, or ask AI to synthesise what the research says — every answer grounded in real papers from four academic sources.',
     mode_search: 'Search', mode_ask: 'Ask AI',
-    mode_hint_search: 'Not keywords — vector search over meaning',
-    mode_hint_ask: 'Source-grounded answer: retrieval + Groq LLM',
+    mode_hint_search: 'No exact wording needed — it searches by meaning',
+    mode_hint_ask: 'AI answers, and every claim shows the paper behind it',
     query_label: 'Research query',
     ph_search: 'What are you researching? E.g. hallucination detection in language models',
     ph_ask: 'Ask a question. E.g. how is retrieval improved in RAG systems?',
@@ -312,8 +321,7 @@ const I18N = {
     res_search: 'Search results', res_ask: 'AI answer',
     sources_head: 'Sources', relevance: 'relevance', rel_short: 'match',
     grounded_pre: 'Grounded in', grounded_post: 'papers',
-    cached: 'Optimized', cached_hint: 'Response served from Redis cache',
-    processing: 'Processed', live_hint: 'Computed fresh and written to cache',
+    intent_pick_papers: 'Pick papers from the results to compare.',
     translated_as: 'Searched in English as:',
     act_read: 'Read', act_ask: 'Ask about this',
     ask_about: 'What does the paper “{t}” propose?',
@@ -347,25 +355,32 @@ const I18N = {
     note_delta: 'Compared with the previous week.',
     share_of_week: 'share',
     digest_title: 'Weekly digest',
-    digest_sub: 'Generated every Sunday by the n8n automation pipeline.',
-    digest_empty: 'No digest yet. The weekly_digest workflow runs on Sunday at 20:00.',
+    digest_sub: 'Put together automatically every Sunday.',
+    // §16 kitabxana
+    nav_library: 'Library',
+    library_title: 'My library',
+    library_sub: 'Papers you saved, starred and read.',
+    lib_saved: 'Add to reading list',
+    lib_starred: 'Star',
+    lib_read: 'Mark as read',
+    lib_tab_saved: 'Reading list',
+    lib_tab_starred: 'Starred',
+    lib_tab_read: 'Read',
+    lib_added: 'Added to your library',
+    lib_login: 'Your library is private — sign in to see it.',
+    lib_empty_saved: 'Your reading list is empty. Use the bookmark on a paper card to save it for later.',
+    lib_empty_starred: 'Nothing starred yet. Stars are for the papers you want to come back to.',
+    lib_empty_read: 'No papers marked read yet. Mark one when you finish it and your history builds up here.',
+    digest_empty: 'No digest yet. The next one arrives Sunday evening.',
     panel_title: 'Research panel',
     areas_title: 'Research areas', area_all: 'All research',
     spot_title: 'Discover', spot_sub: 'Something worth reading',
     authors_title: 'Most active authors', papers_word: 'papers',
-    status_title: 'System status',
-    st_ingest: 'arXiv ingestion', st_search: 'Semantic search', st_vector: 'Vector database',
-    st_cache: 'Redis cache', st_ai: 'AI inference', st_workflow: 'Workflow errors',
-    st_ok: 'Healthy', st_bad: 'Unreachable', st_configured: 'Connected', st_missing: 'No API key',
-    st_none: 'None', st_errors: 'errors',
     open_panel: 'Open panel', close_panel: 'Close panel', refresh: 'Refresh',
-    api_docs: 'API reference',
     no_data: 'No data',
     lang_of_paper: 'Language of the paper', lang_match: 'In your interface language',
     sources_title: 'Sources', sources_word: 'sources',
     merged_hint: 'The same work was found in several sources — shown once',
-    dedup_found: 'Merged across sources: {n} papers. Duplicates are not shown.',
-    dedup_none: 'No overlap between sources found yet.',
     months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
     groups: { tech: 'Technology', natural: 'Natural sciences', formal: 'Formal sciences',
       health: 'Medicine & health', social: 'Social sciences' },
@@ -622,10 +637,6 @@ function renderSources(summary) {
         </li>`).join('')
     : `<li class="sn">${t('no_data')}</li>`;
 
-  const n = summary.multi_source || 0;
-  $('#dedup-note').textContent = n > 0
-    ? t('dedup_found').replace('{n}', num(n))
-    : t('dedup_none');
 }
 
 /* ------------------------------------------------------------------ query */
@@ -756,7 +767,6 @@ async function runSearch(q) {
       <h2>${t('res_search')}</h2>
       <div class="res-meta">
         <span class="badge">${data.hits.length} · ${esc(t('grounded_post'))}</span>
-        <span class="badge live"><span class="dot"></span>${ms(took)}</span>
       </div>
     </div>
     ${data.query_en ? `<p class="translated">${t('translated_as')} <code>${esc(data.query_en)}</code></p>` : ''}`;
@@ -765,7 +775,7 @@ async function runSearch(q) {
     const p = h.paper;
     const authors = p.authors.slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '');
     return `
-      <article class="paper">
+      <article class="paper" data-paper-id="${p.id}">
         <div>${relevanceRing(h.score)}</div>
         <div>
           <a class="paper-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
@@ -777,14 +787,7 @@ async function runSearch(q) {
             ${langChip(p)}${sourceChips(p)}
           </div>
           <p class="paper-abs">${esc(p.abstract)}</p>
-          <div class="paper-actions">
-            <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
-              <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              ${t('act_read')}</a>
-            <button type="button" class="act ai" data-ask="${esc(p.title)}">
-              <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>
-              ${t('act_ask')}</button>
-          </div>
+          ${paperActions(p)}
         </div>
       </article>`;
   }).join('');
@@ -843,10 +846,6 @@ async function runAsk(q) {
   const r = $('#results');
   r.setAttribute('aria-busy', 'false');
 
-  const cacheBadge = data.from_cache
-    ? `<span class="badge cached" title="${esc(t('cached_hint'))}">⚡ ${t('cached')} · ${ms(data.latency_ms)}</span>`
-    : `<span class="badge live" title="${esc(t('live_hint'))}"><span class="dot"></span>${t('processing')} · ${ms(data.latency_ms)}</span>`;
-
   // İstinadlar nömrəlidir: [1], [2]... Nömrə mənbə siyahısındakı sıra ilə eynidir,
   // ona görə etiket birbaşa həmin mənbəyə keçid olur.
   // (Əvvəl DOI/arXiv ID işlədilirdi — model uzun DOI-nu səhvsiz köçürə bilmirdi.)
@@ -873,7 +872,6 @@ async function runAsk(q) {
         <h2><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>${t('res_ask')}</h2>
         <div class="res-meta">
           <span class="badge ai">${t('grounded_pre')} ${data.sources.length} ${t('grounded_post')}</span>
-          ${cacheBadge}
         </div>
       </div>
       ${data.query_en ? `<p class="translated" style="margin-bottom:14px">${t('translated_as')} <code>${esc(data.query_en)}</code></p>` : ''}
@@ -1031,11 +1029,7 @@ async function loadTrends() {
   const note = $('#trend-insight');
   note.textContent = t('loading_trends');
   try {
-    const { data, took, cache } = await api('/api/analytics/trends?weeks=8');
-    const perf = $('#trend-perf');
-    perf.hidden = false;
-    perf.textContent = cache === 'HIT' ? `⚡ ${t('cached')} · ${ms(took)}` : `${t('processing')} · ${ms(took)}`;
-    perf.title = cache === 'HIT' ? t('cached_hint') : t('live_hint');
+    const { data } = await api('/api/analytics/trends?weeks=8');
 
     if (!data.length) {
       note.textContent = t('insight_none');
@@ -1187,7 +1181,7 @@ function renderDeck(dir = 1) {
   const field = (p.field_keys || [])[0];
 
   $('#deck').innerHTML = `
-    <article class="deck-card" style="--from:${dir > 0 ? '14px' : '-14px'}">
+    <article class="deck-card" data-paper-id="${p.id}" style="--from:${dir > 0 ? '14px' : '-14px'}">
       <div class="deck-meta">
         ${field ? `<span class="deck-field">${esc(fieldName(field))}</span>` : ''}
         <span>${p.published_at ? dmy(p.published_at) : ''}</span>
@@ -1197,16 +1191,10 @@ function renderDeck(dir = 1) {
       <a class="deck-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
       ${authors ? `<div class="deck-meta">${esc(authors)}</div>` : ''}
       <p class="deck-abs">${esc(p.abstract)}</p>
-      <div class="paper-actions">
-        <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
-          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          ${t('act_read')}</a>
-        <button type="button" class="act ai" data-ask="${esc(p.title)}">
-          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>
-          ${t('act_ask')}</button>
-      </div>
+      ${paperActions(p)}
     </article>`;
 
+  paintLibrary($('#deck'));
   $('#deck-count').textContent = `${deckIdx + 1} / ${deck.length}`;
   $('#deck-dots').innerHTML = deck.map((_, i) => `<i class="${i === deckIdx ? 'on' : ''}"></i>`).join('');
 }
@@ -1295,28 +1283,181 @@ async function loadDigest() {
   } catch (e) { $('#digest-body').innerHTML = ''; }
 }
 
-async function loadStatus() {
-  const led = (ok) => `<span class="led ${ok ? 'ok' : 'bad'}"></span>`;
-  try {
-    const [{ data: h }, errs] = await Promise.all([
-      api('/health/services'),
-      api('/api/logs/errors?limit=5').catch(() => ({ data: [] })),
-    ]);
-    const nErr = errs.data.length;
-    const ingestOk = h.last_ingest_status === 'success';
+/* ================================================================ kitabxana
 
-    $('#status').innerHTML = `
-      <li>${led(ingestOk)}${t('st_ingest')}<span class="val">${h.last_ingest_at ? hhmm(h.last_ingest_at) : t('st_none')}</span></li>
-      <li>${led(h.postgres)}${t('st_search')}<span class="val">${h.postgres ? t('st_ok') : t('st_bad')}</span></li>
-      <li>${led(h.pgvector)}${t('st_vector')}<span class="val">${h.pgvector ? t('st_ok') : t('st_bad')}</span></li>
-      <li>${led(h.redis)}${t('st_cache')}<span class="val">${h.redis ? t('st_ok') : t('st_bad')}</span></li>
-      <li>${led(h.groq_configured)}${t('st_ai')}<span class="val">${h.groq_configured ? t('st_configured') : t('st_missing')}</span></li>
-      <li>${led(nErr === 0)}${t('st_workflow')}<span class="val">${nErr === 0 ? t('st_none') : `${nErr} ${t('st_errors')}`}</span></li>`;
-    $('#status-note').textContent = '';
-  } catch (e) {
-    $('#status').innerHTML = '';
-    $('#status-note').textContent = errTitle(e);
+   Oxu siyahısı, ulduz və oxundu tarixçəsi.
+
+   Vəziyyət BİR yerdə (LIB) saxlanılır, çünki eyni məqalə eyni anda üç yerdə
+   görünə bilər: axtarış nəticəsində, vərəqləmə dəstində və kitabxana
+   siyahısında. Ayrı-ayrı saxlansaydı, ulduza bir yerdə basanda qalan ikisi
+   köhnə vəziyyətdə qalardı və istifadəçi eyni məqaləni həm ulduzlu, həm
+   ulduzsuz görərdi.
+*/
+
+const LIB = { saved: new Set(), starred: new Set(), read: new Set() };
+
+const LIB_ICON = {
+  saved: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1.6h7v10.8L7 9.9l-3.5 2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  starred: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.3l1.75 3.85 4.05.45-3.05 2.8.85 4.05L7 10.4l-3.6 2.05.85-4.05L1.2 5.6l4.05-.45z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg>',
+  read: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.6 7.4l2.9 2.9 5.9-6.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* Server sahələri fərqli adlanır: `read` bayraqdır, bazada `read_at` vaxtdır.
+   Xəritə burada bir yerdədir ki, hər çağırışda yadda saxlamaq lazım olmasın. */
+const LIB_FIELDS = ['saved', 'starred', 'read'];
+
+async function loadLibraryState() {
+  try {
+    const { data } = await api('/api/library/state');
+    LIB_FIELDS.forEach((k) => { LIB[k] = new Set(data[k] || []); });
+  } catch {
+    LIB_FIELDS.forEach((k) => LIB[k].clear());
   }
+  paintLibrary();
+}
+
+function clearLibraryState() {
+  LIB_FIELDS.forEach((k) => LIB[k].clear());
+  libRows = [];
+  const body = $('#library-body');
+  if (body) body.innerHTML = `<p class="state-note">${esc(t('lib_login'))}</p>`;
+  paintLibrary();
+}
+
+/* Hər iki kart növü (axtarış nəticəsi və vərəqləmə dəsti) eyni düymələri
+   göstərir. Əvvəl bu blok iki yerdə hərfbəhərf təkrarlanırdı — üçüncü düymə
+   əlavə edəndə birini unutmaq qaçılmaz idi. */
+function paperActions(p) {
+  const toggle = (field) => `
+    <button type="button" class="act lib lib-${field}" data-lib="${field}" data-pid="${p.id}"
+            aria-pressed="false" aria-label="${esc(t('lib_' + field))}" title="${esc(t('lib_' + field))}">
+      ${LIB_ICON[field]}
+    </button>`;
+
+  return `
+    <div class="paper-actions">
+      <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${t('act_read')}</a>
+      <button type="button" class="act ai" data-ask="${esc(p.title)}">
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.4l1.3 3.3L11.6 6 8.3 7.3 7 10.6 5.7 7.3 2.4 6l3.3-1.3z" fill="currentColor"/></svg>
+        ${t('act_ask')}</button>
+      <span class="act-gap"></span>
+      ${toggle('saved')}${toggle('starred')}${toggle('read')}
+    </div>`;
+}
+
+/* Yalnız görünüşü yeniləyir — heç nə göndərmir. Hər render-dən və hər
+   vəziyyət dəyişikliyindən sonra çağırılır. */
+function paintLibrary(root = document) {
+  root.querySelectorAll('[data-lib][data-pid]').forEach((b) => {
+    const on = LIB[b.dataset.lib].has(Number(b.dataset.pid));
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  root.querySelectorAll('[data-paper-id]').forEach((card) => {
+    card.classList.toggle('is-read', LIB.read.has(Number(card.dataset.paperId)));
+  });
+}
+
+/* Serverin qaydaları burada TƏKRARLANIR (ulduz siyahıya salır, siyahıdan
+   çıxmaq ulduzu götürür). Bu, şüurlu təkrardır: düymə dərhal reaksiya
+   verməlidir, şəbəkəni gözləməməlidir. Serverin cavabı gələndə vəziyyət
+   onunla əvəzlənir — yəni son söz həmişə serverindir, bu isə təxmindir. */
+function guessLocal(id, field, on) {
+  if (on) {
+    LIB[field].add(id);
+    if (field === 'starred') LIB.saved.add(id);
+  } else {
+    LIB[field].delete(id);
+    if (field === 'saved') LIB.starred.delete(id);
+  }
+}
+
+function applyServer(id, data) {
+  LIB_FIELDS.forEach((k) => (data[k] ? LIB[k].add(id) : LIB[k].delete(id)));
+}
+
+async function toggleLibrary(id, field) {
+  const before = LIB_FIELDS.map((k) => LIB[k].has(id));
+  const next = !LIB[field].has(id);
+
+  guessLocal(id, field, next);
+  paintLibrary();
+
+  try {
+    const { data } = await api(`/api/library/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: next }),
+    });
+    applyServer(id, data);
+    if (next && field !== 'read') toast(t('lib_added'));
+  } catch (e) {
+    // Təxmin səhv çıxdı — dəqiq əvvəlki vəziyyətə qaytarırıq.
+    LIB_FIELDS.forEach((k, i) => (before[i] ? LIB[k].add(id) : LIB[k].delete(id)));
+    // 401/402 artıq öz pəncərəsini açır (api() hadisə atır) — üstünə
+    // «xəta» bildirişi qoysaq, istifadəçi eyni şeyi iki dəfə oxuyar.
+    if (e.status !== 401 && e.status !== 402) toast(errTitle(e));
+  }
+  paintLibrary();
+  if (libRows.length) {
+    libRows = libRows.filter((r) => LIB[libView].has(r.paper.id));
+    renderLibrary();
+  }
+}
+
+/* ---------------------------------------------------------- kitabxana bölməsi */
+
+let libView = 'saved';
+let libRows = [];
+
+async function loadLibrary(view = libView) {
+  libView = view;
+  const body = $('#library-body');
+  $$('#library-tabs button').forEach((b) => {
+    const on = b.dataset.view === view;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  body.innerHTML = `<div class="state"><span class="spinner"></span></div>`;
+  try {
+    const { data } = await api(`/api/library?view=${view}`);
+    libRows = data;
+    renderLibrary();
+  } catch (e) {
+    libRows = [];
+    body.innerHTML = e.status === 401
+      ? `<p class="state-note">${esc(t('lib_login'))}</p>`
+      : `<p class="state-note">${esc(errTitle(e))}</p>`;
+  }
+}
+
+function renderLibrary() {
+  const body = $('#library-body');
+  if (!body) return;
+  if (!libRows.length) {
+    body.innerHTML = `<p class="state-note">${esc(t('lib_empty_' + libView))}</p>`;
+    return;
+  }
+  body.innerHTML = libRows.map((row) => {
+    const p = row.paper;
+    const when = libView === 'read' && row.read_at ? row.read_at : row.created_at;
+    return `
+      <article class="paper lib-row" data-paper-id="${p.id}">
+        <div>
+          <div class="paper-meta">
+            <span class="field">${esc(catName(p.primary_category))}</span>
+            <span class="sep">·</span><span>${when ? dmy(when) : ''}</span>
+            <span class="sep">·</span><span class="aid">${esc(paperRef(p))}</span>
+          </div>
+          <a class="paper-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+          <p class="paper-abs">${esc(p.abstract)}</p>
+          ${paperActions(p)}
+        </div>
+      </article>`;
+  }).join('');
+  paintLibrary(body);
 }
 
 /* ------------------------------------------------------------------ chrome */
@@ -1357,7 +1498,6 @@ function loadAll() {
   loadTrends();
   loadAuthors();
   loadDigest();
-  loadStatus();
   loadSpotlight();
   loadDeck();
 }
@@ -1385,6 +1525,28 @@ document.addEventListener('DOMContentLoaded', () => {
     setField(b.dataset.field);
     if (window.matchMedia('(max-width: 960px)').matches) setDrawer(false);
   });
+  /* Kitabxana vəziyyəti YALNIZ kimlik bilinəndən sonra çəkilir.
+     Səhifə açılan kimi çağırsaydıq, girişsiz istifadəçidə 401 düşər və
+     `api()` avtomatik giriş pəncərəsini açardı — heç nə istəməyən adamın
+     üzünə forma çıxardı. */
+  document.addEventListener('pm:signed-in', () => {
+    loadLibraryState();
+    loadLibrary();
+  });
+  document.addEventListener('pm:signed-out', clearLibraryState);
+
+  // Düymələr sonradan render olunur, ona görə dinləyici sənəd səviyyəsindədir.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-lib][data-pid]');
+    if (!b) return;
+    toggleLibrary(Number(b.dataset.pid), b.dataset.lib);
+  });
+
+  $('#library-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-view]');
+    if (b) loadLibrary(b.dataset.view);
+  });
+
   $('#results').addEventListener('click', (e) => {
     const b = e.target.closest('[data-ask]');
     if (!b) return;

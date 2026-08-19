@@ -299,7 +299,17 @@ class UserSession(Base):
 
 
 class SavedPaper(Base):
-    """İstifadəçinin kitabxanası — «research memory»nin ilk daşı."""
+    """İstifadəçi ilə məqalə arasındakı MÜNASİBƏT — «research memory»nin ilk daşı.
+
+    Üç vəziyyət var və hamısı BİR sətirdədir: oxu siyahısında (`saved`),
+    ulduzlanmış (`starred`), oxunmuş (`read_at`). Ayrı-ayrı cədvəllər
+    qurmadıq, çünki üçü də eyni (istifadəçi, məqalə) cütünə aiddir —
+    üç cədvəl olsaydı, bir kartın vəziyyətini bilmək üçün üç sorğu
+    lazım gələrdi və onları sinxron saxlamaq bizim üzərimizə düşərdi.
+
+    Sətir vəziyyətlərdən heç biri qalmayanda silinir (bax: `_prune`),
+    yoxsa cədvəl heç nə ifadə etməyən boş sətirlərlə dolar.
+    """
 
     __tablename__ = "saved_papers"
     __table_args__ = (UniqueConstraint("user_id", "paper_id", name="uq_saved_user_paper"),)
@@ -308,6 +318,14 @@ class SavedPaper(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), index=True)
     note: Mapped[str | None] = mapped_column(Text)
+
+    # Mövcud sətirlərin hamısı «saxlanmış»dır, ona görə default true —
+    # miqrasiya köhnə kitabxananı olduğu kimi saxlayır.
+    saved: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    starred: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    # Vaxt saxlanılır, sadəcə bayraq yox: «oxundu tarixçəsi» sıralanmalıdır.
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     paper: Mapped[Paper] = relationship()

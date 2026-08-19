@@ -111,6 +111,14 @@
       USER = null;          // 401 = girişsiz; bu, xəta deyil
     }
     renderHeader();
+    /* Hadisə BURADA da atılır, təkcə giriş formasında yox.
+       Səhifə yeniləndikdə sessiya mövcud olsa belə `pm:signed-in` heç
+       düşməsəydi, ondan asılı olan hər şey (kitabxana vəziyyəti) yalnız
+       yenidən giriş edəndən sonra işləyərdi. İndi hadisə «kimliyi ARTIQ
+       bilirik» mənasını verir və hər iki yol üçün eynidir. */
+    document.dispatchEvent(new CustomEvent(
+      USER ? 'pm:signed-in' : 'pm:signed-out', { detail: USER }
+    ));
     return USER;
   }
 

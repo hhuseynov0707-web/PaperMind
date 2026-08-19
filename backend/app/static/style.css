@@ -17,12 +17,21 @@
   /* text */
   --text:       #FAFAFA;
   --text-2:     #A1A1AA;
-  --text-3:     #71717A;
+  /* #71717A idi — HƏR səthdə 4.5:1 kontrastdan aşağı düşürdü (ən pis hal
+     --surface-3 üzərində 3.58). Kiçik, böyük hərfli etiketlər məhz bu rənglə
+     yazılır, yəni ən çox oxunması çətin olanlar ən zəif kontrasta sahib idi.
+     #85858F ən pis halda 4.74 verir və --text-2-dən hələ də açıq-aydın
+     sakitdir, ona görə üç səviyyəli iyerarxiya pozulmur. */
+  --text-3:     #85858F;
 
   /* accents */
-  --accent:      #6366F1;
+  /* #6366F1 idi: ağ mətnlə kontrastı 4.47 verirdi — 4.5 həddindən aşağı.
+     Bu rəng əsas «Axtar» düyməsinin, aktiv dil düyməsinin və keçid linkinin
+     fonudur, yəni ən çox basılan yerlər ən zəif oxunan yerlər idi.
+     #5457E8 eyni indiqodur, 5.38 verir. */
+  --accent:      #5457E8;
   --accent-2:    #818CF8;
-  --accent-soft: rgba(99, 102, 241, .13);
+  --accent-soft: rgba(84, 87, 232, .15);
   --ai:          #A855F7;
   --ai-soft:     rgba(168, 85, 247, .13);
   --ok:          #22C55E;
@@ -35,9 +44,22 @@
   /* chart series — validated for CVD on this surface */
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
 
-  /* spacing */
+  /* spacing — kiçik pillələr komponent daxilində, böyüklər bölmələr arasında */
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
   --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 44px; --sp-12: 64px;
+  --sp-14: 80px; --sp-16: 96px;
+
+  /* Bölmə ritmi. clamp() ona görədir ki, EYNİ qayda telefonda sıxılsın,
+     geniş ekranda açılsın — hər ölçü üçün ayrıca media sorğusu saxlamaq
+     lazım gəlmir və iki yerdə dəyişdirmək unudulmur. */
+  --gap-section: clamp(40px, 5vw, 72px);
+  --pad-panel:   clamp(20px, 3.4vw, 40px);
+  --pad-shell:   clamp(16px, 4vw, 40px);
+
+  /* Oxu ölçüsü: sətirdə ~68 hərf. Bunsuz mətn ekranın bütün eninə yayılır,
+     göz sətir sonundan növbətinin başına qayıda bilmir və uzun cavab
+     oxunmaz olur. Ən çox AI cavabına aiddir — saytın əsas mətni odur. */
+  --measure: 68ch;
 
   /* radius */
   --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-pill: 999px;
@@ -46,9 +68,13 @@
   --t: 180ms cubic-bezier(.4, 0, .2, 1);
 
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
+  /* Başlıqlar üçün serif: akademik ton verir və HEÇ BİR şəbəkə sorğusu
+     tələb etmir — hamısı sistemdə var. Google Fonts əlavə etsək, birinci
+     boya xarici serverə bağlı olardı. */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
   --font: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
-  --header-h: 60px;
+  --header-h: 64px;
 }
 
 * { box-sizing: border-box; }
@@ -64,8 +90,8 @@ body {
   background: var(--bg);
   color: var(--text-2);
   font-family: var(--font);
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -96,15 +122,21 @@ button { font: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--border);
 }
 .hdr-inner {
-  max-width: 1440px; margin: 0 auto; height: var(--header-h);
-  padding: 0 var(--sp-6);
+  max-width: 1320px; margin: 0 auto; height: var(--header-h);
+  padding: 0 var(--pad-shell);
   display: flex; align-items: center; gap: var(--sp-6);
 }
 
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+.brand {
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+  min-width: 0;                      /* flex uşağının kiçilməsinə icazə */
+}
 .brand-mark { width: 30px; height: 30px; color: var(--accent-2); flex-shrink: 0; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.brand-text b { color: var(--text); font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-text b {
+  color: var(--text); font-size: 16px; font-weight: 600; letter-spacing: -.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .brand-text i {
   font-style: normal; font-size: 10.5px; color: var(--text-3);
   letter-spacing: .07em; text-transform: uppercase;
@@ -118,7 +150,10 @@ button { font: inherit; cursor: pointer; }
 .nav a:hover { color: var(--text); background: var(--surface-2); }
 .nav a.on { color: var(--text); background: var(--surface-2); }
 
-.hdr-right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-5); }
+.hdr-right {
+  margin-left: auto; display: flex; align-items: center; gap: var(--sp-5);
+  flex-shrink: 0;                    /* idarəedicilər kəsilməməlidir */
+}
 
 .metrics { display: flex; gap: var(--sp-5); margin: 0; }
 .metrics > div { display: flex; flex-direction: column; align-items: flex-end; }
@@ -153,13 +188,15 @@ button { font: inherit; cursor: pointer; }
 /* ============================= layout ============================= */
 
 .shell {
-  max-width: 1440px; margin: 0 auto; padding: var(--sp-8) var(--sp-6) var(--sp-12);
-  display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp-6);
+  max-width: 1320px; margin: 0 auto;
+  padding: var(--sp-12) var(--pad-shell) var(--sp-16);
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px;
+  gap: clamp(24px, 3.5vw, 56px);
   align-items: start;
 }
-main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+main { display: flex; flex-direction: column; gap: var(--gap-section); min-width: 0; }
 .side {
-  display: flex; flex-direction: column; gap: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-5);
   position: sticky; top: calc(var(--header-h) + var(--sp-6)); min-width: 0;
 }
 .side-head { display: none; }
@@ -167,24 +204,28 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 
 /* ============================= hero ============================= */
 
-.hero { padding: var(--sp-6) 0 0; }
+.hero { padding: var(--sp-6) 0 var(--sp-2); }
 .eyebrow {
   margin: 0 0 var(--sp-3); font-size: 11.5px; font-weight: 600;
   letter-spacing: .13em; text-transform: uppercase; color: var(--accent-2);
 }
 .hero-title {
-  font-size: clamp(2.35rem, 4.4vw, 3.35rem);
-  letter-spacing: -.028em; font-weight: 600; margin-bottom: var(--sp-4);
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5.2vw, 4rem);
+  /* Serifdə mənfi tracking hərfləri bir-birinə yapışdırır — sans üçün
+     düzgün olan -.028em burada səhvdir. */
+  letter-spacing: -.012em; font-weight: 500; line-height: 1.1;
+  margin-bottom: var(--sp-5);
 }
 .hero-sub {
-  margin: 0 0 var(--sp-6); max-width: 62ch;
-  font-size: 16px; color: var(--text-2); line-height: 1.65;
+  margin: 0 0 var(--sp-8); max-width: 52ch;
+  font-size: 17.5px; color: var(--text-2); line-height: 1.6;
 }
 
 /* unified research console */
 .console {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-xl); padding: var(--sp-4);
+  border-radius: var(--r-xl); padding: var(--sp-5);
   transition: border-color var(--t);
 }
 .console:focus-within { border-color: var(--border-2); }
@@ -249,7 +290,8 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 
 /* ============================= results ============================= */
 
-.results { display: flex; flex-direction: column; gap: var(--sp-4); scroll-margin-top: 80px; }
+.results { display: flex; flex-direction: column; gap: var(--sp-5);
+  scroll-margin-top: calc(var(--header-h) + var(--sp-6)); }
 .results:empty { display: none; }
 
 .res-head {
@@ -265,8 +307,6 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   padding: 3px 11px; font-size: 11.5px; color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
-.badge.cached { border-color: rgba(34,197,94,.35); background: var(--ok-soft); color: #86efac; }
-.badge.live { border-color: rgba(99,102,241,.3); background: var(--accent-soft); color: var(--accent-2); }
 .badge.ai { border-color: rgba(168,85,247,.3); background: var(--ai-soft); color: #e9d5ff; }
 .badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
@@ -279,7 +319,7 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 .paper {
   display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: var(--sp-4);
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: var(--sp-5);
+  border-radius: var(--r-lg); padding: var(--sp-6);
   transition: border-color var(--t), background var(--t);
 }
 .paper:hover { border-color: var(--border-2); background: var(--surface-2); }
@@ -329,8 +369,8 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 /* --- AI answer panel --- */
 .answer-panel {
   background: var(--surface); border: 1px solid var(--border);
-  border-left: 2px solid var(--ai); border-radius: var(--r-lg);
-  padding: var(--sp-6); animation: rise 220ms var(--t);
+  border-left: 2px solid var(--ai); border-radius: var(--r-xl);
+  padding: var(--pad-panel); animation: rise 220ms var(--t);
 }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -341,8 +381,8 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 }
 .answer-head h2 svg { width: 14px; height: 14px; }
 .answer-body {
-  font-size: 15.5px; line-height: 1.75; color: var(--text);
-  white-space: pre-wrap; margin-bottom: var(--sp-5);
+  font-size: 17px; line-height: 1.8; color: var(--text); max-width: var(--measure);
+  white-space: pre-wrap; margin-bottom: var(--sp-6);
 }
 .answer-body .cite {
   font-family: var(--mono); font-size: 12.5px; color: var(--accent-2);
@@ -377,15 +417,27 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 
 /* ============================= panels ============================= */
 
+/* Bölmə QUTU deyil.
+   Əvvəl hər bölmə çərçivəli səth idi, içindəki məqalə kartları da çərçivəli —
+   qutu içində qutu. «Sıxılmış, limitli» hissi məhz oradan gəlirdi.
+   İndi bölmələri BOŞLUQ ayırır (--gap-section), xətt yox; çərçivə yalnız
+   ayrıca VAHİD olan elementlərdə qalır: məqalə kartı, AI cavabı, konsol,
+   yan panel kartları. Fon-fiqur münasibəti düzəlir: qab görünmür, məzmun görünür.
+
+   Doldurma sıfırdır ki, bölmə başlığı hero və konsolla EYNİ şaquli xətdən
+   başlasın. Doldurma qalsaydı, hər bölmə bir neçə piksel sağa sürüşərdi və
+   səhifənin sol kənarı pilləkənə dönərdi. */
 .panel {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: var(--sp-6); scroll-margin-top: 80px;
+  background: none; border: 0; padding: 0;
+  scroll-margin-top: calc(var(--header-h) + var(--sp-6));
 }
-.panel-head { display: flex; align-items: flex-start; gap: var(--sp-4); margin-bottom: var(--sp-5); }
-.panel-head h2 { font-size: 21px; letter-spacing: -.015em; }
-.panel-sub { margin: 5px 0 0; font-size: 13.5px; color: var(--text-2); max-width: 62ch; }
+.panel-head { display: flex; align-items: flex-start; gap: var(--sp-4); margin-bottom: var(--sp-8); }
+.panel-head h2 {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: clamp(21px, 2.3vw, 27px); letter-spacing: -.008em;
+}
+.panel-sub { margin: var(--sp-2) 0 0; font-size: 15px; color: var(--text-2); max-width: 56ch; }
 .panel-tools { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); }
-.perf { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
 .chart-wrap { position: relative; height: 280px; }
 
@@ -413,7 +465,8 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 }
 .deck-title:hover { color: var(--accent-2); }
 .deck-abs {
-  margin: 0 0 var(--sp-4); font-size: 14.5px; color: var(--text-2); line-height: 1.65;
+  margin: 0 0 var(--sp-4); font-size: 15px; color: var(--text-2); line-height: 1.7;
+  max-width: var(--measure);
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 .deck-count { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -451,13 +504,16 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   background: var(--surface-2); border: 1px solid var(--border);
   border-radius: var(--r-pill); padding: 4px 12px; font-size: 12px; color: var(--text-2);
 }
-.digest-text { font-size: 15px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+.digest-text {
+  font-size: 16.5px; line-height: 1.8; color: var(--text);
+  max-width: var(--measure); white-space: pre-wrap;
+}
 
 /* ============================= aside cards ============================= */
 
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: var(--sp-5);
+  border-radius: var(--r-lg); padding: var(--sp-6);
 }
 .card-head { display: flex; align-items: center; gap: var(--sp-3); }
 .card-title {
@@ -540,13 +596,6 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 .src i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .src.merged { border-color: rgba(34,197,94,.35); background: var(--ok-soft); color: #86efac; }
 
-.status { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-.status li { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text-2); }
-.status .led { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.status .led.ok { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
-.status .led.bad { background: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
-.status .led.idle { background: var(--text-3); }
-.status .val { margin-left: auto; font-size: 11.5px; color: var(--text-3); }
 
 /* ============================= states ============================= */
 
@@ -607,19 +656,150 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
 /* ============================= footer ============================= */
 
 .ftr {
-  max-width: 1440px; margin: 0 auto; padding: var(--sp-6);
+  max-width: 1320px; margin: 0 auto; padding: var(--sp-8) var(--pad-shell);
   border-top: 1px solid var(--border);
   display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center;
   font-size: 12px; color: var(--text-3);
 }
-.ftr-tech { color: var(--border-2); }
 .ftr a { margin-left: auto; color: var(--text-3); text-decoration: none; }
 .ftr a:hover { color: var(--text-2); }
+
+
+/* ============================= kitabxana (§16) =============================
+
+   Oxu siyahısı, ulduz və oxundu. Üç düymə hər məqalə kartında var, ona görə
+   yığcamdır: yalnız ikona + tooltip + aria-label. Mətnli olsaydı, kart
+   sətrində beş etiket yan-yana düşərdi və əsas olan («Oxu», «AI-dan soruş»)
+   itərdi.
+*/
+
+.act-gap { flex: 1 1 auto; }          /* vəziyyət düymələrini sağ kənara itələyir */
+
+.act.lib {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  padding: 0; justify-content: center;
+  color: var(--text-3);
+  /* transform ayrıca və qısa: basılma cavabı rəng keçidindən tez olmalıdır,
+     yoxsa düymə «gec» hiss olunur. */
+  transition: color var(--t), border-color var(--t), background var(--t),
+              transform 110ms cubic-bezier(.4, 0, .2, 1);
+}
+.act.lib svg { width: 15px; height: 15px; }
+.act.lib:hover { color: var(--text); }
+.act.lib:active { transform: scale(.9); }
+
+/* Aktiv vəziyyət yalnız RƏNGLƏ göstərilmir — dolğunluq da dəyişir.
+   Yalnız rəng olsaydı, rəng ayırd etməyən istifadəçi ulduzlu məqaləni
+   ulduzsuzdan seçə bilməzdi. */
+.act.lib.on { border-color: currentColor; }
+.act.lib-saved.on   { color: var(--accent-2); background: var(--accent-soft); }
+.act.lib-starred.on { color: var(--warn);     background: rgba(245, 158, 11, .14); }
+.act.lib-read.on    { color: var(--ok);       background: var(--ok-soft); }
+
+/* Əlfəcin və ulduz dolur; «oxundu» işarəsi isə cizgidir — onu doldursaq
+   tanınmaz ləkəyə çevrilir, ona görə orada yalnız fon dəyişir. */
+.act.lib-saved.on svg path, .act.lib-starred.on svg path { fill: currentColor; }
+
+.act.lib.on svg { animation: libPop 280ms cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes libPop {
+  0%   { transform: scale(.55); }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* Oxunmuş məqalə axtarış nəticəsində də seçilir: «bunu artıq görmüşəm»
+   sualına cavab kartın özündə olmalıdır, kitabxanaya keçmədən. */
+[data-paper-id].is-read .paper-title,
+[data-paper-id].is-read .deck-title { color: var(--text-2); }
+[data-paper-id].is-read .paper-abs,
+[data-paper-id].is-read .deck-abs { opacity: .72; }
+
+/* ---------- görünüş keçidləri ---------- */
+
+.tabs {
+  display: flex; gap: 2px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); margin-bottom: var(--sp-6);
+}
+.tab {
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;                /* xətt üstünə oturur */
+  color: var(--text-3); padding: 10px 14px; font-size: 14px; font-weight: 500;
+  transition: color var(--t), border-color var(--t);
+}
+.tab:hover { color: var(--text-2); }
+.tab.on { color: var(--text); border-bottom-color: var(--accent-2); }
+
+.lib-row { grid-template-columns: minmax(0, 1fr); }   /* uyğunluq halqası yoxdur */
+.lib-row + .lib-row { margin-top: var(--sp-4); }
+
+/* İzahlı boşluq: boş qutu «xəta oldu?» sualı doğurur, bir cümlə isə
+   nə etmək lazım olduğunu deyir. */
+.state-note {
+  margin: 0; padding: var(--sp-8) 0;
+  color: var(--text-2); font-size: 15px; line-height: 1.65; max-width: 52ch;
+}
+
+/* ============================= hərəkət =============================
+
+   Qayda: hərəkət MƏNA daşımalıdır — nəyinsə göründüyünü, dəyişdiyini və ya
+   basıldığını bildirməlidir. Bəzək üçün hərəkət yoxdur.
+   Bütün bunlar `prefers-reduced-motion` altında sıfırlanır (yuxarıdakı
+   qlobal blok) — ona görə burada ayrıca yoxlama təkrarlanmır.
+*/
+
+.paper, .act, .tab, .area, .mode {
+  will-change: auto;
+}
+
+/* Kart üzərinə gələndə bir piksel qalxır. `transform` seçildi, çünki
+   `height`/`margin` animasiyası bütün siyahını yenidən düzür (layout thrash);
+   transform isə yalnız kompozisiya qatındadır. */
+.paper { transition: border-color var(--t), background var(--t), transform 180ms cubic-bezier(.4, 0, .2, 1); }
+.paper:hover { transform: translateY(-1px); }
+
+.act:active, .tab:active { transform: scale(.97); }
+
+/* Nəticələr birdən yox, ardıcıl görünür — göz siyahının uzunluğunu tutur.
+   Gecikmə 10 karta qədərdir: uzun siyahıda sonuncu kartı yarım saniyə
+   gözlətmək «yavaş» hissi verər, oxunma sürətini artırmaz. */
+.results > .paper { animation: cardIn 300ms cubic-bezier(.4, 0, .2, 1) backwards; }
+.results > .paper:nth-of-type(1) { animation-delay: 0ms; }
+.results > .paper:nth-of-type(2) { animation-delay: 35ms; }
+.results > .paper:nth-of-type(3) { animation-delay: 70ms; }
+.results > .paper:nth-of-type(4) { animation-delay: 105ms; }
+.results > .paper:nth-of-type(5) { animation-delay: 140ms; }
+.results > .paper:nth-of-type(6) { animation-delay: 175ms; }
+.results > .paper:nth-of-type(7) { animation-delay: 210ms; }
+.results > .paper:nth-of-type(8) { animation-delay: 245ms; }
+.results > .paper:nth-of-type(n+9) { animation-delay: 280ms; }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+#library-body .paper { animation: cardIn 260ms cubic-bezier(.4, 0, .2, 1) backwards; }
+
+/* ---------- toxunma cihazları ---------- */
+
+@media (pointer: coarse) {
+  .icon-btn { width: 44px; height: 44px; }
+  /* Dil düymələri: hündürlük 44-ə qalxır, en 42-də qalır. Üçünü də 44 en
+     etsək başlıqda 132px yer tutar və dar ekranda brend adı demək olar ki,
+     tamamilə kəsilər — sıra halında qonşu hədəflər üçün hündürlük kifayətdir. */
+  .lang button { min-height: 44px; padding-inline: 13px; }
+  .acct-btn, .pm-btn, .pm-primary { min-height: 44px; }
+  .mode, .example, .area, .nav a, .act { min-height: 44px; }
+  .act.lib { width: 44px; height: 44px; }
+  .mode, .example { padding-block: 0; display: inline-flex; align-items: center; }
+  .area { align-items: center; }
+  .deck-dots i { height: 6px; }      /* vərəq nöqtələri barmaqla görünsün */
+}
 
 /* ============================= responsive ============================= */
 
 @media (max-width: 1280px) {
-  .shell { grid-template-columns: minmax(0, 1fr) 290px; }
+  .shell { grid-template-columns: minmax(0, 1fr) 280px; }
   .metrics > div:nth-child(2) { display: none; }
 }
 
@@ -650,9 +830,13 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   }
 }
 
+@media (max-width: 600px) {
+  .hdr-inner { gap: var(--sp-4); }
+  .hdr-right { gap: var(--sp-3); }
+}
+
 @media (max-width: 720px) {
-  .hdr-inner, .shell, .ftr { padding-left: var(--sp-4); padding-right: var(--sp-4); }
-  .shell { padding-top: var(--sp-5); }
+  .shell { padding-top: var(--sp-8); padding-bottom: var(--sp-12); }
   .brand-text i { display: none; }
   .console-row { flex-direction: column; align-items: stretch; }
   .console-icon { top: 17px; }
@@ -661,7 +845,7 @@ main { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
   .ring { width: 44px; height: 44px; }
   .ring svg { width: 44px; height: 44px; }
   .ring-label { display: none; }
-  .panel, .card { padding: var(--sp-4); }
+  .card { padding: var(--sp-5); }
   .chart-wrap { height: 240px; }
   .hero { padding-top: var(--sp-2); }
   .toast { left: var(--sp-4); right: var(--sp-4); max-width: none; }

@@ -112,8 +112,9 @@ def test_ask_requires_login(client):
 
 
 def test_library_requires_login(client):
+    # Tam siyahı `test_library.py`-dədir; burada yalnız giriş qapısı yoxlanılır.
     assert client.get("/api/library").status_code == 401
-    assert client.post("/api/library", json={"paper_id": 1}).status_code == 401
+    assert client.put("/api/library/1", json={"saved": True}).status_code == 401
 
 
 def test_me_requires_login(client):

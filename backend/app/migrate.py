@@ -40,6 +40,20 @@ DDL = [
     "ALTER TABLE papers ADD COLUMN IF NOT EXISTS openalex_id text",
     "CREATE INDEX IF NOT EXISTS ix_papers_pmid ON papers (pmid)",
     "CREATE INDEX IF NOT EXISTS ix_papers_openalex_id ON papers (openalex_id)",
+    # §16: kitabxana vəziyyətləri — oxu siyahısı, ulduz, oxundu tarixçəsi.
+    # Mövcud sətirlər saxlanmış məqalələrdir, ona görə `saved` DEFAULT true:
+    # miqrasiya heç kimin kitabxanasını boşaltmır.
+    "ALTER TABLE saved_papers ADD COLUMN IF NOT EXISTS saved boolean NOT NULL DEFAULT true",
+    "ALTER TABLE saved_papers ADD COLUMN IF NOT EXISTS starred boolean NOT NULL DEFAULT false",
+    "ALTER TABLE saved_papers ADD COLUMN IF NOT EXISTS read_at timestamptz",
+    # Qismən indekslər: sorğular həmişə «bu istifadəçinin ulduzluları» və
+    # «bu istifadəçinin oxuduqları» şəklindədir, bütün cədvəl deyil.
+    """CREATE INDEX IF NOT EXISTS ix_saved_starred ON saved_papers (user_id)
+           WHERE starred""",
+    """CREATE INDEX IF NOT EXISTS ix_saved_read ON saved_papers (user_id, read_at DESC)
+           WHERE read_at IS NOT NULL""",
+    """CREATE INDEX IF NOT EXISTS ix_saved_list ON saved_papers (user_id, created_at DESC)
+           WHERE saved""",
     # Phase 4 (§7): məqalə səviyyəli çıxarışlar
     """CREATE TABLE IF NOT EXISTS paper_insights (
            paper_id integer PRIMARY KEY REFERENCES papers(id) ON DELETE CASCADE,

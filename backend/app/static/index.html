@@ -6,15 +6,15 @@
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=3.3.0">
+  <link rel="stylesheet" href="/style.css?v=3.5.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=3.3.0" defer></script>
+  <script src="/app.js?v=3.5.0" defer></script>
   <!-- Hesab qatı ayrıca modul. Paddle.js BURADA yüklənmir — yalnız istifadəçi
        yüksəltmə düyməsinə basanda çəkilir (auth.js: loadPaddle). -->
-  <script src="/auth.js?v=3.3.0" defer></script>
+  <script src="/auth.js?v=3.5.0" defer></script>
   <!-- Şəxsi PDF sənədləri. app.js korpus üçündür, bu isə istifadəçinin
        öz faylları — aralarında ortaq vəziyyət yoxdur. -->
-  <script src="/documents.js?v=3.3.0" defer></script>
+  <script src="/documents.js?v=3.5.0" defer></script>
 </head>
 <body>
 
@@ -38,6 +38,7 @@
       <a href="#discover" data-nav="discover" data-i18n="nav_discover">Discover</a>
       <a href="#results" data-nav="results" data-i18n="nav_search">Search</a>
       <a href="#browse" data-nav="browse" data-i18n="nav_browse">Browse</a>
+      <a href="#library" data-nav="library" data-i18n="nav_library">Library</a>
       <a href="#landscape" data-nav="landscape" data-i18n="nav_landscape">Landscape</a>
       <a href="#documents" data-nav="documents">PDF</a>
       <a href="#trends" data-nav="trends" data-i18n="nav_trends">Trends</a>
@@ -118,6 +119,28 @@
       <div class="deck-dots" id="deck-dots"></div>
     </section>
 
+    <section class="panel" id="library">
+      <div class="panel-head">
+        <div>
+          <h2 data-i18n="library_title">My library</h2>
+          <p class="panel-sub" data-i18n="library_sub">Papers you saved, starred and read.</p>
+        </div>
+      </div>
+
+      <!-- Üç görünüş eyni məlumatın fərqli süzgəcidir, ona görə tab —
+           ayrı-ayrı bölmə olsaydı, səhifədə eyni kartlar üç dəfə görünərdi. -->
+      <div class="tabs" id="library-tabs" role="tablist" aria-label="Library views">
+        <button type="button" role="tab" class="tab on" data-view="saved"
+                aria-selected="true" data-i18n="lib_tab_saved">Reading list</button>
+        <button type="button" role="tab" class="tab" data-view="starred"
+                aria-selected="false" data-i18n="lib_tab_starred">Starred</button>
+        <button type="button" role="tab" class="tab" data-view="read"
+                aria-selected="false" data-i18n="lib_tab_read">Read</button>
+      </div>
+
+      <div id="library-body" aria-live="polite"></div>
+    </section>
+
     <section class="panel" id="documents">
       <div class="panel-head">
         <div>
@@ -147,7 +170,7 @@
       <div class="panel-head">
         <div>
           <h2 data-i18n="landscape_title">Research landscape</h2>
-          <p class="panel-sub" data-i18n="landscape_sub">Clusters, active authors and cross-field links — built from the indexed corpus only.</p>
+          <p class="panel-sub" data-i18n="landscape_sub">Clusters, active authors and links between fields — drawn from the papers in the library.</p>
         </div>
         <span class="pill" id="landscape-scope" hidden></span>
       </div>
@@ -161,7 +184,6 @@
           <p class="panel-sub" id="trend-insight"></p>
         </div>
         <div class="panel-tools">
-          <span class="perf" id="trend-perf" hidden></span>
           <button type="button" class="icon-btn" id="trend-refresh" data-i18n-aria="refresh">
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -177,7 +199,7 @@
       <div class="panel-head">
         <div>
           <h2 data-i18n="digest_title">Weekly digest</h2>
-          <p class="panel-sub" data-i18n="digest_sub">Generated every Sunday by the n8n automation pipeline.</p>
+          <p class="panel-sub" data-i18n="digest_sub">Put together automatically every Sunday.</p>
         </div>
         <span class="pill" id="digest-date" hidden></span>
       </div>
@@ -213,18 +235,11 @@
     <section class="card">
       <h2 class="card-title" data-i18n="sources_title">Sources</h2>
       <ul class="srclist" id="srclist"></ul>
-      <p class="foot-note" id="dedup-note"></p>
     </section>
 
     <section class="card">
       <h2 class="card-title" data-i18n="authors_title">Most active authors</h2>
       <ol class="authors" id="authors"></ol>
-    </section>
-
-    <section class="card">
-      <h2 class="card-title" data-i18n="status_title">System status</h2>
-      <ul class="status" id="status"></ul>
-      <p class="foot-note" id="status-note"></p>
     </section>
   </aside>
   <div class="scrim" id="scrim" hidden></div>
@@ -232,7 +247,6 @@
 
 <footer class="ftr">
   <span>PaperMind · <span data-i18n="product_kicker">Scientific Intelligence Platform</span></span>
-  <span class="ftr-tech">FastAPI · PostgreSQL/pgvector · Redis · fastembed · Groq · n8n</span>
   <!-- Bu üç keçid ödəniş provayderinin domen təsdiqi üçün MƏCBURİDİR
        (Paddle: «your website must link through to your terms of service,
        privacy notice and refund policy»). Silinsə checkout işləməyi
