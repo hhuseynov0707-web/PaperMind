@@ -666,36 +666,40 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
 .ftr a:hover { color: var(--text-2); }
 
 
-/* ===================== kitabxana ayrıca görünüş kimi =====================
+/* ========================= ayrıca səhifə görünüşü =========================
 
-   İki qayda, bir prinsip: kitabxana yalnız öz marşrutunda görünür, qalan
-   bölmələr isə yalnız ondan kənarda. Siyahını CSS saxlayır, JS yox —
-   `:not()` sayəsində yeni bölmə əlavə edəndə heç bir siyahı yenilənmir.
+   Bölmə siyahısı BURADA da yoxdur. Üç qayda seçici gücünə görə sıralanıb:
+
+     1. `main > .page`            səhifələr normal axında görünmür
+     2. `body.view-page main > *` səhifə rejimində HƏR ŞEY gizlənir
+     3. `... > .page-on`          yalnız aktiv səhifə açılır
+
+   Gücləri (0,1,1) < (0,1,2) < (0,2,2) olduğu üçün `!important` lazım deyil,
+   və yeni bölmə əlavə olunanda heç bir siyahı yenilənmir.
 */
 
-body:not(.view-library) #library { display: none; }
+main > .page { display: none; }
+body.view-page main > * { display: none; }
+body.view-page main > .page-on { display: block; }
 
-body.view-library .hero,
-body.view-library #results,
-body.view-library #browse,
-body.view-library #documents,
-body.view-library #landscape,
-body.view-library #trends,
-body.view-library #digest { display: none; }
-
-/* Yan panel araşdırma sahələri üçündür — kitabxanada süzgəc rolu oynamır,
-   ona görə sütun kimi çıxır və siyahı bütün eni tutur.
+/* Yan panel araşdırma sahələri üçündür — nə kitabxanada, nə də öz PDF
+   sənədlərində süzgəc rolu oynamır, ona görə sütun kimi çıxır.
    ANCAQ yalnız geniş ekranda: ≤960px-də həmin panel sürüşən menyudur və
    naviqasiyanın YEGANƏ yeridir (başlıqdakı nav gizlidir). Onu orada da
-   bağlasaq, istifadəçi kitabxanaya girib çıxa bilməz. */
-body.view-library .shell { grid-template-columns: minmax(0, 1fr); }
+   bağlasaq, istifadəçi səhifəyə girib çıxa bilməz. */
+body.view-page .shell { grid-template-columns: minmax(0, 1fr); }
 
 @media (min-width: 961px) {
-  body.view-library .side { display: none; }
+  body.view-page .side { display: none; }
 }
 
-/* Ayrıca səhifədə başlıq bir az böyükdür — bura artıq bölmə deyil, səhifədir. */
-body.view-library #library .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
+/* Ayrıca səhifədə başlıq böyüyür — bura artıq bölmə deyil, səhifədir. */
+body.view-page .page-on > .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
+
+/* «Statistika» səhifəsi iki bloku daşıyır. Aralarındakı məsafə `main`-in
+   gap-ından gəlmir (onlar artıq main-in birbaşa övladı deyil), ona görə
+   ritmi burada saxlayırıq — eyni --gap-section dəyəri ilə. */
+#stats > .panel + .panel { margin-top: var(--gap-section); }
 
 /* ============================= kitabxana (§16) =============================
 

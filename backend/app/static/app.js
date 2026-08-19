@@ -41,7 +41,6 @@ const I18N = {
     filter_note: 'Süzgəc: {f}',
     f_author: 'müəllif',
     f_years: 'il',
-    nav_landscape: 'Landşaft',
     landscape_title: 'Tədqiqat landşaftı',
     landscape_sub: 'Mövzu qrupları, aktiv müəlliflər və sahələr arasındakı əlaqələr — kitabxanadakı məqalələr üzərində qurulub.',
     landscape_empty: 'Landşaft üçün əvvəlcə axtarış et.',
@@ -56,7 +55,7 @@ const I18N = {
     tc_DECLINING: 'Azalır',
     tc_INSUFFICIENT_DATA: 'Data kifayət etmir',
     skip_to_content: 'Əsas məzmuna keç',
-    nav_discover: 'Kəşf', nav_search: 'Axtarış', nav_browse: 'Vərəqlə', nav_trends: 'Trendlər', nav_digest: 'İcmal',
+    nav_search: 'Axtarış', nav_browse: 'Vərəqlə',
     m_papers: 'Məqalə', m_chunks: 'Fraqment', m_updated: 'Yeniləndi',
     hero_eyebrow: 'Araşdırmanı kəşf et',
     hero_title: 'Az axtar. Çox anla.',
@@ -108,6 +107,7 @@ const I18N = {
     digest_sub: 'Hər bazar günü avtomatik hazırlanır.',
     // §16 kitabxana
     nav_library: 'Kitabxanam',
+    nav_stats: 'Statistika',
     library_title: 'Kitabxanam',
     library_sub: 'Saxladığın, ulduzladığın və oxuduğun məqalələr.',
     lib_saved: 'Oxu siyahısına əlavə et',
@@ -166,7 +166,6 @@ const I18N = {
     filter_note: 'Фильтр: {f}',
     f_author: 'автор',
     f_years: 'годы',
-    nav_landscape: 'Ландшафт',
     landscape_title: 'Ландшафт исследований',
     landscape_sub: 'Тематические группы, активные авторы и связи между областями — по статьям из библиотеки.',
     landscape_empty: 'Сначала выполните поиск.',
@@ -181,7 +180,7 @@ const I18N = {
     tc_DECLINING: 'Снижается',
     tc_INSUFFICIENT_DATA: 'Недостаточно данных',
     skip_to_content: 'Перейти к содержимому',
-    nav_discover: 'Обзор', nav_search: 'Поиск', nav_browse: 'Листать', nav_trends: 'Тренды', nav_digest: 'Дайджест',
+    nav_search: 'Поиск', nav_browse: 'Листать',
     m_papers: 'Статей', m_chunks: 'Фрагментов', m_updated: 'Обновлено',
     hero_eyebrow: 'Исследуйте науку',
     hero_title: 'Меньше искать. Больше понимать.',
@@ -233,6 +232,7 @@ const I18N = {
     digest_sub: 'Готовится автоматически каждое воскресенье.',
     // §16 kitabxana
     nav_library: 'Библиотека',
+    nav_stats: 'Статистика',
     library_title: 'Моя библиотека',
     library_sub: 'Сохранённые, отмеченные звездой и прочитанные статьи.',
     lib_saved: 'В список чтения',
@@ -290,7 +290,6 @@ const I18N = {
     filter_note: 'Filter: {f}',
     f_author: 'author',
     f_years: 'years',
-    nav_landscape: 'Landscape',
     landscape_title: 'Research landscape',
     landscape_sub: 'Topic groups, active authors and links between fields — drawn from the papers in the library.',
     landscape_empty: 'Run a search first to build the landscape.',
@@ -305,7 +304,7 @@ const I18N = {
     tc_DECLINING: 'Declining',
     tc_INSUFFICIENT_DATA: 'Insufficient data',
     skip_to_content: 'Skip to content',
-    nav_discover: 'Discover', nav_search: 'Search', nav_browse: 'Browse', nav_trends: 'Trends', nav_digest: 'Digest',
+    nav_search: 'Search', nav_browse: 'Browse',
     m_papers: 'Papers', m_chunks: 'Chunks', m_updated: 'Updated',
     hero_eyebrow: 'Discover research',
     hero_title: 'Search less. Understand more.',
@@ -358,6 +357,7 @@ const I18N = {
     digest_sub: 'Put together automatically every Sunday.',
     // §16 kitabxana
     nav_library: 'Library',
+    nav_stats: 'Statistics',
     library_title: 'My library',
     library_sub: 'Papers you saved, starred and read.',
     lib_saved: 'Add to reading list',
@@ -1407,34 +1407,46 @@ async function toggleLibrary(id, field) {
   }
 }
 
-/* ---------------------------------------------------------- kitabxana görünüşü
+/* ------------------------------------------------------------ səhifə marşrutu
 
-   Kitabxana uzun səhifənin ortasında sürüşülən blok DEYİL — ayrıca səhifə
-   kimi açılır. Marşrut hash-dir (`#library`), ayrıca URL deyil: belədə
-   brauzerin geri düyməsi və keçidin paylaşılması pulsuz gəlir, server
-   tərəfində isə heç nə dəyişmir (SPA marşrutlaması üçün Caddy-də ayrıca
-   qayda yazmaq lazım gəlmir).
+   Bəzi bölmələr uzun səhifədə sürüşülən blok DEYİL — ayrıca səhifə kimi
+   açılır (hazırda kitabxana və PDF). Marşrut hash-dir, ayrıca URL deyil:
+   belədə brauzerin geri düyməsi və keçidin paylaşılması pulsuz gəlir,
+   server tərəfində isə heç nə dəyişmir (Caddy-də SPA qaydası lazım olmur).
 
-   Görünüşü BODY-dəki sinif idarə edir, JS ayrı-ayrı bölmələri gizlətmir:
-   yeni bölmə əlavə edən adam JS siyahısını yeniləməyi unudardı, CSS isə
-   `body:not(.view-library) #library` şəklində özü tutur. */
+   Hansı bölmənin səhifə olduğunu HTML-dəki `class="page"` deyir. Görünüşü
+   isə CSS `main > *` üzərindən idarə edir — nə JS-də, nə CSS-də bölmə
+   siyahısı YOXDUR, ona görə yeni səhifə əlavə edəndə sinxronlaşdırılacaq
+   ikinci yer də yoxdur. */
 
-const LIB_ROUTE = '#library';
+/* Hansı bölmələrin ayrıca səhifə olduğunu HTML deyir (`class="page"`),
+   burada siyahı SAXLANILMIR. Siyahı iki yerdə olsaydı, yeni səhifə əlavə
+   edən adam birini unudar və bölmə ya heç açılmaz, ya da uzun səhifədə
+   ikinci dəfə peyda olardı. */
+const pages = () => $$('main > .page');
 
 function routeView() {
-  const on = location.hash === LIB_ROUTE;
-  document.body.classList.toggle('view-library', on);
+  const hash = location.hash;
+  const all = pages();
+  const active = all.find((p) => '#' + p.id === hash) || null;
 
-  // Bölmə görünüşdən çıxanda IntersectionObserver işləmir, ona görə
-  // naviqasiya işığı burada əl ilə qoyulur.
+  document.body.classList.toggle('view-page', !!active);
+  all.forEach((p) => p.classList.toggle('page-on', p === active));
+
+  // Səhifə görünüşündə bölmələr gizlidir, yəni IntersectionObserver susur —
+  // naviqasiya işığını burada özümüz qoyuruq.
+  const routes = all.map((p) => '#' + p.id);
   $$('.nav a, .side-nav a').forEach((a) => {
-    if (a.getAttribute('href') === LIB_ROUTE) a.classList.toggle('on', on);
-    else if (on) a.classList.remove('on');
+    const href = a.getAttribute('href');
+    if (routes.includes(href)) a.classList.toggle('on', href === hash);
+    else if (active) a.classList.remove('on');
   });
 
-  if (on) {
+  if (active) {
     window.scrollTo({ top: 0, behavior: 'auto' });
-    loadLibrary();
+    /* Hər səhifə öz məlumatını özü çəkir. Burada `if (id === ...)` zənciri
+       qursaydıq, app.js documents.js-in daxili işini bilməli olardı. */
+    document.dispatchEvent(new CustomEvent('pm:page-shown', { detail: { id: active.id } }));
   }
 }
 
@@ -1587,8 +1599,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('pm:signed-out', clearLibraryState);
 
+  document.addEventListener('pm:page-shown', (e) => {
+    if (e.detail.id === 'library') loadLibrary();
+  });
   window.addEventListener('hashchange', routeView);
-  routeView();               // səhifə birbaşa #library ilə açıla bilər
+  routeView();               // səhifə birbaşa #library və ya #documents ilə açıla bilər
 
   // Düymələr sonradan render olunur, ona görə dinləyici sənəd səviyyəsindədir.
   document.addEventListener('click', (e) => {

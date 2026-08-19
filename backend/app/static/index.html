@@ -6,15 +6,15 @@
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=3.7.0">
+  <link rel="stylesheet" href="/style.css?v=3.9.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=3.7.0" defer></script>
+  <script src="/app.js?v=3.9.0" defer></script>
   <!-- Hesab qatı ayrıca modul. Paddle.js BURADA yüklənmir — yalnız istifadəçi
        yüksəltmə düyməsinə basanda çəkilir (auth.js: loadPaddle). -->
-  <script src="/auth.js?v=3.7.0" defer></script>
+  <script src="/auth.js?v=3.9.0" defer></script>
   <!-- Şəxsi PDF sənədləri. app.js korpus üçündür, bu isə istifadəçinin
        öz faylları — aralarında ortaq vəziyyət yoxdur. -->
-  <script src="/documents.js?v=3.7.0" defer></script>
+  <script src="/documents.js?v=3.9.0" defer></script>
 </head>
 <body>
 
@@ -34,15 +34,17 @@
       </span>
     </a>
 
+    <!-- Beş məkan. «Kəşf» ilə «Axtarış» birləşdi: konsol və nəticələr eyni
+         görünüşdür, iki ad iki yer olduğunu düşündürürdü.
+         «Landşaft» siyahıdan çıxarıldı — o, müstəqil məkan deyil, axtarışın
+         nəticəsidir (`hidden` başlayır, yalnız sorğudan sonra dolur), ona
+         görə birbaşa girən adam boş səhifə görərdi. Bölmə yerindədir. -->
     <nav class="nav" id="nav" aria-label="Sections">
-      <a href="#discover" data-nav="discover" data-i18n="nav_discover">Discover</a>
-      <a href="#results" data-nav="results" data-i18n="nav_search">Search</a>
+      <a href="#discover" data-nav="discover" data-i18n="nav_search">Search</a>
       <a href="#browse" data-nav="browse" data-i18n="nav_browse">Browse</a>
       <a href="#library" data-nav="library" data-i18n="nav_library">Library</a>
-      <a href="#landscape" data-nav="landscape" data-i18n="nav_landscape">Landscape</a>
       <a href="#documents" data-nav="documents">PDF</a>
-      <a href="#trends" data-nav="trends" data-i18n="nav_trends">Trends</a>
-      <a href="#digest" data-nav="digest" data-i18n="nav_digest">Digest</a>
+      <a href="#stats" data-nav="stats" data-i18n="nav_stats">Statistics</a>
     </nav>
 
     <div class="hdr-right">
@@ -99,7 +101,7 @@
 
     <section id="results" class="results" aria-live="polite" aria-busy="false"></section>
 
-    <section class="panel" id="browse">
+    <section class="panel page" id="browse">
       <div class="panel-head">
         <div>
           <h2 data-i18n="browse_title">This week in research</h2>
@@ -119,7 +121,9 @@
       <div class="deck-dots" id="deck-dots"></div>
     </section>
 
-    <section class="panel" id="library">
+    <!-- `page` = uzun səhifədə deyil, ayrıca görünüş kimi açılır (#library).
+         Marşrut siyahısı JS-də TƏKRARLANMIR — app.js bu sinfi axtarır. -->
+    <section class="panel page" id="library">
       <div class="panel-head">
         <div>
           <h2 data-i18n="library_title">My library</h2>
@@ -141,7 +145,7 @@
       <div id="library-body" aria-live="polite"></div>
     </section>
 
-    <section class="panel" id="documents">
+    <section class="panel page" id="documents">
       <div class="panel-head">
         <div>
           <h2 id="doc-title">Sənədlərim</h2>
@@ -177,33 +181,38 @@
       <div id="landscape-body"></div>
     </section>
 
-    <section class="panel" id="trends">
-      <div class="panel-head">
-        <div>
-          <h2 data-i18n="trends_title">Research momentum</h2>
-          <p class="panel-sub" id="trend-insight"></p>
-        </div>
-        <div class="panel-tools">
-          <button type="button" class="icon-btn" id="trend-refresh" data-i18n-aria="refresh">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
-      <div class="deltas" id="trend-deltas"></div>
-      <div class="trend-classes" id="trend-classes"></div>
-      <p class="foot-note" id="trend-note"></p>
-    </section>
 
-    <section class="panel" id="digest">
-      <div class="panel-head">
-        <div>
-          <h2 data-i18n="digest_title">Weekly digest</h2>
-          <p class="panel-sub" data-i18n="digest_sub">Put together automatically every Sunday.</p>
+    <!-- İki blok bir səhifədə. Ortaq başlıq qoymadıq: «Statistika» adı
+         naviqasiyadadır, altındakı iki başlıq isə onsuz da özünü izah edir —
+         üçüncü səviyyə başlıq yalnız yer tutardı. -->
+    <section class="page" id="stats">
+      <section class="panel" id="trends">
+        <div class="panel-head">
+          <div>
+            <h2 data-i18n="trends_title">Research momentum</h2>
+            <p class="panel-sub" id="trend-insight"></p>
+          </div>
+          <div class="panel-tools">
+            <button type="button" class="icon-btn" id="trend-refresh" data-i18n-aria="refresh">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
-        <span class="pill" id="digest-date" hidden></span>
-      </div>
-      <div id="digest-body"></div>
+        <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+        <div class="deltas" id="trend-deltas"></div>
+        <div class="trend-classes" id="trend-classes"></div>
+        <p class="foot-note" id="trend-note"></p>
+      </section>
+      <section class="panel" id="digest">
+        <div class="panel-head">
+          <div>
+            <h2 data-i18n="digest_title">Weekly digest</h2>
+            <p class="panel-sub" data-i18n="digest_sub">Put together automatically every Sunday.</p>
+          </div>
+          <span class="pill" id="digest-date" hidden></span>
+        </div>
+        <div id="digest-body"></div>
+      </section>
     </section>
   </main>
 
