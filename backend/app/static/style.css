@@ -200,6 +200,7 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
   position: sticky; top: calc(var(--header-h) + var(--sp-6)); min-width: 0;
 }
 .side-head { display: none; }
+.side-nav { display: none; }
 .scrim, .scrim[hidden] { display: none; }
 
 /* ============================= hero ============================= */
@@ -665,6 +666,37 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
 .ftr a:hover { color: var(--text-2); }
 
 
+/* ===================== kitabxana ayrıca görünüş kimi =====================
+
+   İki qayda, bir prinsip: kitabxana yalnız öz marşrutunda görünür, qalan
+   bölmələr isə yalnız ondan kənarda. Siyahını CSS saxlayır, JS yox —
+   `:not()` sayəsində yeni bölmə əlavə edəndə heç bir siyahı yenilənmir.
+*/
+
+body:not(.view-library) #library { display: none; }
+
+body.view-library .hero,
+body.view-library #results,
+body.view-library #browse,
+body.view-library #documents,
+body.view-library #landscape,
+body.view-library #trends,
+body.view-library #digest { display: none; }
+
+/* Yan panel araşdırma sahələri üçündür — kitabxanada süzgəc rolu oynamır,
+   ona görə sütun kimi çıxır və siyahı bütün eni tutur.
+   ANCAQ yalnız geniş ekranda: ≤960px-də həmin panel sürüşən menyudur və
+   naviqasiyanın YEGANƏ yeridir (başlıqdakı nav gizlidir). Onu orada da
+   bağlasaq, istifadəçi kitabxanaya girib çıxa bilməz. */
+body.view-library .shell { grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 961px) {
+  body.view-library .side { display: none; }
+}
+
+/* Ayrıca səhifədə başlıq bir az böyükdür — bura artıq bölmə deyil, səhifədir. */
+body.view-library #library .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
+
 /* ============================= kitabxana (§16) =============================
 
    Oxu siyahısı, ulduz və oxundu. Üç düymə hər məqalə kartında var, ona görə
@@ -810,6 +842,22 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
 @media (max-width: 960px) {
   .nav { display: none; }
   .drawer-toggle { display: grid; }
+
+  /* Başlıqdakı naviqasiya gizlənir, ona görə sürüşən paneldəki nüsxə açılır.
+     Şərt eyni bloklardadır ki, biri dəyişəndə digəri unudulmasın. */
+  .side-nav {
+    display: flex; flex-direction: column; gap: 2px;
+    padding-bottom: var(--sp-4); margin-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .side-nav a {
+    display: flex; align-items: center; min-height: 44px;
+    padding: 0 var(--sp-3); border-radius: var(--r-md);
+    color: var(--text-2); text-decoration: none; font-size: 15px;
+    transition: color var(--t), background var(--t);
+  }
+  .side-nav a:hover { color: var(--text); background: var(--surface-2); }
+  .side-nav a.on { color: var(--text); background: var(--accent-soft); }
   .shell { grid-template-columns: minmax(0, 1fr); }
   .side {
     position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 88vw);

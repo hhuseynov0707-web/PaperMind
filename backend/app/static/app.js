@@ -1407,6 +1407,37 @@ async function toggleLibrary(id, field) {
   }
 }
 
+/* ---------------------------------------------------------- kitabxana görünüşü
+
+   Kitabxana uzun səhifənin ortasında sürüşülən blok DEYİL — ayrıca səhifə
+   kimi açılır. Marşrut hash-dir (`#library`), ayrıca URL deyil: belədə
+   brauzerin geri düyməsi və keçidin paylaşılması pulsuz gəlir, server
+   tərəfində isə heç nə dəyişmir (SPA marşrutlaması üçün Caddy-də ayrıca
+   qayda yazmaq lazım gəlmir).
+
+   Görünüşü BODY-dəki sinif idarə edir, JS ayrı-ayrı bölmələri gizlətmir:
+   yeni bölmə əlavə edən adam JS siyahısını yeniləməyi unudardı, CSS isə
+   `body:not(.view-library) #library` şəklində özü tutur. */
+
+const LIB_ROUTE = '#library';
+
+function routeView() {
+  const on = location.hash === LIB_ROUTE;
+  document.body.classList.toggle('view-library', on);
+
+  // Bölmə görünüşdən çıxanda IntersectionObserver işləmir, ona görə
+  // naviqasiya işığı burada əl ilə qoyulur.
+  $$('.nav a, .side-nav a').forEach((a) => {
+    if (a.getAttribute('href') === LIB_ROUTE) a.classList.toggle('on', on);
+    else if (on) a.classList.remove('on');
+  });
+
+  if (on) {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    loadLibrary();
+  }
+}
+
 /* ---------------------------------------------------------- kitabxana bölməsi */
 
 let libView = 'saved';
@@ -1462,9 +1493,29 @@ function renderLibrary() {
 
 /* ------------------------------------------------------------------ chrome */
 
+/* Başlıqdakı naviqasiya ≤960px-də gizlənir və telefonda heç bir bölməyə
+   keçid qalmır — istifadəçi kitabxanaya çatmaq üçün 1400px sürüşməli olur.
+   Siyahını sürüşən panelə ƏLLƏ ikinci dəfə yazmaq olardı, amma onda yeni
+   bölmə əlavə edən adam iki yerdən birini unudardı və panel yalan danışardı.
+   Ona görə eyni DOM-dan kopyalanır: mənbə birdir. */
+function mirrorNavIntoDrawer(setDrawer) {
+  const side = $('#side'), nav = $('#nav'), head = $('.side-head');
+  if (!side || !nav || !head || side.querySelector('.side-nav')) return;
+
+  const box = document.createElement('nav');
+  box.className = 'side-nav';
+  box.setAttribute('aria-label', 'Sections');
+  box.innerHTML = nav.innerHTML;
+  head.insertAdjacentElement('afterend', box);
+
+  // Keçidə basanda panel bağlanmalıdır, yoxsa hədəf bölmə panelin altında qalır.
+  box.addEventListener('click', (e) => { if (e.target.closest('a')) setDrawer(false); });
+}
+
 function initNav() {
-  const links = $$('.nav a');
-  const secs = links.map((a) => $(a.getAttribute('href')));
+  // Hər iki nüsxə eyni anda işıqlanır — hansının göründüyü ekran enindən asılıdır.
+  const links = $$('.nav a, .side-nav a');
+  const secs = [...new Set(links.map((a) => a.getAttribute('href')))].map((h) => $(h));
   const io = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
       if (!en.isIntersecting) return;
@@ -1505,6 +1556,7 @@ function loadAll() {
 document.addEventListener('DOMContentLoaded', () => {
   applyI18n();
   const setDrawer = initDrawer();
+  mirrorNavIntoDrawer(setDrawer);
   initNav();
 
   $('#query-form').addEventListener('submit', onSubmit);
@@ -1534,6 +1586,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLibrary();
   });
   document.addEventListener('pm:signed-out', clearLibraryState);
+
+  window.addEventListener('hashchange', routeView);
+  routeView();               // səhifə birbaşa #library ilə açıla bilər
 
   // Düymələr sonradan render olunur, ona görə dinləyici sənəd səviyyəsindədir.
   document.addEventListener('click', (e) => {
