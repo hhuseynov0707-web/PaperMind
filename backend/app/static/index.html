@@ -6,15 +6,15 @@
   <title>PaperMind — Scientific Intelligence Platform</title>
   <meta name="description" content="Search less. Understand more. Semantic search, source-grounded AI answers and research trend analytics over arXiv.">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=3.9.0">
+  <link rel="stylesheet" href="/style.css?v=4.0.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="/app.js?v=3.9.0" defer></script>
+  <script src="/app.js?v=4.0.0" defer></script>
   <!-- Hesab qatı ayrıca modul. Paddle.js BURADA yüklənmir — yalnız istifadəçi
        yüksəltmə düyməsinə basanda çəkilir (auth.js: loadPaddle). -->
-  <script src="/auth.js?v=3.9.0" defer></script>
+  <script src="/auth.js?v=4.0.0" defer></script>
   <!-- Şəxsi PDF sənədləri. app.js korpus üçündür, bu isə istifadəçinin
        öz faylları — aralarında ortaq vəziyyət yoxdur. -->
-  <script src="/documents.js?v=3.9.0" defer></script>
+  <script src="/documents.js?v=4.0.0" defer></script>
 </head>
 <body>
 
@@ -100,6 +100,39 @@
     </section>
 
     <section id="results" class="results" aria-live="polite" aria-busy="false"></section>
+
+    <!-- Bu dörd blok əvvəl 300px-lik yan sütunda idi. Məzmun səhifələrə
+         bölünəndən sonra əsas sütun 453px, yan sütun isə 1936px oldu —
+         boş sahənin yanında iki metrlik lent. İndi əsas sahədə şəbəkədir:
+         yer eni ilə paylanır, hündürlüyü ilə yox. -->
+    <section class="explore" id="explore">
+    <section class="card areas-card">
+      <h2 class="card-title" data-i18n="areas_title">Research areas</h2>
+      <div class="areas" id="areas" role="group" aria-label="Research areas"></div>
+    </section>
+
+    <section class="card discover" id="discover-card" hidden>
+      <div class="card-head">
+        <h2 class="card-title" data-i18n="spot_title">Discover</h2>
+        <svg class="spot-timer" id="spot-timer" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="8" class="spot-track"/>
+          <circle cx="10" cy="10" r="8" class="spot-arc" id="spot-arc"/>
+        </svg>
+      </div>
+      <p class="card-sub" data-i18n="spot_sub">Something worth reading</p>
+      <div id="spot-body"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title" data-i18n="sources_title">Sources</h2>
+      <ul class="srclist" id="srclist"></ul>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title" data-i18n="authors_title">Most active authors</h2>
+      <ol class="authors" id="authors"></ol>
+    </section>
+    </section>
 
     <section class="panel page" id="browse">
       <div class="panel-head">
@@ -223,33 +256,6 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       </button>
     </div>
-
-    <section class="card">
-      <h2 class="card-title" data-i18n="areas_title">Research areas</h2>
-      <div class="areas" id="areas" role="listbox" aria-label="Research areas"></div>
-    </section>
-
-    <section class="card discover" id="discover-card" hidden>
-      <div class="card-head">
-        <h2 class="card-title" data-i18n="spot_title">Discover</h2>
-        <svg class="spot-timer" id="spot-timer" viewBox="0 0 20 20" aria-hidden="true">
-          <circle cx="10" cy="10" r="8" class="spot-track"/>
-          <circle cx="10" cy="10" r="8" class="spot-arc" id="spot-arc"/>
-        </svg>
-      </div>
-      <p class="card-sub" data-i18n="spot_sub">Something worth reading</p>
-      <div id="spot-body"></div>
-    </section>
-
-    <section class="card">
-      <h2 class="card-title" data-i18n="sources_title">Sources</h2>
-      <ul class="srclist" id="srclist"></ul>
-    </section>
-
-    <section class="card">
-      <h2 class="card-title" data-i18n="authors_title">Most active authors</h2>
-      <ol class="authors" id="authors"></ol>
-    </section>
   </aside>
   <div class="scrim" id="scrim" hidden></div>
 </div>

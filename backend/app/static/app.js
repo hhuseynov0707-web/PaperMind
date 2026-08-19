@@ -582,7 +582,7 @@ function areaButton(key, name, count) {
 function renderAreas() {
   /* Sahə sayları üst-üstə düşür (məqalə bir neçə sahəyə aid ola bilər), ona görə
      «bütün araşdırmalar» sayı /api/analytics/summary-dən gələn distinct totaldır. */
-  let html = areaButton('', t('area_all'), totalPapers);
+  let html = `<div class="area-all">${areaButton('', t('area_all'), totalPapers)}</div>`;
 
   /* Fənn qrupları üzrə düzülüş. Boş sahələr göstərilmir — 20 sahədən yalnız
      korpusda mövcud olanlar görünsün deyə. */
@@ -592,12 +592,16 @@ function renderAreas() {
     (byGroup[f.group || 'tech'] ||= []).push(f);
   });
 
+  /* Hər qrup öz qabında gedir. Əvvəl hamısı düz ardıcıllıq idi və dar
+     sütunda 1063px-lik lentə çevrilirdi; qablar sayəsində şəbəkə onları
+     yan-yana sütunlara paylaya bilir və hündürlük beşə bölünür. */
   const order = ['tech', 'natural', 'formal', 'health', 'social'];
   const groups = t('groups') || {};
   order.filter((g) => byGroup[g]).forEach((g) => {
-    html += `<div class="area-group">${esc(groups[g] || g)}</div>`;
+    html += `<div class="area-col"><div class="area-group">${esc(groups[g] || g)}</div>`;
     byGroup[g].sort((a, b) => b.count - a.count)
       .forEach((f) => { html += areaButton(f.key, fieldName(f.key), f.count); });
+    html += `</div>`;
   });
 
   $('#areas').innerHTML = html;
@@ -1587,7 +1591,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const b = e.target.closest('button[data-field]');
     if (!b) return;
     setField(b.dataset.field);
-    if (window.matchMedia('(max-width: 960px)').matches) setDrawer(false);
   });
   /* Kitabxana vəziyyəti YALNIZ kimlik bilinəndən sonra çəkilir.
      Səhifə açılan kimi çağırsaydıq, girişsiz istifadəçidə 401 düşər və

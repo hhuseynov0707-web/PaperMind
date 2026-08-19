@@ -190,18 +190,45 @@ button { font: inherit; cursor: pointer; }
 .shell {
   max-width: 1320px; margin: 0 auto;
   padding: var(--sp-12) var(--pad-shell) var(--sp-16);
-  display: grid; grid-template-columns: minmax(0, 1fr) 300px;
-  gap: clamp(24px, 3.5vw, 56px);
-  align-items: start;
+  display: block;
 }
 main { display: flex; flex-direction: column; gap: var(--gap-section); min-width: 0; }
-.side {
-  display: flex; flex-direction: column; gap: var(--sp-5);
-  position: sticky; top: calc(var(--header-h) + var(--sp-6)); min-width: 0;
-}
+/* Kartlar əsas sahəyə köçdü (bax `.explore`). `.side` yalnız mobil sürüşən
+   panelin qabığı kimi qaldı — orada naviqasiya güzgüsü var, başqa heç nə. */
+.side { display: none; }
 .side-head { display: none; }
 .side-nav { display: none; }
 .scrim, .scrim[hidden] { display: none; }
+
+/* ============================= kəşf şəbəkəsi =============================
+
+   Sahələr, seçilmiş məqalə, mənbələr və müəlliflər. Əvvəl 300px-lik yan
+   sütunda üst-üstə yığılırdı: əsas sütun 453px, panel 1936px idi.
+   İndi yerin ENİ ilə paylanır — auto-fit sayəsində geniş ekranda üç sütun,
+   telefonda bir sütun olur, ayrıca media sorğusu lazım gəlmir. */
+
+.explore {
+  display: grid; align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: var(--sp-5);
+  margin-top: var(--gap-section);
+}
+/* Sahə seçimi süzgəcdir — bütün eni tutur ki, qruplar yan-yana düzülsün. */
+.explore > .areas-card { grid-column: 1 / -1; }
+
+.areas {
+  display: grid; gap: var(--sp-4) var(--sp-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  margin-top: var(--sp-4);
+}
+.area-all { grid-column: 1 / -1; }
+.area-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+/* Qrup başlığı öz sütununun içindədir, ona görə üst xətt hər sütuna düşür. */
+.area-group {
+  padding: 0 0 6px 11px; border-top: 0; margin: 0 0 4px;
+  border-bottom: 1px solid var(--border);
+}
 
 /* ============================= hero ============================= */
 
@@ -523,13 +550,11 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
 }
 .card-sub { margin: 3px 0 var(--sp-4); font-size: 13px; color: var(--text-2); }
 
-.areas { display: flex; flex-direction: column; gap: 1px; margin-top: var(--sp-3); }
 .area-group {
   font-size: 10px; letter-spacing: .11em; text-transform: uppercase;
   color: var(--text-3); font-weight: 600;
   padding: 12px 0 5px 11px; border-top: 1px solid var(--border); margin-top: 6px;
 }
-.area-group:first-of-type { border-top: 0; margin-top: 2px; }
 .area {
   display: flex; align-items: center; gap: 10px;
   background: transparent; border: 0; border-left: 2px solid transparent;
@@ -687,12 +712,6 @@ body.view-page main > .page-on { display: block; }
    ANCAQ yalnız geniş ekranda: ≤960px-də həmin panel sürüşən menyudur və
    naviqasiyanın YEGANƏ yeridir (başlıqdakı nav gizlidir). Onu orada da
    bağlasaq, istifadəçi səhifəyə girib çıxa bilməz. */
-body.view-page .shell { grid-template-columns: minmax(0, 1fr); }
-
-@media (min-width: 961px) {
-  body.view-page .side { display: none; }
-}
-
 /* Ayrıca səhifədə başlıq böyüyür — bura artıq bölmə deyil, səhifədir. */
 body.view-page .page-on > .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
 
@@ -835,7 +854,6 @@ body.view-page .page-on > .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
 /* ============================= responsive ============================= */
 
 @media (max-width: 1280px) {
-  .shell { grid-template-columns: minmax(0, 1fr) 280px; }
   .metrics > div:nth-child(2) { display: none; }
 }
 
@@ -862,8 +880,8 @@ body.view-page .page-on > .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
   }
   .side-nav a:hover { color: var(--text); background: var(--surface-2); }
   .side-nav a.on { color: var(--text); background: var(--accent-soft); }
-  .shell { grid-template-columns: minmax(0, 1fr); }
   .side {
+    display: flex; flex-direction: column;
     position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 88vw);
     z-index: 50; background: var(--bg); border-left: 1px solid var(--border);
     padding: var(--sp-4); overflow-y: auto;
