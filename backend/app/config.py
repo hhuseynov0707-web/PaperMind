@@ -124,6 +124,10 @@ class Settings(BaseSettings):
     # Parol minimumu. NIST tövsiyəsi: uzunluq mürəkkəblikdən vacibdir.
     min_password_length: int = 10
 
+    # Silinmə möhləti. Bu müddət ərzində istifadəçi fikrini dəyişə bilər;
+    # sonra məlumat GERİ QAYTARILMADAN silinir.
+    account_deletion_grace_days: int = 30
+
     # --- Plan və kredit ---
     # Kredit = bahalı əməliyyatların vahid ölçüsü. Xam token göstərmirik (§19):
     # istifadəçi "500 tədqiqat krediti" görür, API paneli yox.

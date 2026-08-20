@@ -268,6 +268,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Silinmə TƏLƏBİ. Sətir dərhal silinmir: istifadəçiyə fikrini dəyişmək
+    # üçün möhlət verilir (§GDPR — «unudulma hüququ», amma təsadüfi klik
+    # geri qaytarıla bilməlidir). Möhlət bitəndə `purge` sətri həqiqətən silir.
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     sessions: Mapped[list["UserSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

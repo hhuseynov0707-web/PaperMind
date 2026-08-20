@@ -1,12 +1,21 @@
-"""Qeydiyyat, giriş, çıxış və hesab məlumatı."""
+"""Qeydiyyat, giriş, çıxış, hesab məlumatı və hesabın silinməsi."""
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
-from .. import auth, limits, models, plans
+from .. import auth, limits, models, payments, plans
 from ..config import settings
 from ..database import get_db
-from ..schemas import LoginRequest, PlanOut, RegisterRequest, UserOut
+from ..schemas import (
+    DeleteAccountRequest,
+    LoginRequest,
+    PlanOut,
+    RegisterRequest,
+    UserOut,
+)
+from ..security import require_admin_key
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -30,7 +39,18 @@ def _user_out(db: Session, user: models.User) -> UserOut:
         subscription_status=user.subscription_status,
         plan_expires_at=user.plan_expires_at,
         created_at=user.created_at,
+        deletion_requested_at=user.deletion_requested_at,
+        deletion_effective_at=_effective_at(user),
     )
+
+
+def _effective_at(user: models.User) -> datetime | None:
+    """Silinmənin faktiki tarixi. İnterfeys «X tarixində silinəcək» yazır —
+    möhlət günlərini frontend-də ikinci dəfə hesablamaq iki həqiqət mənbəyi
+    yaradardı və möhlət dəyişəndə interfeys yalan danışardı."""
+    if user.deletion_requested_at is None:
+        return None
+    return user.deletion_requested_at + timedelta(days=settings.account_deletion_grace_days)
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
@@ -135,3 +155,86 @@ def list_plans(lang: str = "az"):
             )
         )
     return out
+
+
+# ---------------------------------------------------------------- silmə (§17)
+
+@router.post("/account/delete", response_model=UserOut)
+def request_deletion(
+    req: DeleteAccountRequest,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_user),
+):
+    """Hesabın silinməsini tələb edir — DƏRHAL silmir.
+
+    Sətir möhlət bitəndən sonra `purge` ilə silinir. Möhlət var, çünki bu
+    əməliyyat geri qaytarıla bilməz və təsadüfi klik bütün kitabxananı,
+    sənədləri və tarixçəni aparır.
+    """
+    if not auth.verify_password(user.password_hash, req.password):
+        auth.waste_time_like_a_real_check()
+        raise HTTPException(status_code=401, detail="Parol yanlışdır.")
+
+    # Aktiv abunəlik varkən silmək TƏHLÜKƏLİDİR: hesab gedər, Paddle isə
+    # pul çəkməyə davam edər və istifadəçinin onu dayandırmaq üçün girişi
+    # qalmaz. Provayderin API açarımız abunəliyi ləğv etməyə icazə vermir,
+    # ona görə istifadəçini portala yönləndiririk.
+    if (user.subscription_status or "").lower() in {"active", "trialing", "past_due"}:
+        provider = payments.get_payments()
+        url = provider.manage_url(subscription_id=user.subscription_id) if provider else None
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "subscription_active",
+                "message": "Əvvəlcə abunəliyi ləğv et, sonra hesabı silmək olar.",
+                "manage_url": url,
+            },
+        )
+
+    if user.deletion_requested_at is None:
+        user.deletion_requested_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
+    return _user_out(db, user)
+
+
+@router.post("/account/delete/cancel", response_model=UserOut)
+def cancel_deletion(
+    db: Session = Depends(get_db),
+    user: models.User = Depends(auth.require_user),
+):
+    """Möhlət bitməmişdən əvvəl tələbi geri götürür."""
+    user.deletion_requested_at = None
+    db.commit()
+    db.refresh(user)
+    return _user_out(db, user)
+
+
+@router.post("/account/purge", dependencies=[Depends(require_admin_key)])
+def purge_deleted(db: Session = Depends(get_db)):
+    """Möhləti bitmiş hesabları HƏQİQƏTƏN silir. Cron gündə bir dəfə çağırır.
+
+    Sətrin silinməsi kifayətdir, çünki xarici açarlar düzgün qurulub:
+      user_sessions, saved_papers, usage_events, documents  -> CASCADE
+      document_chunks                                       -> documents-dən CASCADE
+      billing_events                                        -> SET NULL
+
+    Sonuncusu qəsdəndir: maliyyə qeydi mühasibat üçün qalmalıdır, amma
+    istifadəçi ilə bağlantısı qırılır. Yəni «kim ödədi» itir, «nə qədər
+    ödənilib» qalır.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.account_deletion_grace_days)
+    rows = (
+        db.query(models.User)
+        .filter(
+            models.User.deletion_requested_at.isnot(None),
+            models.User.deletion_requested_at <= cutoff,
+        )
+        .all()
+    )
+    purged = [{"id": u.id, "requested_at": u.deletion_requested_at} for u in rows]
+    for u in rows:
+        db.delete(u)
+    db.commit()
+    return {"purged": len(purged), "grace_days": settings.account_deletion_grace_days,
+            "accounts": purged}

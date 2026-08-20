@@ -40,6 +40,10 @@ DDL = [
     "ALTER TABLE papers ADD COLUMN IF NOT EXISTS openalex_id text",
     "CREATE INDEX IF NOT EXISTS ix_papers_pmid ON papers (pmid)",
     "CREATE INDEX IF NOT EXISTS ix_papers_openalex_id ON papers (openalex_id)",
+    # §17: hesab silmə tələbi (GDPR). NULL = tələb yoxdur.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_requested_at timestamptz",
+    """CREATE INDEX IF NOT EXISTS ix_users_deletion ON users (deletion_requested_at)
+           WHERE deletion_requested_at IS NOT NULL""",
     # §16: kitabxana vəziyyətləri — oxu siyahısı, ulduz, oxundu tarixçəsi.
     # Mövcud sətirlər saxlanmış məqalələrdir, ona görə `saved` DEFAULT true:
     # miqrasiya heç kimin kitabxanasını boşaltmır.

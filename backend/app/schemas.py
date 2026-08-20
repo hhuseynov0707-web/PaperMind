@@ -301,11 +301,24 @@ class UserOut(BaseModel):
     subscription_status: str | None = None
     plan_expires_at: datetime | None = None
     created_at: datetime
+    # Doludursa, interfeys xəbərdarlıq zolağı və «ləğv et» düyməsi göstərir.
+    deletion_requested_at: datetime | None = None
+    deletion_effective_at: datetime | None = None
 
 
 class SavePaperRequest(BaseModel):
     paper_id: int = Field(ge=1)
     note: str | None = Field(default=None, max_length=2000)
+
+
+class DeleteAccountRequest(BaseModel):
+    """Parol TƏKRAR istənilir.
+
+    Sessiya oğurlanıbsa (və ya kimsə açıq kompüterə yaxınlaşıbsa), tək klik
+    hesabı silməyə kifayət etməməlidir. Parol bu addımı sahibinə bağlayır.
+    """
+
+    password: str = Field(max_length=200)
 
 
 class PaperStateIn(BaseModel):
