@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from . import cache, crud, migrate, models  # noqa: F401 — models: Base.metadata qeydiyyatı üçün
 from .config import settings
 from .database import Base, engine, get_db
+from .security import require_admin_key
 from .routers import (
     accounts,
     analytics,
@@ -48,9 +49,16 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/health/services", response_model=ServiceHealth, tags=["system"])
+# `/health` (sadə «ok») açıq qalır — onu Caddy və monitorinq çağırır.
+# Bu isə fərqlidir: hansı servislərin qalxdığını, LLM açarının təyin olunub-
+# olunmadığını və son ingest vaxtını deyir. İstifadəçiyə heç nə vermir,
+# hücumçuya isə sistemin xəritəsini verir. Frontend artıq onu çağırmır.
+@app.get(
+    "/health/services", response_model=ServiceHealth, tags=["system"],
+    dependencies=[Depends(require_admin_key)],
+)
 def health_services(db: Session = Depends(get_db)):
-    """Sistem statusu paneli üçün — hər sahə real yoxlamadan gəlir, heç nə fərz edilmir."""
+    """Daxili status — hər sahə real yoxlamadan gəlir, heç nə fərz edilmir."""
     try:
         db.execute(text("SELECT 1"))
         postgres_ok = True
