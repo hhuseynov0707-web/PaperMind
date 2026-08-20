@@ -62,8 +62,14 @@ fi
 
 # Sirr yoxlaması commit-dən ƏVVƏL. Bir dəfə push olunan açar geri qaytarıla
 # bilməz — yalnız ləğv edilə bilər, ona görə bu addım dayandırıcıdır.
+#
+# Naxış SİRR FAYLLARINI tutur, adında «backup» keçən skriptləri yox. Əvvəlki
+# variantda sadəcə `backup` sözü vardı və `scripts/backup.sh`-ı da işarələyirdi.
+# Yalançı həyəcan verən qoruyucu bir müddət sonra tamamilə nəzərə alınmır —
+# yəni belə naxış qorumanı gücləndirmir, zəiflədir.
 SECRETS=$(git status --porcelain | awk '{print $NF}' \
-          | grep -iE '(^|/)\.env($|\.)|\.key$|\.pem$|\.sql(\.gz)?$|backup' || true)
+          | grep -ivE '[.](sh|md|py|js|yml|yaml)$' \
+          | grep -iE '(^|/)[.]env($|[.])|[.](key|pem|asc|gpg|p12|pfx|jks)$|[.]sql([.]gz)?$|[.](dump|bak)$|id_(rsa|ed25519)$' || true)
 if [ -n "$SECRETS" ]; then
   bad "sirr ola bilən fayllar:"
   echo "$SECRETS" | sed 's/^/      /'

@@ -27,3 +27,7 @@ backup/
 qr*.b64
 papermind-qr.png
 .caddyfile.md5
+
+# Yedək açarları — REPODAN KƏNARDA saxlanılır (../papermind-keys/)
+*.asc
+*.gpg
