@@ -9,7 +9,11 @@ import requests
 from ..fields import FIELDS
 from .common import clean_abstract, get_with_retry, normalize_arxiv_id, usable
 
-API = "http://export.arxiv.org/api/query"
+# https: korpus açıq mətnlə çəkilirdi. Bu, brauzer «qarışıq məzmunu» deyil
+# (server-server çağırışdır), amma aradakı şəxs məqalə qeydlərini dəyişə
+# bilərdi — dəyişdirilmiş `pdf_url` istifadəçinin klikləyəcəyi keçidə,
+# dəyişdirilmiş xülasə isə birbaşa LLM kontekstinə düşür.
+API = "https://export.arxiv.org/api/query"
 NS = {"a": "http://www.w3.org/2005/Atom"}
 PAGE = 100
 RATE_LIMIT_S = 3.0          # arXiv qaydası: sorğular arasında ən azı 3 saniyə
