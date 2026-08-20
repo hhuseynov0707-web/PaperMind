@@ -20,6 +20,15 @@
   const S = {
     az: {
       sign_in: 'Daxil ol', sign_up: 'Hesab yarat', sign_out: 'Çıxış',
+      del_acct: 'Hesabı sil',
+      del_title: 'Hesabı silmək',
+      del_warn: 'Kitabxanan, yüklədiyin sənədlər və bütün tarixçən silinəcək. Bu, geri qaytarıla bilməz.',
+      del_grace: 'Hesab {d} tarixində silinəcək. O vaxta qədər fikrini dəyişə bilərsən.',
+      del_pw: 'Təsdiq üçün parolunu yaz',
+      del_go: 'Silinməni başlat',
+      del_undo: 'Silinməni ləğv et',
+      del_sub: 'Əvvəlcə abunəliyi ləğv et — əks halda hesab silinər, ödəniş davam edər.',
+      del_manage: 'Abunəliyi idarə et',
       email: 'E-poçt', password: 'Parol', name: 'Ad (istəyə görə)',
       login_title: 'Hesabına daxil ol', register_title: 'Yeni hesab',
       no_account: 'Hesabın yoxdur?', have_account: 'Artıq hesabın var?',
@@ -40,6 +49,15 @@
     },
     en: {
       sign_in: 'Sign in', sign_up: 'Create account', sign_out: 'Sign out',
+      del_acct: 'Delete account',
+      del_title: 'Delete your account',
+      del_warn: 'Your library, uploaded documents and all history will be removed. This cannot be undone.',
+      del_grace: 'Your account will be deleted on {d}. You can change your mind until then.',
+      del_pw: 'Enter your password to confirm',
+      del_go: 'Start deletion',
+      del_undo: 'Cancel deletion',
+      del_sub: 'Cancel your subscription first — otherwise the account goes but billing continues.',
+      del_manage: 'Manage subscription',
       email: 'Email', password: 'Password', name: 'Name (optional)',
       login_title: 'Sign in', register_title: 'Create your account',
       no_account: 'No account yet?', have_account: 'Already have an account?',
@@ -60,6 +78,15 @@
     },
     ru: {
       sign_in: 'Войти', sign_up: 'Создать аккаунт', sign_out: 'Выйти',
+      del_acct: 'Удалить аккаунт',
+      del_title: 'Удаление аккаунта',
+      del_warn: 'Библиотека, загруженные документы и вся история будут удалены. Отменить нельзя.',
+      del_grace: 'Аккаунт будет удалён {d}. До этого можно передумать.',
+      del_pw: 'Введите пароль для подтверждения',
+      del_go: 'Начать удаление',
+      del_undo: 'Отменить удаление',
+      del_sub: 'Сначала отмените подписку — иначе аккаунт исчезнет, а списания продолжатся.',
+      del_manage: 'Управление подпиской',
       email: 'Эл. почта', password: 'Пароль', name: 'Имя (необязательно)',
       login_title: 'Вход', register_title: 'Новый аккаунт',
       no_account: 'Нет аккаунта?', have_account: 'Уже есть аккаунт?',
@@ -243,6 +270,59 @@
 
   /* ------------------------------------------------------------ hesab paneli */
 
+  /* Tarixi oxunaqlı formata salır. Server ISO qaytarır; günü frontend-də
+     HESABLAMIRIQ — yalnız formatlayırıq, yoxsa möhlət dəyişəndə interfeys
+     səssizcə yalan danışardı. */
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString(
+        LANG === 'en' ? 'en-GB' : LANG === 'ru' ? 'ru-RU' : 'az-AZ',
+        { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return String(iso).slice(0, 10); }
+  }
+
+  async function openDeleteAccount() {
+    modal(`
+      <h2 class="pm-modal-title">${esc(t('del_title'))}</h2>
+      <p class="pm-danger-text">${esc(t('del_warn'))}</p>
+      <form id="del-form">
+        <label class="pm-label">${esc(t('del_pw'))}
+          <input type="password" id="del-pw" autocomplete="current-password" required>
+        </label>
+        <p class="pm-err" id="del-err" hidden></p>
+        <div class="pm-actions">
+          <button type="submit" class="pm-danger-btn">${esc(t('del_go'))}</button>
+        </div>
+      </form>
+    `);
+
+    $('#del-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = $('#del-err');
+      err.hidden = true;
+      try {
+        USER = await call('/api/auth/account/delete', {
+          method: 'POST',
+          body: JSON.stringify({ password: $('#del-pw').value }),
+        });
+        renderHeader();
+        openAccount();                       // möhlət zolağı ilə geri qayıdır
+      } catch (ex) {
+        // Aktiv abunəlik xüsusi haldır: sadəcə «alınmadı» demək faydasızdır,
+        // istifadəçiyə NƏ etməli olduğunu və hara getməli olduğunu deyirik.
+        const d = ex && ex.detail;
+        if (d && d.error === 'subscription_active') {
+          err.innerHTML = esc(t('del_sub')) +
+            (d.manage_url ? ` <a href="${esc(d.manage_url)}" target="_blank" rel="noopener">${esc(t('del_manage'))}</a>` : '');
+        } else {
+          err.textContent = (d && d.message) || (typeof d === 'string' ? d : t('del_warn'));
+        }
+        err.hidden = false;
+      }
+    });
+  }
+
   async function openAccount() {
     if (!USER) return openAuth('login');
     const pro = USER.plan === 'pro';
@@ -263,12 +343,26 @@
         ${pro ? '' : `<button type="button" class="pm-primary" id="acct-upgrade">${esc(t('upgrade'))}</button>`}
         <button type="button" class="pm-ghost" id="acct-signout">${esc(t('sign_out'))}</button>
       </div>
+      ${USER.deletion_requested_at ? `
+        <div class="pm-danger-note">
+          <p>${esc(t('del_grace').replace('{d}', fmtDate(USER.deletion_effective_at)))}</p>
+          <button type="button" class="pm-ghost" id="acct-undel">${esc(t('del_undo'))}</button>
+        </div>` : `
+        <button type="button" class="pm-danger-link" id="acct-del">${esc(t('del_acct'))}</button>`}
     `);
 
     const up = $('#acct-upgrade');
     // Ox funksiyası VACİBDİR: `openPricing`-i birbaşa bağlasaq, o, ilk arqument
     // kimi hadisə obyektini alır və pəncərədə «[object PointerEvent]» görünür.
     if (up) up.addEventListener('click', () => openPricing());
+    const del = $('#acct-del');
+    if (del) del.addEventListener('click', openDeleteAccount);
+    const undel = $('#acct-undel');
+    if (undel) undel.addEventListener('click', async () => {
+      USER = await call('/api/auth/account/delete/cancel', { method: 'POST' });
+      renderHeader();
+      openAccount();
+    });
     $('#acct-signout').addEventListener('click', async () => {
       await call('/api/auth/logout', { method: 'POST' }).catch(() => {});
       USER = null;

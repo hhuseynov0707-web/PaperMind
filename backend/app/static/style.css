@@ -691,6 +691,60 @@ main { display: flex; flex-direction: column; gap: var(--gap-section); min-width
 .ftr a:hover { color: var(--text-2); }
 
 
+/* ---------- hesabın silinməsi (təhlükə zonası) ----------
+
+   Vizual olaraq QƏSDƏN sakitdir. Silmə düyməsi əsas əməliyyatlarla eyni
+   çəkidə olsaydı, təsadüfi klik ehtimalı artardı; burada isə səhv klikin
+   qiyməti bütün kitabxana və sənədlərdir. Ona görə keçid kimi görünür,
+   təsdiq isə ayrıca pəncərədə parol tələb edir. */
+
+.pm-danger-link {
+  display: block; width: 100%; margin-top: var(--sp-5);
+  background: none; border: 0; padding: var(--sp-2);
+  color: var(--text-3); font-size: 13px; text-decoration: underline;
+  text-underline-offset: 3px; transition: color var(--t);
+}
+.pm-danger-link:hover { color: var(--err); }
+
+.pm-danger-text {
+  margin: 0 0 var(--sp-5); font-size: 14.5px; line-height: 1.6;
+  color: var(--text-2); max-width: 46ch;
+}
+
+.pm-danger-btn {
+  width: 100%; padding: 12px 18px; border-radius: var(--r-md);
+  background: var(--err-soft); color: var(--err);
+  border: 1px solid rgba(248, 113, 113, .4);
+  font-size: 14.5px; font-weight: 600;
+  transition: background var(--t), border-color var(--t);
+}
+.pm-danger-btn:hover { background: rgba(248, 113, 113, .2); border-color: var(--err); }
+.pm-danger-btn:active { transform: scale(.98); }
+
+/* Möhlət zolağı — hesab silinməyə işarələnib, amma hələ oradadır. */
+.pm-danger-note {
+  margin-top: var(--sp-5); padding: var(--sp-4);
+  background: var(--err-soft); border: 1px solid rgba(248, 113, 113, .3);
+  border-radius: var(--r-md);
+}
+.pm-danger-note p { margin: 0 0 var(--sp-3); font-size: 14px; color: var(--text); }
+
+.pm-label {
+  display: block; margin-bottom: var(--sp-4);
+  font-size: 13px; color: var(--text-2);
+}
+.pm-label input {
+  display: block; width: 100%; margin-top: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 11px 13px;
+  color: var(--text); font-size: 15px;
+}
+.pm-label input:focus { border-color: var(--accent-2); outline: none; }
+
+@media (pointer: coarse) {
+  .pm-danger-link, .pm-danger-btn { min-height: 44px; }
+}
+
 /* ========================= ayrıca səhifə görünüşü =========================
 
    Bölmə siyahısı BURADA da yoxdur. Üç qayda seçici gücünə görə sıralanıb:
