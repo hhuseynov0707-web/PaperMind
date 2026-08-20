@@ -127,21 +127,21 @@ PLAN_FEATURES: dict[str, dict[str, list[str]]] = {
             f"Ayda {settings.pro_monthly_credits} tədqiqat krediti",
             f"Kitabxanada {settings.pro_library_limit} məqalə",
             "Ziddiyyət analizi və tədqiqat boşluqları",
-            "Tezliklə: öz PDF sənədlərini yüklə və sual ver",
+            "Öz PDF sənədlərini yüklə və onlar haqqında sual ver",
             "Tezliklə: bütün kitabxanan üzrə sintez",
         ],
         "en": [
             f"{settings.pro_monthly_credits} research credits per month",
             f"{settings.pro_library_limit} papers in your library",
             "Contradiction analysis and research gaps",
-            "Coming soon: upload your own PDFs and ask about them",
+            "Upload your own PDFs and ask questions about them",
             "Coming soon: synthesis across your entire library",
         ],
         "ru": [
             f"{settings.pro_monthly_credits} кредитов в месяц",
             f"{settings.pro_library_limit} статей в библиотеке",
             "Анализ противоречий и исследовательских пробелов",
-            "Скоро: загрузка собственных PDF и вопросы по ним",
+            "Загрузка собственных PDF и вопросы по ним",
             "Скоро: синтез по всей библиотеке",
         ],
     },
@@ -151,7 +151,13 @@ PLAN_FEATURES: dict[str, dict[str, list[str]]] = {
 # yazılanda gating hazır olsun — amma satış mətnində «tezliklə» kimi
 # işarələnirlər. Endpoint işə düşəndə ad buradan çıxarılır və eyni anda
 # PLAN_FEATURES-dəki «tezliklə» prefiksi silinir.
-COMING_SOON: frozenset[str] = frozenset({UPLOAD_PDF, ASK_LIBRARY})
+# ASK_LIBRARY hələ qurulmayıb — router-i yoxdur. UPLOAD_PDF isə 2026-08-19-da
+# canlıya çıxdı, ona görə siyahıdan götürüldü.
+#
+# QEYD: `is_available()` heç yerdə çağırılmır. Yəni bu çoxluq HEÇ NƏYİ
+# bağlamır — sadəcə satış mətnini idarə edir. Gerçək bağlama `capabilities`
+# ilə olur (bax `_free()` / `_pro()`).
+COMING_SOON: frozenset[str] = frozenset({ASK_LIBRARY})
 
 
 def is_available(action: str) -> bool:
