@@ -1,0 +1,46 @@
+# BİRBAŞA asılılıqlar — əl ilə redaktə olunan yeganə fayl.
+#
+# `requirements.txt` BUNDAN yaradılır və ƏLLƏ REDAKTƏ EDİLMİR:
+#
+#     bash scripts/lock-deps.sh
+#
+# Orada həm transitiv paketlər (45-ə yaxın), həm də hər faylın SHA-256
+# həshi olur. Həsh olmasa versiya sabitliyi yarımçıqdır: `fastapi==0.141.1`
+# həmişə eyni versiyanı çəkir, amma həmin versiyanın faylı reyestrdə əvəz
+# olunsaydı, bunu tutan heç nə yoxdur. Həsh məhz o boşluğu bağlayır.
+#
+# ## Niyə burada da `==` var
+#
+# Adətən bu fayl boş diapazon (`>=`) saxlayır və kilid ən yenisini seçir.
+# Burada isə dəqiq versiyalar var, çünki bunlar istehsalatda İŞLƏYƏN və
+# test dəstinin keçdiyi versiyalardır. `>=` qoysaydıq, növbəti kilid
+# yeniləməsi sınaqdan keçməmiş versiyaları səssizcə gətirərdi.
+#
+# ## Yeniləmə qaydası
+#
+# Hamısını birdən qaldırma. Əvvəl yamaq buraxılışları (x.y.Z), ayrıca
+# commit-lə; sonra minor (x.Y.z); əsas versiya atlamaları (X.y.z) hər biri
+# ayrıca, dəyişiklik qeydləri oxunaraq. Hər dəfə: bu faylı dəyiş →
+# `lock-deps.sh` → testlər → deploy.
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+sqlalchemy==2.0.52
+psycopg2-binary==2.9.12
+pgvector==0.5.0
+redis==8.1.0
+pydantic==2.13.4
+pydantic-settings==2.15.0
+fastembed==0.8.0          # cross-encoder rerank dəstəyi (§5 ölçməsi üçün)
+groq==1.6.0
+feedparser==6.0.14
+requests==2.34.2
+
+# Parol həshi. OWASP-ın birinci seçimi argon2id-dir; öz sxemimizi qurmuruq
+# və parametr seçimini kitabxanaya buraxırıq.
+argon2-cffi==25.1.0
+
+pytest==9.1.1
+httpx==0.28.1             # FastAPI TestClient üçün
+pypdf==6.16.1             # BSD lisenziya. PyMuPDF AGPL-dir və kommersiya məhsulunda işlədilə bilməz.
+python-multipart==0.0.32  # fayl yükləmə (UploadFile) üçün FastAPI tələb edir
