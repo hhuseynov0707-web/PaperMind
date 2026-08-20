@@ -1,21 +1,4 @@
-# Sətir sonu normallaşdırması.
-#
-# Layihə Windows-da yazılır, Linux konteynerində işləyir. Windows-un CRLF
-# sətir sonu shell skriptlərinə düşəndə Linux `#!/usr/bin/env bash\r` görür və
-# "bad interpreter: ^M" xətası verir. Aşağıdakı fayllar həmişə LF ilə saxlanılır.
-
-* text=auto
-
-*.sh      text eol=lf
-*.py      text eol=lf
-*.yml     text eol=lf
-*.yaml    text eol=lf
-*.json    text eol=lf
-Dockerfile text eol=lf
-Caddyfile  text eol=lf
-.env.example text eol=lf
-
-# Binar fayllar toxunulmur
-*.png binary
-*.jpg binary
-*.pdf binary
+# .bat fayllari CRLF olmalidir — LF ile cmd.exe emrleri korlayir
+# (echo -> cho). Git-in avtomatik cevirmesine buraxmiriq.
+*.bat text eol=crlf
+*.sh  text eol=lf
