@@ -81,3 +81,11 @@ body.legal {
   border-top: 1px solid var(--border);
   font-size: .86rem;
 }
+
+/* Silmə bölməsində alt başlıqlar var — h2-dən kiçik, mətndən güclü. */
+h3 {
+  margin: 1.6rem 0 .5rem;
+  font-size: 1.02rem;
+  color: var(--text, #FAFAFA);
+  font-weight: 600;
+}

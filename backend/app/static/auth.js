@@ -273,11 +273,20 @@
   /* Tarixi oxunaqlı formata salır. Server ISO qaytarır; günü frontend-də
      HESABLAMIRIQ — yalnız formatlayırıq, yoxsa möhlət dəyişəndə interfeys
      səssizcə yalan danışardı. */
+  /* Azərbaycan ayları ƏL İLƏ verilir.
+     `toLocaleDateString('az-AZ', {month:'long'})` brauzerdə «M09» qaytarır —
+     `az-AZ` üçün ay adları CLDR məlumatında yoxdur. Yəni istifadəçiyə
+     «Hesab 2026 M09 19 tarixində silinəcək» yazılırdı. */
+  const AZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+                     'iyul', 'avqust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
+
   function fmtDate(iso) {
     if (!iso) return '';
     try {
-      return new Date(iso).toLocaleDateString(
-        LANG === 'en' ? 'en-GB' : LANG === 'ru' ? 'ru-RU' : 'az-AZ',
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10);
+      if (LANG === 'az') return `${d.getDate()} ${AZ_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+      return d.toLocaleDateString(LANG === 'ru' ? 'ru-RU' : 'en-GB',
         { day: 'numeric', month: 'long', year: 'numeric' });
     } catch { return String(iso).slice(0, 10); }
   }
