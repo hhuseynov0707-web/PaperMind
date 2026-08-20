@@ -15,7 +15,7 @@ set -uo pipefail
 HOST="${PM_HOST:-root@2.28.22.89}"
 KEY="${PM_KEY:-$HOME/.ssh/papermind}"
 REMOTE_DIR="${PM_DIR:-/root/papermind}"
-SITE="${PM_SITE:-https://papermind.duckdns.org}"
+SITE="${PM_SITE:-https://pmind.online}"
 
 G='\033[32m'; R='\033[31m'; Y='\033[33m'; C='\033[36m'; N='\033[0m'
 ok()   { printf "  ${G}OK${N}    %s\n" "$1"; }
