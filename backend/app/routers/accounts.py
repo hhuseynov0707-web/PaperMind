@@ -150,6 +150,7 @@ def list_plans(lang: str = "az"):
                 label=plan.label,
                 monthly_credits=plan.monthly_credits,
                 library_limit=plan.library_limit,
+                price_label=plan.price_label,
                 capabilities=sorted(plan.capabilities),
                 features=features.get(lang, features.get("az", [])),
             )

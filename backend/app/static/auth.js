@@ -394,7 +394,7 @@
       return `
         <div class="pm-plan ${isPro ? 'pro' : ''}">
           <h3>${esc(p.label)}</h3>
-          ${isPro ? '' : `<p class="pm-plan-price">${esc(t('free_forever'))}</p>`}
+          <p class="pm-plan-price">${esc(p.price_label || t('free_forever'))}</p>
           <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
           ${isCurrent
             ? `<span class="pm-current">${esc(t('current'))}</span>`
@@ -490,6 +490,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderHeader();
     refresh();
+    // Girişsiz də işləyir — `openPricing` yalnız açıq `/api/auth/plans`-ı
+    // oxuyur; «yüksəlt» düyməsi basılanda giriş tələbi onsuz da çıxır.
+    const fp = document.getElementById('ftr-pricing');
+    if (fp) fp.addEventListener('click', () => openPricing());
     // Checkout-dan qayıdış: plan webhook ilə dəyişir, ona görə bir az gecikmə
     // ilə yenilənir — dərhal oxusaq hələ köhnə planı görə bilərik.
     if (new URLSearchParams(location.search).get('upgraded') === '1') {

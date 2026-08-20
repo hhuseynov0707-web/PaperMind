@@ -1293,3 +1293,21 @@ body.view-page .page-on > .panel-head h2 { font-size: clamp(26px, 3vw, 34px); }
   cursor: pointer; padding: 0;
 }
 .doc-del:hover { color: var(--err); }
+
+/* Altbilgidəki düymə keçid kimi görünməlidir — yanındakılar <a>-dır.
+
+   `margin-left: auto` BUNA verilir, çünki mövcud qayda onu `.ftr a`-ya
+   verirdi və boşluğu BİRİNCİ keçid udurdu. Düymə onlardan əvvəl gəldiyi
+   üçün, düzəliş olmasa qiymət keçidi solda tək qalar, qalan üçü sağda
+   olardı. `~ a` sonrakı keçidlərdən avtomatik boşluğu götürür ki, dördü
+   birlikdə sağda dursun. */
+.ftr-link {
+  margin-left: auto;
+  background: none; border: 0; padding: 0;
+  color: var(--text-3); font-size: 12px; text-decoration: none;
+  transition: color var(--t);
+}
+.ftr-link ~ a { margin-left: 0; }
+.ftr-link:hover { color: var(--text-2); text-decoration: underline; }
+
+@media (pointer: coarse) { .ftr-link { min-height: 44px; } }

@@ -158,6 +158,14 @@ class Settings(BaseSettings):
     paddle_client_token: str = ""
     paddle_webhook_secret: str = ""
     paddle_price_id_pro: str = ""
+
+    # Qiymət SAYTDA göstərilməlidir, yalnız Paddle-ın içində yox.
+    # İki səbəb: (1) ödəniş provayderinin domen təsdiqi bunu tələb edir,
+    # (2) neçəyə olduğunu görməyən adam «yüksəlt» düyməsinə basmır.
+    # Faktiki məbləği Paddle idarə edir — bu, yalnız GÖSTƏRİLƏN etiketdir,
+    # ona görə ikisi bir-birindən ayrı düşməsin deyə tək yerdə saxlanılır.
+    pro_price_label: str = "$3"
+    pro_price_period: str = "ay"
     paddle_environment: str = "sandbox"     # sandbox | production
     # Checkout-dan qayıdış üçün. Boş qalsa sorğunun öz host-u işlədilir.
     public_base_url: str = ""

@@ -280,6 +280,8 @@ class PlanOut(BaseModel):
     label: str
     monthly_credits: int
     library_limit: int
+    # Girişsiz də görünür — qiymət açıq olmalıdır.
+    price_label: str | None = None
     capabilities: list[str]
     features: list[str] = []
 

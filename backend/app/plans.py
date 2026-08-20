@@ -39,6 +39,7 @@ class Plan:
     label: str
     monthly_credits: int
     library_limit: int
+    price_label: str | None = None
     capabilities: frozenset[str] = field(default_factory=frozenset)
 
 
@@ -60,6 +61,7 @@ def _pro() -> Plan:
         label="Pro",
         monthly_credits=settings.pro_monthly_credits,
         library_limit=settings.pro_library_limit,
+        price_label=f"{settings.pro_price_label} / {settings.pro_price_period}",
         capabilities=frozenset(
             {ASK, SAVE, INSIGHTS, COMPARE, CONFLICTS, GAPS, UPLOAD_PDF, ASK_LIBRARY}
         ),
