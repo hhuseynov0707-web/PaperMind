@@ -45,9 +45,9 @@ class PaperIn(BaseModel):
     pmid: str | None = Field(default=None, max_length=MAX_ID)
     openalex_id: str | None = Field(default=None, max_length=MAX_ID)
     primary_category: str | None = Field(default=None, max_length=64)
-    categories: list[str] = []
-    field_keys: list[str] = []
-    authors: list[str] = []
+    categories: list[str] = Field(default=[], max_length=64)
+    field_keys: list[str] = Field(default=[], max_length=32)
+    authors: list[str] = Field(default=[], max_length=500)
     published_at: datetime | None = None
     pdf_url: str | None = Field(default=None, max_length=MAX_URL)
     language: str | None = Field(default=None, max_length=8)  # verilməsə mətndən təyin olunur
@@ -181,7 +181,9 @@ class ChatTurn(BaseModel):
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
     top_k: int = Field(5, ge=1, le=10)
-    field: str | None = None  # sahə açarı (fields.FIELDS) — axtarışı daraldır
+    # Ağ siyahı `ask.py`-dədir (FIELDS). Buradakı hədd yalnız uzun dəyərin
+    # xəta mesajında GERİ ƏKS OLUNMASININ qarşısını alır.
+    field: str | None = Field(default=None, max_length=64)
     # Söhbətin davam etməsi üçün. Son 6 növbə saxlanılır (llm._clean_history).
     history: list[ChatTurn] = Field(default=[], max_length=20)
 
@@ -302,7 +304,7 @@ class UserOut(BaseModel):
 
 
 class SavePaperRequest(BaseModel):
-    paper_id: int
+    paper_id: int = Field(ge=1)
     note: str | None = Field(default=None, max_length=2000)
 
 
@@ -451,7 +453,7 @@ class SummaryOut(BaseModel):
 
 class DigestIn(BaseModel):
     week_start: date
-    content: str
+    content: str = Field(max_length=200_000)
 
 
 class DigestOut(BaseModel):
@@ -464,9 +466,9 @@ class DigestOut(BaseModel):
 
 
 class ErrorIn(BaseModel):
-    workflow: str
+    workflow: str = Field(max_length=200)
     node: str | None = None
-    message: str
+    message: str = Field(max_length=20_000)
 
 
 class ErrorOut(BaseModel):

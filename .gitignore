@@ -26,3 +26,4 @@ backup/
 *.sql.gz
 qr*.b64
 papermind-qr.png
+.caddyfile.md5

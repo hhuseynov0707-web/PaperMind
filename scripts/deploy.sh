@@ -87,6 +87,25 @@ if ! $C up -d --build backend; then
 fi
 ok "backend qaldırıldı"
 
+# Caddyfile TƏK FAYL kimi mount olunub (`./Caddyfile:/etc/caddy/Caddyfile`).
+# `git pull` faylı dəyişmir — ƏVƏZ EDİR, yəni inode dəyişir. Konteyner isə
+# köhnə inode-a baxmağa davam edir, ona görə nə `reload`, nə də restart
+# yeni məzmunu görür. Bu, səssiz nasazlıqdır: deploy «OK» deyir, təhlükəsizlik
+# başlıqları isə heç vaxt tətbiq olunmur.
+#
+# Ona görə fayl dəyişəndə konteyner YENİDƏN YARADILIR — mount o zaman
+# yenidən həll olunur. Dəyişməyibsə toxunulmur (bir-iki saniyəlik kəsinti).
+CADDY_NOW=$(md5sum Caddyfile 2>/dev/null | cut -d" " -f1)
+CADDY_WAS=$(cat .caddyfile.md5 2>/dev/null || echo "")
+if [ "$CADDY_NOW" != "$CADDY_WAS" ]; then
+  if $C exec -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1 || true; then
+    $C up -d --force-recreate caddy >/dev/null 2>&1 && ok "Caddy yenidən yaradıldı (konfiqurasiya dəyişib)"
+    echo "$CADDY_NOW" > .caddyfile.md5
+  fi
+else
+  ok "Caddy konfiqurasiyası dəyişməyib"
+fi
+
 # --------------------------------------------------------------- 3. sağlamlıq
 
 info "3/5 · Backend hazırlanır"
