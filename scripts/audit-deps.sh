@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Asılılıq zəifliyi taraması.
 #
-#   bash scripts/audit-deps.sh          # istehsalatda İŞLƏYƏN dəsti yoxlayır
-#   bash scripts/audit-deps.sh --local  # yalnız requirements.txt-i yoxlayır
+#   bash scripts/audit-deps.sh        # istehsalatda İŞLƏYƏN dəsti yoxlayır
+#   bash scripts/audit-deps.sh --env  # LOKAL quraşdırılmış mühiti yoxlayır
 #
 # Niyə serverdə işləyir:
 #   `uvloop` yalnız Linux üçündür. Windows-da `pip-audit` asılılıqları həll
@@ -22,11 +22,17 @@ IMG="python:3.12-slim"
 
 cd "$(dirname "$0")/.." || exit 1
 
-if [ "${1:-}" = "--local" ]; then
-  echo "==> Lokal: backend/requirements.txt (yalnız birbaşa asılılıqlar)"
-  # PYTHONUTF8: fayldakı şərhlər Azərbaycan hərfləri daşıyır; pip-audit-in
-  # oxuyucusu isə standart olaraq sistem kodlaşdırmasını (cp1252) işlədir.
-  PYTHONUTF8=1 python -m pip_audit -r backend/requirements.txt --progress-spinner off
+# `-r fayl` rejimi Windows-da İŞLƏMİR və işləyə də bilməz: pip-audit faylı
+# oxuyanda asılılıqları HƏLL EDİR, həll isə `uvloop`-u qurmağa çalışır —
+# o paket yalnız Linux üçündür. `--no-deps` da kömək etmir, çünki quraşdırma
+# addımı yenə işə düşür.
+#
+# Ona görə lokal variant faylı yox, MÜHİTİ yoxlayır: nə quraşdırılıbsa onu.
+# Bu, istehsalat dəsti DEYİL — orada fərqli paketlər ola bilər, ona görə
+# əsas rejim aşağıdakıdır.
+if [ "${1:-}" = "--env" ]; then
+  echo "==> Lokal quraşdırılmış mühit (istehsalat DEYİL)"
+  python -m pip_audit --progress-spinner off
   exit $?
 fi
 
