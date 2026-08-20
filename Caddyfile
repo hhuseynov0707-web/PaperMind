@@ -6,10 +6,32 @@
 
 	# Təhlükəsizlik başlıqları
 	header {
+		# 1 il. `preload` QOYULMUR: preload siyahısına düşmək birtərəfli
+		# qapıdır (çıxmaq aylar çəkir), üstəlik duckdns.org paylaşılan
+		# suffiksdir — öz domenimiz olanda yenidən baxılmalıdır.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# İşlətmədiyimiz brauzer imkanları bağlanır. `payment` Paddle üçün
+		# açıq qalır — checkout onu tələb edir.
+		Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(self), usb=(), xr-spatial-tracking=()"
+
+		# CSP əvvəlcə YALNIZ RAPOR rejimindədir: brauzer pozuntunu konsola
+		# yazır, amma HEÇ NƏYİ BLOKLAMIR. Bir neçə gün real istifadədən
+		# sonra konsolda pozuntu görünmürsə, başlığın adından
+		# `-Report-Only` hissəsini silib məcburi rejimə keçirmək olar.
+		#
+		# Siyahıdakı kənar mənbələr (yalnız bu ikisi işlənir):
+		#   cdn.jsdelivr.net  → Chart.js (trend qrafiki)
+		#   *.paddle.com      → Paddle.js, checkout iframe-i və onun XHR-ləri
+		#
+		# `style-src 'unsafe-inline'` məcburidir: kart rəngləri və vərəqləmə
+		# animasiyası JS-də `style="..."` atributu ilə verilir. Skriptlərdə
+		# isə `unsafe-inline` YOXDUR — index.html-də inline <script> yoxdur.
+		Content-Security-Policy-Report-Only `default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdn.paddle.com https://*.paddle.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.paddle.com; font-src 'self'; connect-src 'self' https://*.paddle.com; frame-src https://*.paddle.com; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'`
+
 		-Server
 	}
 

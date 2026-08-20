@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
-from .. import auth, models, plans
+from .. import auth, limits, models, plans
 from ..config import settings
 from ..database import get_db
 from ..schemas import LoginRequest, PlanOut, RegisterRequest, UserOut
@@ -40,9 +40,9 @@ def register(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    auth.limit_auth_attempt(request, "signup", settings.signup_rate_limit)
-
     email = auth.normalize_email(req.email)
+    limits.enforce("signup", ip=auth.client_ip(request), account=email)
+
     if not auth.valid_email(email):
         raise HTTPException(status_code=422, detail="E-poçt ünvanı düzgün deyil.")
 
@@ -77,9 +77,11 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    auth.limit_auth_attempt(request, "login", settings.login_rate_limit)
-
     email = auth.normalize_email(req.email)
+    # Həm ünvana, həm HESABA. Yalnız IP limiti olsaydı, botnet hər ünvandan
+    # bir parol sınayıb limitə heç vaxt dəyməzdi.
+    limits.enforce("login", ip=auth.client_ip(request), account=email)
+
     user = db.query(models.User).filter(models.User.email == email).first()
 
     # Hesab yoxdursa da həsh hesablanır: cavab müddəti «bu e-poçt var» siqnalı

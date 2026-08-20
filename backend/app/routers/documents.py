@@ -25,7 +25,7 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import auth, models, pdf, plans
+from .. import auth, limits, models, pdf, plans
 from ..config import settings
 from ..database import SessionLocal, get_db
 from ..providers import get_embedder
@@ -138,6 +138,31 @@ def _process(document_id: int, chunks: list[tuple[int, str]]) -> None:
 
 # ----------------------------------------------------------------- endpoint
 
+async def _read_capped(file: UploadFile) -> bytes:
+    """Faylı hissə-hissə oxuyur və limiti keçən kimi DAYANDIRIR.
+
+    Əvvəl `await file.read()` bütün faylı yaddaşa alırdı, 20 MB limiti isə
+    ondan SONRA `pdf.parse()` içində yoxlanılırdı. Yəni 2 GB-lıq yükləmə
+    limitə heç çatmadan konteynerin yaddaşını tükədirdi — hesabı olan bir
+    nəfər serveri yıxa bilərdi.
+
+    İndi limit oxumanın İÇİNDƏDİR: 20 MB-ı keçən bayt heç vaxt yaddaşa
+    yığılmır. 413 qaytarılır (422 yox) — semantik olaraq doğrudur və
+    proxy səviyyəsində də eyni koddur.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(64 * 1024):
+        total += len(chunk)
+        if total > pdf.MAX_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Fayl çox böyükdür. Limit: {pdf.MAX_BYTES // 1024 // 1024} MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post("", response_model=DocumentOut, status_code=201)
 async def upload(
     background: BackgroundTasks,
@@ -145,7 +170,9 @@ async def upload(
     db: Session = Depends(get_db),
     user: models.User = Depends(auth.require_capability(plans.UPLOAD_PDF)),
 ):
-    data = await file.read()
+    limits.enforce("upload", user_id=user.id)
+
+    data = await _read_capped(file)
     if not data:
         raise HTTPException(status_code=422, detail="Fayl boşdur.")
 

@@ -444,6 +444,19 @@ const catName = (c) => (c ? CAT_NAMES[LANG][c] ?? c : '—');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/* esc() HTML-i qaçırır, amma SXEMİ dayandırmır: `javascript:alert(1)`
+   içində heç bir xüsusi simvol yoxdur, ona görə escape-dən toxunulmaz
+   çıxır və klikdə işləyir.
+
+   `pdf_url` bizim yazdığımız dəyər deyil — arXiv, Crossref, DOAJ və
+   OpenAlex cavablarından gəlir. Zəhərlənmiş və ya saxta bir qeyd kifayətdir.
+   Ona görə sxem AĞ SİYAHI ilə yoxlanılır: yalnız http/https keçir,
+   qalanı zərərsiz '#' olur. */
+const safeUrl = (u) => {
+  const v = String(u ?? '').trim();
+  return /^https?:\/\//i.test(v) ? v : '#';
+};
+
 const nf = () => new Intl.NumberFormat(LANG === 'en' ? 'en-US' : LANG === 'ru' ? 'ru-RU' : 'az-AZ');
 const num = (n) => nf().format(n);
 
@@ -782,7 +795,7 @@ async function runSearch(q) {
       <article class="paper" data-paper-id="${p.id}">
         <div>${relevanceRing(h.score)}</div>
         <div>
-          <a class="paper-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+          <a class="paper-title" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">${esc(p.title)}</a>
           <div class="paper-meta">
             <span class="field" title="${esc(p.primary_category || '')}">${esc(catName(p.primary_category))}</span>
             <span class="sep">·</span><span>${p.published_at ? dmy(p.published_at) : ''}</span>
@@ -896,7 +909,7 @@ async function runAsk(q) {
         <div class="sources-head">${t('sources_head')}</div>
         <div class="sources">
           ${data.sources.map((s, i) => `
-            <a class="source" id="src-${i + 1}" href="${esc(s.pdf_url || '#')}" target="_blank" rel="noopener">
+            <a class="source" id="src-${i + 1}" href="${esc(safeUrl(s.pdf_url))}" target="_blank" rel="noopener">
               <span class="idx">${i + 1}</span>
               <span class="st"><b>${esc(s.title)}</b><span>${esc(paperRef(s))}</span></span>
               <span class="sc">${Math.round(s.score * 100)}% ${esc(t('rel_short'))}</span>
@@ -1192,7 +1205,7 @@ function renderDeck(dir = 1) {
         <span class="sep">·</span><span class="aid">${esc(paperRef(p))}</span>
         ${langChip(p)}${sourceChips(p)}
       </div>
-      <a class="deck-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+      <a class="deck-title" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">${esc(p.title)}</a>
       ${authors ? `<div class="deck-meta">${esc(authors)}</div>` : ''}
       <p class="deck-abs">${esc(p.abstract)}</p>
       ${paperActions(p)}
@@ -1250,9 +1263,9 @@ function renderSpot() {
   $('#spot-body').innerHTML = `
     <div class="spot-item">
       <span class="spot-field" title="${esc(p.primary_category || '')}">${esc(catName(p.primary_category))}</span>
-      <a class="spot-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+      <a class="spot-title" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">${esc(p.title)}</a>
       <p class="spot-abs">${esc(p.abstract)}</p>
-      <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
+      <a class="act" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">
         <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         ${t('act_read')}</a>
     </div>`;
@@ -1340,7 +1353,7 @@ function paperActions(p) {
 
   return `
     <div class="paper-actions">
-      <a class="act" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">
+      <a class="act" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">
         <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2H2.5v9.5H12V9M8 2h4v4M12 2 6.5 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         ${t('act_read')}</a>
       <button type="button" class="act ai" data-ask="${esc(p.title)}">
@@ -1498,7 +1511,7 @@ function renderLibrary() {
             <span class="sep">·</span><span>${when ? dmy(when) : ''}</span>
             <span class="sep">·</span><span class="aid">${esc(paperRef(p))}</span>
           </div>
-          <a class="paper-title" href="${esc(p.pdf_url || '#')}" target="_blank" rel="noopener">${esc(p.title)}</a>
+          <a class="paper-title" href="${esc(safeUrl(p.pdf_url))}" target="_blank" rel="noopener">${esc(p.title)}</a>
           <p class="paper-abs">${esc(p.abstract)}</p>
           ${paperActions(p)}
         </div>

@@ -1,19 +1,38 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-sqlalchemy>=2.0
-psycopg2-binary>=2.9
-pgvector>=0.2.5
-redis>=5.0
-pydantic>=2.6
-pydantic-settings>=2.2
-fastembed>=0.4   # >=0.4: cross-encoder rerank dəstəyi (§5 ölçməsi üçün)
-groq>=0.9
-feedparser>=6.0
-requests>=2.31
+# Versiyalar DƏQİQ sabitlənib (`==`), `>=` deyil.
+#
+# Əvvəl hamısı `>=` idi və lock faylı yox idi. Bunun iki nəticəsi var idi:
+#
+#   1. Build təkrarlanmırdı. Bu gün işləyən image sabah fərqli versiyalarla
+#      qurulurdu; nasazlıq olanda «dünən nə fərqli idi» sualına cavab yox idi.
+#   2. Təchizat zənciri açıq idi. Asılılıqlardan birinin yeni buraxılışı
+#      zərərli olsaydı, növbəti `docker build` onu SƏSSİZCƏ çəkərdi —
+#      heç kim heç nə dəyişdirmədən.
+#
+# Buradakı versiyalar istehsalatda HAZIRDA işləyən dəstdir (2026-08-20
+# konteynerindən `pip freeze` ilə götürülüb), yəni sınaqdan keçmiş vəziyyət.
+#
+# Yeniləmə qaydası: hamısını birdən qaldırma. Əvvəl yamaq buraxılışları
+# (x.y.Z), ayrıca commit-lə; sonra minor (x.Y.z); əsas versiya atlamaları
+# (X.y.z) hər biri ayrıca, dəyişiklik qeydləri oxunaraq.
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+sqlalchemy==2.0.52
+psycopg2-binary==2.9.12
+pgvector==0.5.0
+redis==8.1.0
+pydantic==2.13.4
+pydantic-settings==2.15.0
+fastembed==0.8.0          # cross-encoder rerank dəstəyi (§5 ölçməsi üçün)
+groq==1.6.0
+feedparser==6.0.14
+requests==2.34.2
+
 # Parol həshi. OWASP-ın birinci seçimi argon2id-dir; öz sxemimizi qurmuruq və
 # parametr seçimini kitabxanaya buraxırıq.
-argon2-cffi>=23.1
-pytest>=8.0
-httpx>=0.27      # FastAPI TestClient üçün
-pypdf>=5.0        # BSD lisenziya. PyMuPDF AGPL-dir ve kommersiya mehsulunda islədilə bilməz.
-python-multipart>=0.0.9   # fayl yukleme (UploadFile) ucun FastAPI teleb edir
+argon2-cffi==25.1.0
+
+pytest==9.1.1
+httpx==0.28.1             # FastAPI TestClient üçün
+pypdf==6.16.1             # BSD lisenziya. PyMuPDF AGPL-dir və kommersiya məhsulunda işlədilə bilməz.
+python-multipart==0.0.32  # fayl yükləmə (UploadFile) üçün FastAPI tələb edir
