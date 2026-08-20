@@ -100,7 +100,10 @@ rm -f "$RAW"                       # açıq nüsxə serverdə QALMIR
 echo "[$(date '+%F %T')] hazırdır ($RAW_SIZE -> $(du -h "$ENC" | cut -f1), şifrələnmiş)"
 
 # Köhnə nüsxələr
-ls -1t "$DIR"/papermind-*.sql.gz.gpg 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
+# `|| true` VACİBDİR: glob uyğunluq tapmayanda `ls` sıfırdan fərqli kod
+# qaytarır, `pipefail` onu boruya ötürür və `set -e` skripti öldürür —
+# özü də məhz NORMAL vəziyyətdə, yəni təmizləyəcək fayl qalmayanda.
+{ ls -1t "$DIR"/papermind-*.sql.gz.gpg 2>/dev/null || true; } | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -f "$old"
   echo "  silindi: $(basename "$old")"
 done
@@ -110,7 +113,7 @@ done
 # yedək TARİXÇƏSİNİ məhv etməməlidir. Şifrələnməmiş fayl problemdir, amma
 # həlli onu şifrələməkdir — yox etmək yox. Yalnız çevrilmə uğursuz olsa
 # fayl yerində qalır ki, əl ilə baxmaq mümkün olsun.
-ls -1 "$DIR"/papermind-*.sql.gz 2>/dev/null | while read -r plain; do
+{ ls -1 "$DIR"/papermind-*.sql.gz 2>/dev/null || true; } | while read -r plain; do
   target="$plain.gpg"
   if [ -f "$target" ]; then
     rm -f "$plain"
@@ -123,7 +126,7 @@ ls -1 "$DIR"/papermind-*.sql.gz 2>/dev/null | while read -r plain; do
   fi
 done
 
-echo "  saxlanılan: $(ls -1 "$DIR"/papermind-*.sql.gz.gpg 2>/dev/null | wc -l) şifrələnmiş nüsxə"
+echo "  saxlanılan: $({ ls -1 "$DIR"/papermind-*.sql.gz.gpg 2>/dev/null || true; } | wc -l) şifrələnmiş nüsxə"
 
 # --- Kənar surət ----------------------------------------------------------
 # rclone konfiqurasiya olunubsa, yeni nüsxə dərhal kənara göndərilir.
