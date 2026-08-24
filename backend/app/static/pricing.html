@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricing — PaperMind</title>
+  <meta name="description" content="PaperMind pricing: a free plan with 60 research credits per month, and Pro at $3 per month with 700 credits, PDF upload and a 5000-paper library.">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css?v=4.5.0">
+  <link rel="stylesheet" href="/legal.css?v=2">
+</head>
+<!--
+  Bu səhifə QƏSDƏN statikdir — qiymət birbaşa HTML-dədir, JavaScript tələb
+  etmir.
+
+  Səbəb: qiymət yalnız hesab panelindəki modal pəncərədə idi və `/api/auth/plans`
+  sorğusundan sonra görünürdü. Yəni JS işlətməyən hər kəs — ödəniş provayderinin
+  yoxlayıcısı, axtarış botu, mətn brauzeri — heç bir qiymət görmürdü. Paddle-ın
+  domen təsdiqi «Pending» qalmasının ən ehtimallı səbəbi budur: onların tələbi
+  qiymətin saytda AÇIQ göstərilməsidir.
+
+  Rəqəmlər `backend/app/config.py`-dəki `pro_price_label` ilə eyni olmalıdır.
+  İki yerdə saxlamaq xoşagəlməzdir, amma statik HTML-i şablonlaşdırmaq bütöv
+  bir render qatı tələb edərdi. Əvəzində `tests/test_pricing_page.py` ikisinin
+  uyğunluğunu yoxlayır — ayrı düşsələr test düşür.
+-->
+<body class="legal">
+<main class="legal-wrap">
+  <a class="legal-back" href="/">&larr; PaperMind</a>
+  <h1>Pricing</h1>
+  <p class="legal-meta">Prices in US dollars. Billed monthly. Cancel any time.</p>
+
+  <p>
+    PaperMind is a research search engine over open scientific literature. It
+    searches papers by meaning rather than keywords, and answers questions with
+    citations back to the papers the answer came from.
+  </p>
+
+  <div class="price-grid">
+    <section class="price-card">
+      <h2>Free</h2>
+      <p class="price-tag">$0<span>forever</span></p>
+      <ul>
+        <li>Semantic search across the whole corpus</li>
+        <li>60 research credits per month</li>
+        <li>10 papers in your library</li>
+        <li>Source-grounded answers with citation checking</li>
+        <li>Paper extraction and comparison</li>
+      </ul>
+      <p class="price-note">No card required.</p>
+    </section>
+
+    <section class="price-card featured">
+      <h2>Pro</h2>
+      <p class="price-tag">$3<span>per month</span></p>
+      <ul>
+        <li>700 research credits per month</li>
+        <li>5000 papers in your library</li>
+        <li>Contradiction analysis and research gaps</li>
+        <li>Upload your own PDFs and ask questions about them</li>
+        <li>Everything in Free</li>
+      </ul>
+      <p class="price-note">Cancel any time. Refunds within 14 days.</p>
+    </section>
+  </div>
+
+  <h2>What a credit is</h2>
+  <p>
+    Expensive operations cost credits: an AI answer, a multi-paper comparison, a
+    contradiction analysis. Plain search does not cost credits and is unlimited
+    within fair-use limits. Credits reset at the start of each month and do not
+    carry over.
+  </p>
+
+  <h2>Billing</h2>
+  <p>
+    Payments are handled by Paddle, our authorised reseller. Paddle appears on
+    your statement, issues your invoice, and handles VAT where it applies. You
+    can cancel from the account panel or from the link in any Paddle receipt;
+    cancellation stops the next charge and Pro stays active until the end of the
+    period you already paid for.
+  </p>
+
+  <h2>Refunds</h2>
+  <p>
+    We refund within 14 days of a charge, no questions asked. See our
+    <a href="/refunds.html">refund policy</a> for the full terms.
+  </p>
+
+  <nav class="legal-links">
+    <a href="/terms.html">Terms of Service</a>
+    <a href="/privacy.html">Privacy Notice</a>
+    <a href="/refunds.html">Refund Policy</a>
+    <a href="/">Back to PaperMind</a>
+  </nav>
+</main>
+</body>
+</html>

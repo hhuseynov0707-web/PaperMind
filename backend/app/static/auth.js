@@ -490,10 +490,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderHeader();
     refresh();
-    // Girişsiz də işləyir — `openPricing` yalnız açıq `/api/auth/plans`-ı
-    // oxuyur; «yüksəlt» düyməsi basılanda giriş tələbi onsuz da çıxır.
-    const fp = document.getElementById('ftr-pricing');
-    if (fp) fp.addEventListener('click', () => openPricing());
     // Checkout-dan qayıdış: plan webhook ilə dəyişir, ona görə bir az gecikmə
     // ilə yenilənir — dərhal oxusaq hələ köhnə planı görə bilərik.
     if (new URLSearchParams(location.search).get('upgraded') === '1') {

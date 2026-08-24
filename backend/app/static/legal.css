@@ -89,3 +89,31 @@ h3 {
   color: var(--text, #FAFAFA);
   font-weight: 600;
 }
+
+/* ---------- qiymət səhifəsi ----------
+   Statik səhifədir, JS işlətmir — qiymət birbaşa HTML-dədir ki, tarayıcılar
+   və ödəniş provayderinin yoxlayıcısı onu görsün. */
+
+.price-grid {
+  display: grid; gap: 1rem; margin: 1.6rem 0 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+}
+.price-card {
+  border: 1px solid var(--border, #27272A);
+  border-radius: 14px; padding: 1.4rem;
+  background: var(--surface, #111113);
+}
+.price-card.featured { border-color: var(--accent, #5457E8); }
+.price-card h2 { margin: 0 0 .3rem; font-size: 1.05rem; }
+.price-tag {
+  margin: 0 0 1rem; font-size: 2.1rem; font-weight: 600;
+  color: var(--text, #FAFAFA); line-height: 1.1;
+}
+.price-tag span {
+  display: block; font-size: .78rem; font-weight: 400;
+  color: var(--text-2, #A1A1AA); margin-top: .25rem;
+}
+.price-card ul { margin: 0; padding-left: 1.1rem; }
+.price-card li { margin-bottom: .4rem; }
+.price-note { margin: 1rem 0 0; font-size: .8rem; color: var(--text-3, #85858F); }
